@@ -495,6 +495,8 @@ body { background: var(--color-background-primary); color: var(--color-text-prim
 // Supabase setup & storage wrapper
 // ─────────────────────────────────────────────
 const CRED_KEY = 'wtd-supabase-creds';
+  const HARDCODED_URL = 'https://ceahoxydtjcprjkbjakn.supabase.co';
+const HARDCODED_KEY = 'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6ImNlYWhveHlkdGpjcHJqa2JqYWtuIiwicm9sZSI6ImFub24iLCJpYXQiOjE3NzQzOTAyNDMsImV4cCI6MjA4OTk2NjI0M30.B9SPHoEYWd_-GtaNuXrc8M0tlqhxns9otKl9z5jcTZ0';
 let sbClient = null;
 
 function getCredentials() {
@@ -553,7 +555,7 @@ const storage = {
 // App boot
 // ─────────────────────────────────────────────
 (async () => {
-  const creds = getCredentials();
+const creds = getCredentials() || { url: HARDCODED_URL, key: HARDCODED_KEY };
   if (creds) {
     try {
       await initSupabase(creds.url, creds.key);
