@@ -1,0 +1,992 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Win the Day</title>
+<script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
+<style>
+:root {
+  --color-background-primary: #ffffff;
+  --color-background-secondary: #f5f5f7;
+  --color-text-primary: #1d1d1f;
+  --color-text-secondary: #3a3a3c;
+  --color-text-tertiary: #8e8e93;
+  --color-border-tertiary: #e5e5ea;
+  --color-border-secondary: #c7c7cc;
+  --border-radius-md: 8px;
+  --border-radius-lg: 12px;
+  --font-sans: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, sans-serif;
+  --font-mono: "SF Mono", "Fira Code", monospace;
+}
+@media (prefers-color-scheme: dark) {
+  :root {
+    --color-background-primary: #1c1c1e;
+    --color-background-secondary: #2c2c2e;
+    --color-text-primary: #f2f2f7;
+    --color-text-secondary: #ebebf5cc;
+    --color-text-tertiary: #8e8e93;
+    --color-border-tertiary: #38383a;
+    --color-border-secondary: #48484a;
+  }
+}
+body { background: var(--color-background-primary); color: var(--color-text-primary); font-family: var(--font-sans); }
+#setup-screen {
+  max-width: 480px; margin: 60px auto; padding: 2rem 1.5rem;
+  background: var(--color-background-secondary);
+  border-radius: var(--border-radius-lg);
+  border: 0.5px solid var(--color-border-tertiary);
+}
+#setup-screen h1 { font-size: 22px; margin-bottom: 6px; }
+#setup-screen p  { font-size: 13px; color: var(--color-text-tertiary); margin-bottom: 1.5rem; line-height: 1.6; }
+#setup-screen label { display: block; font-size: 11px; text-transform: uppercase; letter-spacing: .08em; color: var(--color-text-tertiary); margin-bottom: 4px; }
+#setup-screen input {
+  width: 100%; padding: 8px 12px; border-radius: var(--border-radius-md);
+  border: 0.5px solid var(--color-border-tertiary);
+  background: var(--color-background-primary); color: var(--color-text-primary);
+  font-size: 13px; font-family: var(--font-mono); outline: none; box-sizing: border-box; margin-bottom: 1rem;
+}
+#setup-screen input:focus { border-color: var(--color-border-secondary); }
+#setup-save-btn {
+  width: 100%; padding: 10px; border-radius: var(--border-radius-md);
+  background: var(--color-text-primary); color: var(--color-background-primary);
+  border: none; font-size: 14px; cursor: pointer; font-family: var(--font-sans);
+}
+#setup-error { font-size: 12px; color: #E24B4A; margin-top: 8px; min-height: 18px; }
+*{box-sizing:border-box;margin:0;padding:0}
+.tracker{font-family:var(--font-sans);max-width:560px;margin:0 auto;padding:1.5rem 1rem}
+.tabs{display:flex;gap:4px;margin-bottom:1.5rem;background:var(--color-background-secondary);border-radius:var(--border-radius-md);padding:3px;border:0.5px solid var(--color-border-tertiary)}
+.tab{flex:1;text-align:center;font-size:13px;padding:6px;border-radius:6px;cursor:pointer;color:var(--color-text-secondary);transition:all 0.15s}
+.tab.active{background:var(--color-background-primary);color:var(--color-text-primary);font-weight:500;border:0.5px solid var(--color-border-tertiary)}
+.why-banner{border-radius:var(--border-radius-lg);padding:14px 16px;margin-bottom:1.5rem;border:0.5px solid var(--color-border-tertiary);background:var(--color-background-secondary);position:relative}
+.why-label{font-size:10px;text-transform:uppercase;letter-spacing:0.1em;color:var(--color-text-tertiary);margin-bottom:6px}
+.why-text{font-size:14px;color:var(--color-text-primary);line-height:1.6;font-style:italic;padding-right:48px}
+.why-edit-btn{position:absolute;top:10px;right:12px;font-size:11px;color:var(--color-text-tertiary);background:none;border:0.5px solid var(--color-border-tertiary);border-radius:var(--border-radius-md);padding:3px 8px;cursor:pointer}
+.why-edit-btn:hover{background:var(--color-background-primary)}
+.why-input{width:100%;font-size:14px;color:var(--color-text-primary);background:none;border:none;outline:none;resize:none;line-height:1.6;font-family:var(--font-sans);font-style:italic;min-height:60px}
+.why-save-btn{margin-top:8px;font-size:12px;padding:5px 14px;border-radius:var(--border-radius-md);background:var(--color-background-primary);border:0.5px solid var(--color-border-secondary);cursor:pointer;color:var(--color-text-primary)}
+.rest-banner{border-radius:var(--border-radius-lg);padding:12px 16px;margin-bottom:1.5rem;border:0.5px solid var(--color-border-tertiary);background:var(--color-background-secondary);display:flex;align-items:center;justify-content:space-between;gap:12px}
+.rest-banner.active{border-color:#3A7EC4;background:rgba(58,126,196,0.06)}
+.rest-info{flex:1}
+.rest-title{font-size:13px;font-weight:500;color:var(--color-text-primary)}
+.rest-sub{font-size:11px;color:var(--color-text-tertiary);margin-top:2px}
+.rest-sub a{font-size:11px;color:#3A7EC4;cursor:pointer;margin-left:6px}
+.toggle{position:relative;width:40px;height:22px;flex-shrink:0}
+.toggle input{opacity:0;width:0;height:0;position:absolute}
+.toggle-track{position:absolute;inset:0;background:var(--color-border-tertiary);border-radius:11px;cursor:pointer;transition:background 0.2s}
+.toggle input:checked+.toggle-track{background:#3A7EC4}
+.toggle-thumb{position:absolute;top:3px;left:3px;width:16px;height:16px;background:#fff;border-radius:50%;transition:transform 0.2s;pointer-events:none}
+.toggle input:checked~.toggle-thumb{transform:translateX(18px)}
+.celebrate-banner{border-radius:var(--border-radius-lg);padding:12px 16px;margin-bottom:1.5rem;display:flex;align-items:center;gap:10px;animation:fadeIn 0.4s ease}
+.celebrate-banner.won{background:rgba(58,126,196,0.08);border:0.5px solid rgba(58,126,196,0.3)}
+.celebrate-banner.crush{background:rgba(46,158,91,0.08);border:0.5px solid rgba(46,158,91,0.3)}
+@keyframes fadeIn{from{opacity:0;transform:translateY(-6px)}to{opacity:1;transform:translateY(0)}}
+.score-card{display:flex;align-items:center;gap:1.5rem;margin-bottom:1.25rem;background:var(--color-background-secondary);border-radius:var(--border-radius-lg);padding:1.25rem 1.5rem;border:0.5px solid var(--color-border-tertiary)}
+.score-insight{font-size:12px;color:var(--color-text-tertiary);margin-bottom:1.5rem;padding:0 2px;line-height:1.5}
+.score-insight strong{color:var(--color-text-secondary)}
+.yesterday-line{font-size:11px;color:var(--color-text-tertiary);margin-top:-1rem;margin-bottom:1.5rem;padding:0 2px}
+.thresholds{display:flex;gap:8px;margin-top:10px}
+.thresh-pill{font-size:11px;padding:3px 8px;border-radius:var(--border-radius-md);background:var(--color-background-primary);border:0.5px solid var(--color-border-tertiary);color:var(--color-text-secondary)}
+.rest-day-badge{display:inline-flex;align-items:center;font-size:10px;padding:2px 8px;border-radius:20px;background:rgba(58,126,196,0.12);color:#3A7EC4;border:0.5px solid rgba(58,126,196,0.25);margin-bottom:4px;font-weight:500;letter-spacing:0.05em;text-transform:uppercase}
+.missed-s-alert{background:rgba(200,137,26,0.06);border:0.5px solid rgba(200,137,26,0.25);border-radius:var(--border-radius-lg);padding:12px 14px;margin-bottom:1.25rem}
+.missed-s-label{font-size:10px;text-transform:uppercase;letter-spacing:0.1em;color:#C8891A;margin-bottom:8px;font-weight:500}
+.missed-s-item{font-size:13px;color:var(--color-text-secondary);padding:3px 0;display:flex;align-items:center;gap:8px}
+.missed-s-item::before{content:'';width:4px;height:4px;border-radius:50%;background:#C8891A;flex-shrink:0}
+.block-label{display:flex;justify-content:space-between;align-items:center;margin-bottom:6px}
+.block-name{font-size:11px;font-weight:500;color:var(--color-text-tertiary);text-transform:uppercase;letter-spacing:0.08em;display:flex;align-items:center;gap:6px}
+.block-done-check{font-size:11px;color:#2E9E5B;opacity:0.8}
+.block-pct{font-size:11px;color:var(--color-text-tertiary)}
+.block-tasks{background:var(--color-background-secondary);border-radius:var(--border-radius-lg);overflow:hidden;border:0.5px solid var(--color-border-tertiary);margin-bottom:1.25rem}
+.essentials-block{background:var(--color-background-secondary);border-radius:var(--border-radius-lg);overflow:hidden;border:1.5px solid var(--color-border-secondary);margin-bottom:1.25rem}
+.task-row{display:flex;align-items:center;gap:12px;padding:10px 14px;cursor:pointer;border-top:0.5px solid var(--color-border-tertiary);transition:background 0.15s;position:relative}
+.task-row:first-child{border-top:none}
+.task-row:hover{background:var(--color-background-primary)}
+.task-row.done{background:var(--color-background-primary)}
+.task-row.s-tier::before{content:'';position:absolute;left:0;top:0;bottom:0;width:2px;background:#C8891A;opacity:0.5}
+.task-row.s-tier.done::before{opacity:0.2}
+.checkbox{width:18px;height:18px;border-radius:4px;flex-shrink:0;border:1.5px solid var(--color-border-secondary);display:flex;align-items:center;justify-content:center;transition:all 0.2s}
+.checkbox.checked{border:none}
+.task-name{flex:1;font-size:14px;color:var(--color-text-primary);transition:all 0.2s;line-height:1.4}
+.task-name.done{color:var(--color-text-tertiary);text-decoration:line-through}
+.task-sub{display:block;font-size:11px;color:var(--color-text-tertiary);margin-top:2px}
+.tier-badge{font-size:10px;font-weight:500;width:16px;text-align:center}
+.task-pts{font-size:12px;color:var(--color-text-tertiary);min-width:28px;text-align:right}
+.win-bar{height:4px;background:var(--color-border-tertiary);border-radius:2px;margin-top:8px;overflow:hidden;position:relative}
+.win-bar-fill{height:100%;border-radius:2px;transition:width 0.4s ease}
+.winddown-complete{background:rgba(46,158,91,0.06);border:0.5px solid rgba(46,158,91,0.2);border-radius:var(--border-radius-lg);padding:12px 16px;margin-bottom:1.25rem;display:flex;align-items:center;gap:10px}
+.reflection-section{margin-top:2rem;border-top:0.5px solid var(--color-border-tertiary);padding-top:1.5rem}
+.reflection-label{font-size:11px;text-transform:uppercase;letter-spacing:0.1em;color:var(--color-text-tertiary);margin-bottom:8px}
+.reflection-input{width:100%;min-height:100px;font-size:14px;color:var(--color-text-primary);background:var(--color-background-secondary);border:0.5px solid var(--color-border-tertiary);border-radius:var(--border-radius-lg);padding:12px 14px;outline:none;resize:none;line-height:1.6;font-family:var(--font-sans)}
+.reflection-input:focus{border-color:var(--color-border-secondary)}
+.autosave-indicator{font-size:11px;color:var(--color-text-tertiary);margin-top:6px;height:16px}
+.action-buttons{display:grid;grid-template-columns:1fr 1fr;gap:8px;margin-top:1.5rem}
+.action-btn{padding:10px 12px;border-radius:var(--border-radius-md);border:0.5px solid var(--color-border-tertiary);background:var(--color-background-secondary);font-size:13px;cursor:pointer;color:var(--color-text-secondary);text-align:center;transition:all 0.15s;font-family:var(--font-sans)}
+.action-btn:hover{background:var(--color-background-primary);color:var(--color-text-primary)}
+.action-btn.danger:hover{border-color:#E24B4A;color:#E24B4A}
+.history-nav{display:flex;align-items:center;justify-content:space-between;margin-bottom:1.25rem}
+.nav-btn{background:none;border:0.5px solid var(--color-border-tertiary);border-radius:var(--border-radius-md);padding:5px 12px;font-size:13px;cursor:pointer;color:var(--color-text-secondary);font-family:var(--font-sans)}
+.nav-btn:hover{background:var(--color-background-secondary)}
+.nav-title{font-size:15px;font-weight:500;color:var(--color-text-primary)}
+.day-grid{display:grid;grid-template-columns:repeat(7,1fr);gap:6px;margin-bottom:1.5rem}
+.day-cell{border-radius:var(--border-radius-md);padding:8px 4px;text-align:center;border:0.5px solid var(--color-border-tertiary);background:var(--color-background-secondary)}
+.day-cell.today{border:1.5px solid var(--color-border-secondary)}
+.day-cell.future{opacity:0.35}
+.day-label{font-size:10px;color:var(--color-text-tertiary);margin-bottom:4px;text-transform:uppercase;letter-spacing:0.05em}
+.day-pct{font-size:15px;font-weight:500}
+.day-dot{width:6px;height:6px;border-radius:50%;margin:4px auto 0}
+.week-row{display:grid;grid-template-columns:90px 1fr 52px;align-items:center;gap:12px;padding:10px 0;border-top:0.5px solid var(--color-border-tertiary)}
+.week-row:first-child{border-top:none}
+.week-bar-track{height:6px;background:var(--color-border-tertiary);border-radius:3px;overflow:hidden}
+.week-bar-fill{height:100%;border-radius:3px}
+.month-grid{display:grid;grid-template-columns:repeat(7,1fr);gap:5px;margin-bottom:1rem}
+.month-hdr{font-size:10px;color:var(--color-text-tertiary);text-align:center;text-transform:uppercase;letter-spacing:0.05em;padding-bottom:4px}
+.month-cell{aspect-ratio:1;border-radius:6px;display:flex;flex-direction:column;align-items:center;justify-content:center;font-size:11px;font-weight:500;border:0.5px solid transparent;position:relative}
+.month-cell.has-data{border-color:var(--color-border-tertiary)}
+.month-cell.today-cell{border:1.5px solid var(--color-border-secondary)}
+.month-cell.empty{background:none}
+.streak-dot{width:4px;height:4px;border-radius:50%;background:#E8A020;margin-top:2px;flex-shrink:0}
+.summary-row{display:flex;gap:12px;margin-bottom:1.5rem}
+.summary-card{flex:1;background:var(--color-background-secondary);border-radius:var(--border-radius-md);padding:12px;border:0.5px solid var(--color-border-tertiary);text-align:center}
+.summary-val{font-size:22px;font-weight:500;color:var(--color-text-primary)}
+.summary-lbl{font-size:11px;color:var(--color-text-tertiary);margin-top:2px}
+.reflection-card{background:var(--color-background-secondary);border-radius:var(--border-radius-lg);padding:14px 16px;border:0.5px solid var(--color-border-tertiary);margin-bottom:10px}
+.reflection-card-date{font-size:11px;color:var(--color-text-tertiary);margin-bottom:6px;display:flex;justify-content:space-between;align-items:center;flex-wrap:wrap;gap:4px}
+.reflection-card-text{font-size:13px;color:var(--color-text-primary);line-height:1.6;white-space:pre-wrap}
+.no-data-state{text-align:center;padding:3rem 1rem}
+.no-data-state p{font-size:13px;color:var(--color-text-tertiary);margin-bottom:1rem}
+.no-data-btn{font-size:13px;padding:8px 20px;border-radius:var(--border-radius-md);border:0.5px solid var(--color-border-tertiary);background:var(--color-background-secondary);cursor:pointer;color:var(--color-text-secondary);font-family:var(--font-sans)}
+.streak-banner{background:linear-gradient(135deg,rgba(232,160,32,0.1),rgba(200,137,26,0.05));border:0.5px solid rgba(232,160,32,0.25);border-radius:var(--border-radius-lg);padding:10px 16px;margin-bottom:1.5rem;display:flex;align-items:center;gap:10px}
+.streak-text{font-size:13px;color:var(--color-text-primary)}
+.streak-text strong{color:#E8A020}
+.editor-overlay{position:fixed;inset:0;background:rgba(0,0,0,0.5);display:flex;align-items:flex-start;justify-content:center;padding:20px;z-index:100;overflow-y:auto}
+.editor-modal{background:var(--color-background-primary);border-radius:var(--border-radius-lg);border:0.5px solid var(--color-border-tertiary);width:100%;max-width:520px;padding:1.5rem;margin:auto}
+.editor-title{font-size:17px;font-weight:500;margin-bottom:4px;color:var(--color-text-primary)}
+.editor-subtitle{font-size:13px;color:var(--color-text-tertiary);margin-bottom:1.25rem;line-height:1.5}
+.editor-section{margin-bottom:1.25rem}
+.editor-section-label{font-size:10px;text-transform:uppercase;letter-spacing:0.1em;color:var(--color-text-tertiary);margin-bottom:8px;display:flex;justify-content:space-between;align-items:center}
+.editor-row{display:grid;grid-template-columns:1fr 48px 44px 24px;gap:6px;align-items:center;margin-bottom:6px}
+.editor-input{font-size:13px;padding:6px 10px;border-radius:var(--border-radius-md);border:0.5px solid var(--color-border-tertiary);background:var(--color-background-secondary);color:var(--color-text-primary);width:100%;outline:none;font-family:var(--font-sans)}
+.editor-input:focus{border-color:var(--color-border-secondary)}
+.editor-pts{font-size:13px;padding:6px 4px;border-radius:var(--border-radius-md);border:0.5px solid var(--color-border-tertiary);background:var(--color-background-secondary);color:var(--color-text-primary);width:100%;outline:none;text-align:center;font-family:var(--font-sans)}
+.tier-select{font-size:12px;padding:6px 2px;border-radius:var(--border-radius-md);border:0.5px solid var(--color-border-tertiary);background:var(--color-background-secondary);color:var(--color-text-primary);width:100%;outline:none;font-family:var(--font-sans)}
+.delete-task-btn{background:none;border:none;cursor:pointer;color:var(--color-text-tertiary);font-size:16px;line-height:1;padding:0;display:flex;align-items:center;justify-content:center}
+.delete-task-btn:hover{color:#E24B4A}
+.editor-actions{display:flex;gap:8px;margin-top:1rem}
+.btn-primary{padding:8px 18px;border-radius:var(--border-radius-md);background:var(--color-text-primary);color:var(--color-background-primary);border:none;font-size:13px;cursor:pointer;font-family:var(--font-sans)}
+.btn-secondary{padding:8px 18px;border-radius:var(--border-radius-md);background:none;color:var(--color-text-secondary);border:0.5px solid var(--color-border-tertiary);font-size:13px;cursor:pointer;font-family:var(--font-sans)}
+.import-area{width:100%;min-height:80px;font-size:12px;padding:10px;border-radius:var(--border-radius-md);border:0.5px solid var(--color-border-tertiary);background:var(--color-background-secondary);color:var(--color-text-primary);resize:none;outline:none;font-family:var(--font-mono)}
+.block-select{font-size:13px;padding:6px 10px;border-radius:var(--border-radius-md);border:0.5px solid var(--color-border-tertiary);background:var(--color-background-secondary);color:var(--color-text-primary);width:100%;outline:none;font-family:var(--font-sans);margin-bottom:10px}
+.rest-task-group{margin-bottom:10px}
+.rest-task-group-label{font-size:10px;text-transform:uppercase;letter-spacing:0.08em;color:var(--color-text-tertiary);padding:6px 12px 4px;font-weight:500}
+.rest-task-row{display:flex;align-items:center;gap:10px;padding:9px 12px;border-top:0.5px solid var(--color-border-tertiary);cursor:pointer}
+.rest-task-row:first-of-type{border-top:none}
+.rest-task-row:hover{background:var(--color-background-secondary)}
+.rest-checkbox{width:16px;height:16px;border-radius:3px;flex-shrink:0;border:1.5px solid var(--color-border-secondary);display:flex;align-items:center;justify-content:center}
+.rest-checkbox.on{background:#3A7EC4;border-color:#3A7EC4}
+.rest-task-name{flex:1;font-size:13px;color:var(--color-text-primary)}
+.rest-task-pts{font-size:11px;color:var(--color-text-tertiary)}
+.rest-task-list{background:var(--color-background-secondary);border-radius:var(--border-radius-lg);overflow:hidden;border:0.5px solid var(--color-border-tertiary);margin-bottom:1rem}
+.threshold-row{display:flex;align-items:center;gap:12px;margin-bottom:8px}
+.threshold-row label{font-size:13px;color:var(--color-text-secondary);white-space:nowrap;min-width:56px}
+.threshold-row input[type=range]{flex:1;height:3px;-webkit-appearance:none;background:var(--color-border-tertiary);border-radius:2px;outline:none}
+.threshold-row input[type=range]::-webkit-slider-thumb{-webkit-appearance:none;width:16px;height:16px;border-radius:50%;background:#3A7EC4;cursor:pointer}
+.threshold-val{font-size:14px;font-weight:500;color:#3A7EC4;min-width:36px;text-align:right}
+.rest-preview{font-size:12px;color:var(--color-text-tertiary);padding:8px 12px;background:var(--color-background-secondary);border-radius:var(--border-radius-md);border:0.5px solid var(--color-border-tertiary);margin-bottom:1rem;line-height:1.6}
+.rest-preview strong{color:var(--color-text-secondary)}
+</style>
+</head>
+<body>
+
+<div id="setup-screen" style="display:none">
+  <h1>Win the Day</h1>
+  <p>Connect your Supabase database to get started. You only need to do this once.</p>
+  <label>Supabase Project URL</label>
+  <input id="sb-url" type="text" placeholder="https://xxxxxxxxxxxx.supabase.co" autocomplete="off" spellcheck="false">
+  <label>Supabase Anon Key</label>
+  <input id="sb-key" type="text" placeholder="eyJhbGci..." autocomplete="off" spellcheck="false">
+  <button id="setup-save-btn" onclick="setupSave()">Connect &amp; Start →</button>
+  <div id="setup-error"></div>
+  <p style="margin-top:1.5rem;font-size:11px;color:var(--color-text-tertiary)">
+    Find these in your Supabase dashboard → Project Settings → API.
+  </p>
+</div>
+
+<div class="tracker" id="app" style="display:none"></div>
+<div id="editor-overlay" style="display:none"></div>
+
+<script>
+const CRED_KEY = 'wtd-supabase-creds';
+let sbClient = null;
+
+function getCredentials() {
+  try { return JSON.parse(localStorage.getItem(CRED_KEY)); } catch { return null; }
+}
+function saveCredentials(url, key) {
+  localStorage.setItem(CRED_KEY, JSON.stringify({ url, key }));
+}
+
+async function initSupabase(url, key) {
+  sbClient = window.supabase.createClient(url, key);
+  const { error } = await sbClient.from('wtd_store').select('key').limit(1);
+  if (error) throw error;
+}
+
+async function setupSave() {
+  const url = document.getElementById('sb-url').value.trim();
+  const key = document.getElementById('sb-key').value.trim();
+  const errEl = document.getElementById('setup-error');
+  errEl.textContent = 'Connecting…';
+  try {
+    await initSupabase(url, key);
+    saveCredentials(url, key);
+    document.getElementById('setup-screen').style.display = 'none';
+    document.getElementById('app').style.display = 'block';
+    await loadAll();
+    render();
+  } catch (e) {
+    errEl.textContent = 'Could not connect. Check your URL and key, and make sure the wtd_store table exists.';
+  }
+}
+
+const storage = {
+  async get(key) {
+    const { data, error } = await sbClient.from('wtd_store').select('value').eq('key', key).maybeSingle();
+    if (error || !data) return null;
+    return { key, value: data.value };
+  },
+  async set(key, value) {
+    const { error } = await sbClient.from('wtd_store').upsert({ key, value, updated_at: new Date().toISOString() }, { onConflict: 'key' });
+    if (error) { console.error('storage.set error', error); return null; }
+    return { key, value };
+  }
+};
+
+(async () => {
+  const creds = getCredentials();
+  if (creds) {
+    try {
+      await initSupabase(creds.url, creds.key);
+      document.getElementById('setup-screen').style.display = 'none';
+      document.getElementById('app').style.display = 'block';
+      await loadAll();
+      const tasks = isRestDay ? restTasks() : allTasks();
+      const tot = isRestDay ? restTotal() : total();
+      const earned = tasks.filter(t => checked[t.id]).reduce((s, t) => s + t.points, 0);
+      prevWonState = earned / tot >= (isRestDay ? restSettings.win / 100 : WIN);
+      render();
+    } catch (e) {
+      document.getElementById('setup-screen').style.display = 'block';
+    }
+  } else {
+    document.getElementById('setup-screen').style.display = 'block';
+  }
+})();
+
+const DEFAULT_TIMED=[
+  {id:1,block:"Morning",name:"Wake up at scheduled time",points:8,tier:"A"},
+  {id:2,block:"Morning",name:"Morning walk",points:7,tier:"A"},
+  {id:3,block:"Morning",name:"Stretch + breathwork",points:8,tier:"A"},
+  {id:4,block:"Morning",name:"FSN + gratitude + why statement + habit doc",sub:"Read your why. Let it land.",points:8,tier:"A"},
+  {id:5,block:"Deep Work",name:"Work block 1 — deep focus",points:17,tier:"S"},
+  {id:6,block:"Midday",name:"Walk",points:5,tier:"B"},
+  {id:7,block:"Midday",name:"10-min meditation",points:7,tier:"A"},
+  {id:8,block:"Deep Work",name:"Work block 2",points:15,tier:"S"},
+  {id:9,block:"Reset",name:"Ground + stretch",points:4,tier:"B"},
+  {id:10,block:"Deep Work",name:"Work block 3",points:13,tier:"S"},
+  {id:11,block:"Body",name:"Gym or movement",points:13,tier:"S"},
+  {id:12,block:"Body",name:"Yoga",points:6,tier:"B"},
+  {id:13,block:"Body",name:"Sauna",points:5,tier:"B"},
+  {id:14,block:"Evening",name:"To-dos + admin",points:4,tier:"B"},
+  {id:15,block:"Wind Down",name:"Book, audible, or learning",points:7,tier:"A"},
+  {id:16,block:"Wind Down",name:"10-min meditation",points:8,tier:"A"},
+  {id:17,block:"Wind Down",name:"Write tomorrow's schedule by hand",points:15,tier:"S"},
+  {id:18,block:"Wind Down",name:"FSN",points:10,tier:"A"},
+  {id:19,block:"Wind Down",name:"Sleep by 9pm",points:10,tier:"A"},
+];
+const DEFAULT_ESSENTIAL=[
+  {id:101,name:"Identity work protocol",points:11,tier:"S"},
+  {id:102,name:"Track calories",points:11,tier:"S"},
+];
+const DEFAULT_REST={win:50,crush:75,taskIds:[4,7,12,15,16,17,18,19,101,102]};
+const BLOCKS=["Morning","Deep Work","Midday","Reset","Body","Evening","Wind Down"];
+const WIN=0.72;const CRUSH=0.88;
+const TIER={S:{color:"#C8891A",label:"Critical"},A:{color:"#3A7EC4",label:"High impact"},B:{color:"#888",label:"Supporting"}};
+const DAYS=["Sun","Mon","Tue","Wed","Thu","Fri","Sat"];
+const MONTHS=["January","February","March","April","May","June","July","August","September","October","November","December"];
+
+let timedTasks=[...DEFAULT_TIMED.map(t=>({...t}))];
+let essentialTasks=[...DEFAULT_ESSENTIAL.map(t=>({...t}))];
+let restSettings={...DEFAULT_REST};
+let checked={};
+let activeTab="today";
+let weekOffset=0;let monthOffset=0;
+let allHistory={};
+let whyStatement="";
+let editingWhy=false;
+let showEditor=false;let showImport=false;let showRestEditor=false;
+let importError="";
+let isRestDay=false;
+let autoSaveTimer=null;let autoSaveStatus="";
+let nextId=200;
+let prevWonState=null;
+let showCelebration=false;let celebrationTimeout=null;
+
+function allTasks(){return[...timedTasks,...essentialTasks];}
+function total(){return allTasks().reduce((s,t)=>s+t.points,0);}
+function restTasks(){return allTasks().filter(t=>restSettings.taskIds.includes(t.id));}
+function restTotal(){return restTasks().reduce((s,t)=>s+t.points,0);}
+function todayKey(){const d=new Date();return`${d.getFullYear()}-${String(d.getMonth()+1).padStart(2,'0')}-${String(d.getDate()).padStart(2,'0')}`;}
+function dateKey(d){return`${d.getFullYear()}-${String(d.getMonth()+1).padStart(2,'0')}-${String(d.getDate()).padStart(2,'0')}`;}
+function yesterday(){const d=new Date();d.setDate(d.getDate()-1);return dateKey(d);}
+
+function statusColor(pct,rest){
+  const w=rest?restSettings.win/100:WIN;
+  const c=rest?restSettings.crush/100:CRUSH;
+  if(pct>=c)return"#2E9E5B";if(pct>=w)return"#3A7EC4";
+  if(pct>=0.4)return"#C8891A";if(pct>0)return"#aaa";
+  return"var(--color-border-tertiary)";
+}
+function statusText(pct,rest){
+  const w=rest?restSettings.win/100:WIN;const c=rest?restSettings.crush/100:CRUSH;
+  if(pct>=c)return"Crushing it";if(pct>=w)return"Day won";
+  if(pct>=0.4)return"Building";if(pct>0)return"Started";return"Not started";
+}
+function getInsight(pct,earned,rest){
+  const tot=rest?restTotal():total();
+  const w=rest?restSettings.win/100:WIN;
+  const c=rest?restSettings.crush/100:CRUSH;
+  const toWin=Math.ceil(w*tot-earned);
+  const toCrush=Math.ceil(c*tot-earned);
+  if(pct>=c)return`${rest?'Rest day — ':''}Crushing it. <strong>${Math.round(pct*100)}%</strong> — exceptional.`;
+  if(pct>=w)return`${rest?'Rest day — ':''}Day won. <strong>${toCrush} more pts</strong> to crush it.`;
+  if(toWin>0&&toWin<=20)return`<strong>${toWin} points</strong> away from winning the day.`;
+  if(pct>=0.4)return`Building. <strong>${toWin} points</strong> to win the day.`;
+  if(pct>0)return`Started. <strong>${toWin} points</strong> needed to win.`;
+  return`Check off your first task to get started.`;
+}
+
+async function loadAll(){
+  try{const r=await storage.get('wtd-history');if(r)allHistory=JSON.parse(r.value);}catch(e){allHistory={};}
+  try{const w=await storage.get('wtd-why');if(w)whyStatement=w.value;}catch(e){whyStatement="";}
+  try{const t=await storage.get('wtd-tasks');if(t){const s=JSON.parse(t.value);timedTasks=s.timed;essentialTasks=s.essential;}}catch(e){}
+  try{const rs=await storage.get('wtd-rest');if(rs)restSettings=JSON.parse(rs.value);}catch(e){}
+  const key=todayKey();
+  if(allHistory[key]){checked=allHistory[key].checked||{};isRestDay=allHistory[key].restDay||false;}
+  else{checked={};isRestDay=false;}
+}
+
+async function saveDay(){
+  const tasks=isRestDay?restTasks():allTasks();
+  const tot=isRestDay?restTotal():total();
+  const earned=tasks.filter(t=>checked[t.id]).reduce((s,t)=>s+t.points,0);
+  const pct=tot>0?earned/tot:0;
+  const key=todayKey();
+  if(!allHistory[key])allHistory[key]={};
+  const w=isRestDay?restSettings.win/100:WIN;
+  const wasWon=prevWonState;const isNowWon=pct>=w;
+  const isNowCrush=pct>=(isRestDay?restSettings.crush/100:CRUSH);
+  if(!wasWon&&isNowWon){
+    showCelebration=isNowCrush?'crush':'won';
+    clearTimeout(celebrationTimeout);
+    celebrationTimeout=setTimeout(()=>{showCelebration=false;render();},4000);
+  }
+  prevWonState=isNowWon;
+  allHistory[key]={...allHistory[key],checked:{...checked},earned,total:tot,pct,restDay:isRestDay};
+  try{await storage.set('wtd-history',JSON.stringify(allHistory));}catch(e){}
+}
+
+async function saveTasks(){try{await storage.set('wtd-tasks',JSON.stringify({timed:timedTasks,essential:essentialTasks}));}catch(e){}}
+async function saveRestSettings(){try{await storage.set('wtd-rest',JSON.stringify(restSettings));}catch(e){}}
+async function saveWhy(){
+  const val=document.getElementById('why-input').value.trim();
+  whyStatement=val;
+  try{await storage.set('wtd-why',val);}catch(e){}
+  editingWhy=false;render();
+}
+
+function onReflectionInput(){
+  autoSaveStatus="saving...";updateAutoSaveIndicator();
+  clearTimeout(autoSaveTimer);
+  autoSaveTimer=setTimeout(async()=>{
+    const val=document.getElementById('reflection-input')?.value.trim()||"";
+    const key=todayKey();
+    if(!allHistory[key])allHistory[key]={};
+    allHistory[key]={...allHistory[key],reflection:val,reflectionTime:new Date().toISOString()};
+    try{await storage.set('wtd-history',JSON.stringify(allHistory));}catch(e){}
+    autoSaveStatus="saved";updateAutoSaveIndicator();
+    setTimeout(()=>{autoSaveStatus="";updateAutoSaveIndicator();},2000);
+  },1200);
+}
+
+function updateAutoSaveIndicator(){const el=document.getElementById('autosave-indicator');if(el)el.textContent=autoSaveStatus;}
+async function toggleRestDay(){isRestDay=!isRestDay;await saveDay();render();}
+
+function calcStreak(){
+  let streak=0;const d=new Date();
+  while(true){
+    const key=dateKey(d);const rec=allHistory[key];
+    const w=rec&&rec.restDay?restSettings.win/100:WIN;
+    if(rec&&rec.pct>=w)streak++;
+    else if(key===todayKey()&&(!rec||rec.pct<w)){d.setDate(d.getDate()-1);continue;}
+    else break;
+    d.setDate(d.getDate()-1);
+  }
+  return streak;
+}
+
+function exportData(){
+  const data={history:allHistory,tasks:{timed:timedTasks,essential:essentialTasks},why:whyStatement,restSettings,exportedAt:new Date().toISOString()};
+  const blob=new Blob([JSON.stringify(data,null,2)],{type:'application/json'});
+  const url=URL.createObjectURL(blob);
+  const a=document.createElement('a');a.href=url;a.download=`win-the-day-${todayKey()}.json`;
+  document.body.appendChild(a);a.click();document.body.removeChild(a);URL.revokeObjectURL(url);
+}
+
+async function doImport(){
+  try{
+    const data=JSON.parse(document.getElementById('import-textarea').value.trim());
+    if(data.history)allHistory={...allHistory,...data.history};
+    if(data.tasks&&data.tasks.timed)timedTasks=data.tasks.timed;
+    if(data.tasks&&data.tasks.essential)essentialTasks=data.tasks.essential;
+    if(data.why)whyStatement=data.why;
+    if(data.restSettings)restSettings=data.restSettings;
+    await storage.set('wtd-history',JSON.stringify(allHistory));
+    await saveTasks();await saveRestSettings();
+    if(data.why)await storage.set('wtd-why',data.why);
+    const key=todayKey();
+    if(allHistory[key]){checked=allHistory[key].checked||{};isRestDay=allHistory[key].restDay||false;}
+    showImport=false;importError="";render();
+  }catch(e){importError="Invalid data.";render();}
+}
+
+function buildEmailBody(){
+  const key=todayKey();const rec=allHistory[key];
+  const earned=rec?rec.earned:0;const pct=rec?rec.pct:0;
+  const todayDate=new Date().toLocaleDateString("en-US",{weekday:"long",month:"long",day:"numeric"});
+  const reflection=(rec&&rec.reflection)||"No reflection written.";
+  let body=`WIN THE DAY${isRestDay?' — REST DAY':''}\n${todayDate}\n\n`;
+  body+=`Score: ${Math.round(pct*100)}% — ${statusText(pct,isRestDay)}\n\n`;
+  const tasks=isRestDay?restTasks():allTasks();
+  body+=`COMPLETED:\n`;tasks.filter(t=>checked[t.id]).forEach(t=>{body+=`✓ ${t.name}\n`;});
+  body+=`\nMISSED:\n`;tasks.filter(t=>!checked[t.id]).forEach(t=>{body+=`○ ${t.name}\n`;});
+  body+=`\nREFLECTION:\n${reflection}`;
+  if(whyStatement)body+=`\n\nMY WHY:\n${whyStatement}`;
+  return body;
+}
+
+function openMailto(){
+  const body=buildEmailBody();
+  const subj=`Win the Day — ${new Date().toLocaleDateString("en-US",{month:"short",day:"numeric"})}${isRestDay?' (Rest)':''}`;
+  window.location.href=`mailto:?subject=${encodeURIComponent(subj)}&body=${encodeURIComponent(body)}`;
+}
+
+function taskRow(task,pct,rest){
+  const isDone=!!checked[task.id];const tc=TIER[task.tier].color;const sc=statusColor(pct,rest);
+  const isS=task.tier==='S';
+  return`<div class="task-row${isDone?' done':''}${isS?' s-tier':''}" onclick="toggle(${task.id})">
+    <div class="checkbox${isDone?' checked':''}" style="${isDone?'background:'+sc:''}">
+      ${isDone?'<svg width="10" height="8" viewBox="0 0 10 8" fill="none"><path d="M1 4L3.5 6.5L9 1" stroke="white" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round"/></svg>':''}
+    </div>
+    <span class="task-name${isDone?' done':''}">
+      ${task.name}${task.sub?`<span class="task-sub">${task.sub}</span>`:''}
+    </span>
+    <span class="tier-badge" style="color:${tc}">${task.tier}</span>
+    <span class="task-pts">+${task.points}</span>
+  </div>`;
+}
+
+function updateRestPreview(){
+  const rt=restSettings.taskIds.reduce((s,id)=>{const t=allTasks().find(t=>t.id===id);return s+(t?t.points:0);},0);
+  const toWin=Math.ceil(restSettings.win/100*rt);
+  const toCrush=Math.ceil(restSettings.crush/100*rt);
+  const el=document.getElementById('rest-preview-text');
+  if(el)el.innerHTML=`<strong>${restSettings.taskIds.length} tasks</strong> · <strong>${rt} pts total</strong> · Win at <strong>${toWin} pts</strong> · Crush at <strong>${toCrush} pts</strong>`;
+}
+
+function renderRestEditor(){
+  const groupedBlocks=[
+    {label:"Daily Essentials",tasks:essentialTasks},
+    ...BLOCKS.map(b=>({label:b,tasks:timedTasks.filter(t=>t.block===b)})).filter(({tasks})=>tasks.length)
+  ];
+  const rt=restSettings.taskIds.reduce((s,id)=>{const t=allTasks().find(t=>t.id===id);return s+(t?t.points:0);},0);
+  const toWin=Math.ceil(restSettings.win/100*rt);
+  const toCrush=Math.ceil(restSettings.crush/100*rt);
+  return`<div class="editor-overlay" onclick="if(event.target===this)closeRestEditor()">
+  <div class="editor-modal">
+    <div class="editor-title">Customize rest day</div>
+    <div class="editor-subtitle">Choose your tasks and set your win target for lighter days.</div>
+    <div class="editor-section">
+      <div class="editor-section-label"><span>Thresholds</span></div>
+      <div class="threshold-row">
+        <label>Win at</label>
+        <input type="range" min="20" max="80" step="5" value="${restSettings.win}" id="rest-win-sl"
+          oninput="restSettings.win=parseInt(this.value);document.getElementById('rest-win-v').textContent=this.value+'%';updateRestPreview()">
+        <span class="threshold-val" id="rest-win-v">${restSettings.win}%</span>
+      </div>
+      <div class="threshold-row">
+        <label>Crush at</label>
+        <input type="range" min="40" max="95" step="5" value="${restSettings.crush}" id="rest-crush-sl"
+          oninput="restSettings.crush=parseInt(this.value);document.getElementById('rest-crush-v').textContent=this.value+'%';updateRestPreview()">
+        <span class="threshold-val" id="rest-crush-v">${restSettings.crush}%</span>
+      </div>
+      <div class="rest-preview" id="rest-preview-text">
+        <strong>${restSettings.taskIds.length} tasks</strong> · <strong>${rt} pts total</strong> · Win at <strong>${toWin} pts</strong> · Crush at <strong>${toCrush} pts</strong>
+      </div>
+    </div>
+    <div class="editor-section">
+      <div class="editor-section-label"><span>Active tasks on rest day</span><span style="color:var(--color-text-tertiary)">${restSettings.taskIds.length} selected</span></div>
+      <div class="rest-task-list">
+        ${groupedBlocks.map(({label,tasks})=>`
+          <div class="rest-task-group">
+            <div class="rest-task-group-label">${label}</div>
+            ${tasks.map(t=>{
+              const on=restSettings.taskIds.includes(t.id);
+              return`<div class="rest-task-row" onclick="toggleRestTask(${t.id})">
+                <div class="rest-checkbox${on?' on':''}">
+                  ${on?'<svg width="8" height="6" viewBox="0 0 8 6" fill="none"><path d="M1 3L3 5.5L7 1" stroke="white" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round"/></svg>':''}
+                </div>
+                <span class="rest-task-name">${t.name}</span>
+                <span class="rest-task-pts">+${t.points}</span>
+              </div>`;
+            }).join('')}
+          </div>`).join('')}
+      </div>
+    </div>
+    <div class="editor-actions">
+      <button class="btn-primary" onclick="saveRestEditor()">Save</button>
+      <button class="btn-secondary" onclick="closeRestEditor()">Cancel</button>
+    </div>
+  </div></div>`;
+}
+
+function toggleRestTask(id){
+  if(restSettings.taskIds.includes(id))restSettings.taskIds=restSettings.taskIds.filter(x=>x!==id);
+  else restSettings.taskIds=[...restSettings.taskIds,id];
+  renderOverlay();
+}
+
+async function saveRestEditor(){await saveRestSettings();closeRestEditor();}
+function closeRestEditor(){showRestEditor=false;render();}
+function openRestEditor(){showRestEditor=true;render();}
+
+function renderEditor(){
+  const allBlocksForEditor=[
+    ...BLOCKS.map(b=>({label:b,tasks:timedTasks.filter(t=>t.block===b),type:'timed'})),
+    {label:"Daily Essentials",tasks:essentialTasks,type:'essential'}
+  ];
+  let h=`<div class="editor-overlay" onclick="if(event.target===this)closeEditor()">
+  <div class="editor-modal">
+    <div class="editor-title">Edit habits</div>
+    <div style="margin-bottom:1rem">
+      <div class="editor-section-label" style="margin-bottom:6px"><span>Add task to block</span></div>
+      <select class="block-select" id="new-task-block">
+        ${BLOCKS.map(b=>`<option value="timed:${b}">${b}</option>`).join('')}
+        <option value="essential:Daily Essentials">Daily Essentials</option>
+      </select>
+      <button style="padding:6px 12px;font-size:12px;cursor:pointer;border:0.5px solid var(--color-border-tertiary);border-radius:var(--border-radius-md);background:var(--color-background-secondary);color:var(--color-text-secondary);font-family:var(--font-sans)" onclick="addTaskFromSelect()">+ Add task</button>
+    </div>`;
+  allBlocksForEditor.forEach(({label,tasks,type})=>{
+    if(!tasks.length)return;
+    h+=`<div class="editor-section"><div class="editor-section-label"><span>${label}</span></div>`;
+    tasks.forEach(task=>{
+      h+=`<div class="editor-row">
+        <input class="editor-input" value="${task.name.replace(/"/g,'&quot;').replace(/'/g,"&#39;")}" onchange="updateTask(${task.id},'name',this.value,'${type}')">
+        <input class="editor-pts" type="number" value="${task.points}" min="1" max="30" onchange="updateTask(${task.id},'points',parseInt(this.value)||1,'${type}')">
+        <select class="tier-select" onchange="updateTask(${task.id},'tier',this.value,'${type}')">
+          <option${task.tier==='S'?' selected':''}>S</option>
+          <option${task.tier==='A'?' selected':''}>A</option>
+          <option${task.tier==='B'?' selected':''}>B</option>
+        </select>
+        <button class="delete-task-btn" onclick="deleteTask(${task.id},'${type}')">×</button>
+      </div>`;
+    });
+    h+=`</div>`;
+  });
+  h+=`<div class="editor-actions">
+    <button class="btn-primary" onclick="saveEdits()">Save changes</button>
+    <button class="btn-secondary" onclick="closeEditor()">Cancel</button>
+  </div>
+  <div style="margin-top:1rem;padding-top:1rem;border-top:0.5px solid var(--color-border-tertiary)">
+    <button class="btn-secondary" onclick="disconnectSupabase()" style="font-size:12px;color:var(--color-text-tertiary)">Disconnect Supabase</button>
+  </div>
+  </div></div>`;
+  return h;
+}
+
+function disconnectSupabase(){
+  if(confirm('Disconnect Supabase? This removes saved credentials from this browser.')){
+    localStorage.removeItem(CRED_KEY);location.reload();
+  }
+}
+
+function addTaskFromSelect(){
+  const val=document.getElementById('new-task-block')?.value||'timed:Morning';
+  const[type,block]=val.split(':');
+  const newTask={id:nextId++,name:"New task",points:5,tier:"B"};
+  if(type==='essential')essentialTasks.push(newTask);
+  else{newTask.block=block;timedTasks.push(newTask);}
+  renderOverlay();
+}
+
+function deleteTask(id,type){
+  if(type==='essential')essentialTasks=essentialTasks.filter(t=>t.id!==id);
+  else timedTasks=timedTasks.filter(t=>t.id!==id);
+  renderOverlay();
+}
+
+function updateTask(id,field,value,type){
+  const arr=type==='essential'?essentialTasks:timedTasks;
+  const task=arr.find(t=>t.id===id);if(task)task[field]=value;
+}
+
+async function saveEdits(){await saveTasks();closeEditor();}
+function closeEditor(){showEditor=false;render();}
+function closeImport(){showImport=false;importError="";render();}
+function openEditor(){showEditor=true;render();}
+function openImport(){showImport=true;render();}
+
+function renderOverlay(){
+  const overlay=document.getElementById('editor-overlay');
+  if(showEditor)overlay.innerHTML=renderEditor();
+  else if(showImport)overlay.innerHTML=renderImportModal();
+  else if(showRestEditor)overlay.innerHTML=renderRestEditor();
+  overlay.style.display=(showEditor||showImport||showRestEditor)?'block':'none';
+}
+
+function renderImportModal(){
+  return`<div class="editor-overlay" onclick="if(event.target===this)closeImport()">
+  <div class="editor-modal">
+    <div class="editor-title">Import data</div>
+    <p style="font-size:13px;color:var(--color-text-secondary);margin-bottom:1rem;line-height:1.6">Paste your previously exported JSON.</p>
+    <textarea class="import-area" id="import-textarea" placeholder="Paste exported JSON here..."></textarea>
+    ${importError?`<p style="font-size:12px;color:#E24B4A;margin-top:6px">${importError}</p>`:''}
+    <div class="editor-actions">
+      <button class="btn-primary" onclick="doImport()">Import</button>
+      <button class="btn-secondary" onclick="closeImport()">Cancel</button>
+    </div>
+  </div></div>`;
+}
+
+function reflectionCards(entries){
+  const withR=entries.filter(({rec})=>rec&&rec.reflection);
+  if(!withR.length)return`<p style="font-size:13px;color:var(--color-text-tertiary);padding:1rem 0">No reflections written yet.</p>`;
+  return withR.map(({d,rec})=>{
+    const timeStr=rec.reflectionTime?new Date(rec.reflectionTime).toLocaleTimeString("en-US",{hour:"numeric",minute:"2-digit"}):'';
+    return`<div class="reflection-card">
+      <div class="reflection-card-date">
+        <span>${d.toLocaleDateString("en-US",{weekday:"long",month:"short",day:"numeric"})}${timeStr?` · ${timeStr}`:''}${rec.restDay?' · Rest day':''}</span>
+        <span style="font-weight:500;color:${statusColor(rec.pct||0,rec.restDay)}">${Math.round((rec.pct||0)*100)}% — ${statusText(rec.pct||0,rec.restDay)}</span>
+      </div>
+      <div class="reflection-card-text">${rec.reflection}</div>
+    </div>`;
+  }).join('');
+}
+
+function renderToday(){
+  const tasks=isRestDay?restTasks():allTasks();
+  const tot=isRestDay?restTotal():total();
+  const earned=tasks.filter(t=>checked[t.id]).reduce((s,t)=>s+t.points,0);
+  const pct=tot>0?earned/tot:0;
+  const done=tasks.filter(t=>checked[t.id]).length;
+  const sc=statusColor(pct,isRestDay);
+  const R=54;const C=2*Math.PI*R;const d=Math.min(pct,1)*C;
+  const todayDate=new Date().toLocaleDateString("en-US",{weekday:"long",month:"long",day:"numeric"});
+  const todayReflection=(allHistory[todayKey()]&&allHistory[todayKey()].reflection)||"";
+  const streak=calcStreak();
+  const WIN_T=isRestDay?restSettings.win/100:WIN;
+  const CRUSH_T=isRestDay?restSettings.crush/100:CRUSH;
+  const missedS=tasks.filter(t=>t.tier==='S'&&!checked[t.id]);
+  const yRec=allHistory[yesterday()];
+  let h=`<div style="display:flex;justify-content:space-between;align-items:flex-start;margin-bottom:1.25rem">
+    <div>
+      <p style="font-size:11px;color:var(--color-text-tertiary);text-transform:uppercase;letter-spacing:0.1em">Win the Day</p>
+      <p style="font-size:15px;color:var(--color-text-secondary);margin-top:2px">${todayDate}</p>
+    </div>
+  </div>`;
+  if(streak>=2)h+=`<div class="streak-banner"><span style="font-size:18px">&#128293;</span><span class="streak-text"><strong>${streak} day streak</strong> — keep it going</span></div>`;
+  if(showCelebration){
+    const isCrush=showCelebration==='crush';
+    h+=`<div class="celebrate-banner ${isCrush?'crush':'won'}">
+      <span style="font-size:18px">${isCrush?'&#127942;':'&#9989;'}</span>
+      <span style="font-size:14px;font-weight:500;color:${isCrush?'#2E9E5B':'#3A7EC4'}">${isCrush?'Crushing it — exceptional day.':'Day won. You did the work.'}</span>
+    </div>`;
+  }
+  if(editingWhy){
+    h+=`<div class="why-banner"><div class="why-label">My why</div>
+      <textarea class="why-input" id="why-input" placeholder="Write your why statement here...">${whyStatement}</textarea>
+      <button class="why-save-btn" onclick="saveWhy()">Save</button></div>`;
+  }else if(whyStatement){
+    h+=`<div class="why-banner"><div class="why-label">My why</div>
+      <div class="why-text">${whyStatement}</div>
+      <button class="why-edit-btn" onclick="editWhy()">Edit</button></div>`;
+  }else{
+    h+=`<div class="why-banner" style="cursor:pointer;border-style:dashed" onclick="editWhy()">
+      <div class="why-label">My why</div>
+      <div style="font-size:13px;color:var(--color-text-tertiary);font-style:italic">Tap to add your why statement — it appears here every day.</div>
+    </div>`;
+  }
+  h+=`<div class="rest-banner${isRestDay?' active':''}">
+    <div class="rest-info">
+      <div class="rest-title">Rest day</div>
+      <div class="rest-sub">${isRestDay?`Lighter target — win at ${restSettings.win}%`:'Toggle for travel, recovery, or weekends'}
+        <a onclick="openRestEditor()">Customize</a>
+      </div>
+    </div>
+    <label class="toggle">
+      <input type="checkbox" ${isRestDay?'checked':''} onchange="toggleRestDay()">
+      <div class="toggle-track"></div>
+      <div class="toggle-thumb"></div>
+    </label>
+  </div>`;
+  h+=`<div class="score-card">
+    <svg width="120" height="120" viewBox="0 0 130 130" style="flex-shrink:0">
+      <circle cx="65" cy="65" r="${R}" fill="none" stroke="var(--color-border-tertiary)" stroke-width="8"/>
+      <circle cx="65" cy="65" r="${R}" fill="none" stroke="${sc}" stroke-width="8"
+        stroke-dasharray="${d} ${C}" stroke-linecap="round" transform="rotate(-90 65 65)"
+        style="transition:stroke-dasharray 0.4s ease,stroke 0.4s ease"/>
+      <text x="65" y="61" text-anchor="middle" font-size="22" font-weight="500" fill="var(--color-text-primary)">${Math.round(pct*100)}%</text>
+      <text x="65" y="79" text-anchor="middle" font-size="11" fill="var(--color-text-tertiary)">${earned} / ${tot} pts</text>
+    </svg>
+    <div style="flex:1">
+      ${isRestDay?`<div class="rest-day-badge">Rest Day</div>`:''}
+      <p style="font-size:22px;font-weight:500;color:${sc};margin-bottom:4px">${statusText(pct,isRestDay)}</p>
+      <p style="font-size:13px;color:var(--color-text-secondary);margin-bottom:10px">${done} of ${tasks.length} tasks complete</p>
+      <div class="win-bar" style="position:relative">
+        <div class="win-bar-fill" style="width:${Math.round(pct*100)}%;background:${sc}"></div>
+        <div style="position:absolute;top:-1px;left:${Math.round(WIN_T*100)}%;width:2px;height:6px;background:var(--color-border-secondary);border-radius:1px"></div>
+        <div style="position:absolute;top:-1px;left:${Math.round(CRUSH_T*100)}%;width:2px;height:6px;background:var(--color-border-secondary);border-radius:1px"></div>
+      </div>
+      <div class="thresholds">
+        <div class="thresh-pill">Win: ${Math.round(WIN_T*100)}%</div>
+        <div class="thresh-pill">Crush: ${Math.round(CRUSH_T*100)}%</div>
+      </div>
+    </div>
+  </div>
+  <p class="score-insight">${getInsight(pct,earned,isRestDay)}</p>`;
+  if(yRec){
+    const diff=Math.round(pct*100)-Math.round(yRec.pct*100);
+    const diffColor=diff>0?'#2E9E5B':diff<0?'#E24B4A':'var(--color-text-tertiary)';
+    const diffStr=diff>0?`+${diff}%`:diff<0?`${diff}%`:'same';
+    h+=`<p class="yesterday-line">Yesterday: <strong style="color:${statusColor(yRec.pct,yRec.restDay)}">${Math.round(yRec.pct*100)}%</strong> <span style="color:${diffColor};font-size:11px">${diffStr}</span></p>`;
+  }
+  if(missedS.length>0&&pct<WIN_T){
+    h+=`<div class="missed-s-alert">
+      <div class="missed-s-label">Critical tasks remaining</div>
+      ${missedS.map(t=>`<div class="missed-s-item">${t.name}<span style="margin-left:auto;font-size:11px;color:var(--color-text-tertiary)">+${t.points}</span></div>`).join('')}
+    </div>`;
+  }
+  if(isRestDay){
+    const rEss=essentialTasks.filter(t=>restSettings.taskIds.includes(t.id));
+    const rTimed=BLOCKS.map(b=>({block:b,tasks:timedTasks.filter(t=>t.block===b&&restSettings.taskIds.includes(t.id))})).filter(({tasks})=>tasks.length);
+    if(rEss.length){
+      const ee=rEss.filter(t=>checked[t.id]).reduce((s,t)=>s+t.points,0);
+      const et=rEss.reduce((s,t)=>s+t.points,0);
+      h+=`<div class="block-label"><span class="block-name">Daily Essentials${rEss.every(t=>checked[t.id])?` <span class="block-done-check">✓</span>`:''}</span><span class="block-pct">${et>0?Math.round(ee/et*100):0}% · ${ee}/${et}</span></div>
+      <div class="essentials-block">${rEss.map(t=>taskRow(t,pct,true)).join('')}</div>`;
+    }
+    rTimed.forEach(({block,tasks})=>{
+      const be=tasks.filter(t=>checked[t.id]).reduce((s,t)=>s+t.points,0);
+      const bt=tasks.reduce((s,t)=>s+t.points,0);
+      h+=`<div class="block-label"><span class="block-name">${block}${tasks.every(t=>checked[t.id])?` <span class="block-done-check">✓</span>`:''}</span><span class="block-pct">${bt>0?Math.round(be/bt*100):0}% · ${be}/${bt}</span></div>
+      <div class="block-tasks">${tasks.map(t=>taskRow(t,pct,true)).join('')}</div>`;
+    });
+  }else{
+    const essEarned=essentialTasks.filter(t=>checked[t.id]).reduce((s,t)=>s+t.points,0);
+    const essTotal=essentialTasks.reduce((s,t)=>s+t.points,0);
+    h+=`<div class="block-label"><span class="block-name">Daily Essentials${essentialTasks.every(t=>checked[t.id])?` <span class="block-done-check">✓</span>`:''}</span><span class="block-pct">${essTotal>0?Math.round(essEarned/essTotal*100):0}% · ${essEarned}/${essTotal}</span></div>
+    <div class="essentials-block">${essentialTasks.map(t=>taskRow(t,pct,false)).join('')}</div>`;
+    BLOCKS.forEach(block=>{
+      const bt=timedTasks.filter(t=>t.block===block);if(!bt.length)return;
+      const be=bt.filter(t=>checked[t.id]).reduce((s,t)=>s+t.points,0);
+      const bto=bt.reduce((s,t)=>s+t.points,0);
+      const allDone=bt.every(t=>checked[t.id]);
+      h+=`<div class="block-label"><span class="block-name">${block}${allDone?` <span class="block-done-check">✓</span>`:''}</span><span class="block-pct">${bto>0?Math.round(be/bto*100):0}% · ${be}/${bto}</span></div>
+      <div class="block-tasks">${bt.map(t=>taskRow(t,pct,false)).join('')}</div>`;
+      if(block==="Wind Down"&&allDone){
+        h+=`<div class="winddown-complete"><span style="font-size:16px">&#128218;</span><div><div style="font-size:13px;font-weight:500;color:#2E9E5B">Tomorrow is set up.</div><div style="font-size:11px;color:var(--color-text-tertiary);margin-top:2px">Wind down complete — you can close the day.</div></div></div>`;
+      }
+    });
+    h+=`<div style="display:flex;gap:16px;margin-top:1rem;justify-content:center">
+      ${Object.entries(TIER).map(([k,v])=>`<div style="display:flex;align-items:center;gap:5px">
+        <span style="font-size:10px;font-weight:500;color:${v.color}">${k}</span>
+        <span style="font-size:11px;color:var(--color-text-tertiary)">${v.label}</span>
+      </div>`).join('')}
+    </div>`;
+  }
+  h+=`<div class="reflection-section">
+    <div class="reflection-label">Daily reflection</div>
+    <textarea class="reflection-input" id="reflection-input" placeholder="How did today go? What came up? What are you proud of?" oninput="onReflectionInput()">${todayReflection}</textarea>
+    <div class="autosave-indicator" id="autosave-indicator">${autoSaveStatus}</div>
+  </div>
+  <div class="action-buttons">
+    <button class="action-btn" onclick="openEditor()">Edit habits</button>
+    <button class="action-btn danger" onclick="confirmReset()">Reset day</button>
+    <button class="action-btn" onclick="exportData()">Export data</button>
+    <button class="action-btn" onclick="openImport()">Import data</button>
+  </div>
+  <div style="margin-top:8px">
+    <button class="action-btn" style="width:100%;text-align:center" onclick="openMailto()">Send today's summary by email</button>
+  </div>`;
+  return h;
+}
+
+function getWeekDates(offset){
+  const now=new Date();const day=now.getDay();const mon=new Date(now);
+  mon.setDate(now.getDate()-day+1+(offset*7));
+  return Array.from({length:7},(_,i)=>{const d=new Date(mon);d.setDate(mon.getDate()+i);return d;});
+}
+
+function renderWeek(){
+  const dates=getWeekDates(weekOffset);const tk=todayKey();
+  const label=`${dates[0].toLocaleDateString("en-US",{month:"short",day:"numeric"})} – ${dates[6].toLocaleDateString("en-US",{month:"short",day:"numeric",year:"numeric"})}`;
+  const hasAnyData=dates.some(d=>allHistory[dateKey(d)]);
+  const streak=calcStreak();
+  const activeDays=dates.filter(d=>{const r=allHistory[dateKey(d)];return r&&!r.restDay;});
+  const won=dates.filter(d=>{const r=allHistory[dateKey(d)];if(!r)return false;const w=r.restDay?restSettings.win/100:WIN;return r.pct>=w;}).length;
+  const avg=activeDays.length?activeDays.reduce((s,d)=>{const r=allHistory[dateKey(d)];return s+(r?r.pct:0);},0)/activeDays.length:0;
+  let h=`<div class="history-nav">
+    <button class="nav-btn" onclick="shiftWeek(-1)">&#8592;</button>
+    <span class="nav-title">${label}</span>
+    <button class="nav-btn" onclick="shiftWeek(1)">&#8594;</button>
+  </div>`;
+  if(!hasAnyData)return h+`<div class="no-data-state"><p>No data for this week yet.</p><button class="no-data-btn" onclick="setTab('today')">Go to Today</button></div>`;
+  h+=`<div class="summary-row">
+    <div class="summary-card"><div class="summary-val">${won}/7</div><div class="summary-lbl">Days won</div></div>
+    <div class="summary-card"><div class="summary-val">${activeDays.length?Math.round(avg*100)+'%':'—'}</div><div class="summary-lbl">Avg (${activeDays.length} active)</div></div>
+    <div class="summary-card"><div class="summary-val">${streak} &#128293;</div><div class="summary-lbl">Streak</div></div>
+  </div><div class="day-grid">`;
+  dates.forEach(d=>{
+    const key=dateKey(d);const rec=allHistory[key];
+    const isToday=key===tk;const isFuture=d>new Date()&&!isToday;
+    const pct=rec?rec.pct:null;const rest=rec&&rec.restDay;
+    const col=pct!==null?statusColor(pct,rest):"var(--color-border-tertiary)";
+    h+=`<div class="day-cell${isToday?' today':''}${isFuture?' future':''}">
+      <div class="day-label">${DAYS[d.getDay()]}</div>
+      <div class="day-pct" style="color:${pct!==null?col:'var(--color-text-tertiary)'}">${rest?'R':pct!==null?Math.round(pct*100)+'%':'—'}</div>
+      <div class="day-dot" style="background:${col}"></div>
+      ${rec&&rec.reflection?`<div style="font-size:9px;color:var(--color-text-tertiary);margin-top:2px">note</div>`:''}
+    </div>`;
+  });
+  h+=`</div>`;
+  const entries=dates.map(d=>({d,rec:allHistory[dateKey(d)]})).filter(e=>e.rec);
+  h+=`<div style="margin-bottom:1.5rem">`;
+  entries.forEach(({d,rec})=>{
+    const pct=rec.pct||0;const col=statusColor(pct,rec.restDay);
+    h+=`<div class="week-row">
+      <span style="font-size:13px;color:var(--color-text-secondary)">${d.toLocaleDateString("en-US",{weekday:"short",month:"short",day:"numeric"})}${rec.restDay?' <span style="font-size:10px;color:#3A7EC4">R</span>':''}</span>
+      <div class="week-bar-track"><div class="week-bar-fill" style="width:${Math.round(pct*100)}%;background:${col}"></div></div>
+      <span style="font-size:13px;font-weight:500;color:${col};text-align:right">${Math.round(pct*100)}%</span>
+    </div>`;
+  });
+  h+=`</div><div style="border-top:0.5px solid var(--color-border-tertiary);padding-top:1.25rem">
+    <div class="reflection-label" style="margin-bottom:1rem">Reflections this week</div>
+    ${reflectionCards(dates.map(d=>({d,rec:allHistory[dateKey(d)]})))}
+  </div>`;
+  return h;
+}
+
+function getMonthDates(offset){
+  const now=new Date();const y=now.getFullYear();const m=now.getMonth()+offset;
+  const first=new Date(y,m,1);const last=new Date(y,m+1,0);
+  return{first,last,year:first.getFullYear(),month:first.getMonth()};
+}
+
+function getStreakRanges(){
+  const ranges=[];let start=null;
+  const sorted=Object.keys(allHistory).sort();
+  sorted.forEach((key,i)=>{
+    const rec=allHistory[key];const w=rec&&rec.restDay?restSettings.win/100:WIN;
+    const counts=rec&&rec.pct>=w;
+    if(counts&&!start)start=key;
+    else if(!counts&&start){ranges.push({start,end:sorted[i-1]});start=null;}
+  });
+  if(start)ranges.push({start,end:sorted[sorted.length-1]});
+  return ranges;
+}
+
+function renderMonth(){
+  const{first,last,year,month}=getMonthDates(monthOffset);
+  const tk=todayKey();const daysInMonth=last.getDate();const startDay=first.getDay();
+  const daysData=Array.from({length:daysInMonth},(_,i)=>{
+    const d=new Date(year,month,i+1);const key=dateKey(d);
+    return{day:i+1,key,rec:allHistory[key],d};
+  });
+  const hasAnyData=daysData.some(({rec})=>rec);
+  const streak=calcStreak();
+  const activeDays=daysData.filter(({rec})=>rec&&!rec.restDay);
+  const won=daysData.filter(({rec})=>{if(!rec)return false;const w=rec.restDay?restSettings.win/100:WIN;return rec.pct>=w;}).length;
+  const avg=activeDays.length?activeDays.reduce((s,{rec})=>s+(rec?rec.pct:0),0)/activeDays.length:0;
+  const streakRanges=getStreakRanges();
+  function isInStreak(key){return streakRanges.some(r=>key>=r.start&&key<=r.end);}
+  let h=`<div class="history-nav">
+    <button class="nav-btn" onclick="shiftMonth(-1)">&#8592;</button>
+    <span class="nav-title">${MONTHS[month]} ${year}</span>
+    <button class="nav-btn" onclick="shiftMonth(1)">&#8594;</button>
+  </div>`;
+  if(!hasAnyData)return h+`<div class="no-data-state"><p>No data for ${MONTHS[month]} yet.</p><button class="no-data-btn" onclick="setTab('today')">Go to Today</button></div>`;
+  h+=`<div class="summary-row">
+    <div class="summary-card"><div class="summary-val">${won}</div><div class="summary-lbl">Days won</div></div>
+    <div class="summary-card"><div class="summary-val">${activeDays.length?Math.round(avg*100)+'%':'—'}</div><div class="summary-lbl">Avg (${activeDays.length} active)</div></div>
+    <div class="summary-card"><div class="summary-val">${streak} &#128293;</div><div class="summary-lbl">Streak</div></div>
+  </div><div class="month-grid">`;
+  DAYS.forEach(d=>{h+=`<div class="month-hdr">${d[0]}</div>`;});
+  for(let i=0;i<startDay;i++)h+=`<div class="month-cell empty"></div>`;
+  daysData.forEach(({day,key,rec,d})=>{
+    const isToday=key===tk;const isFuture=d>new Date()&&!isToday;
+    const pct=rec?rec.pct:null;const rest=rec&&rec.restDay;
+    const inStreak=isInStreak(key);
+    let bg='var(--color-background-secondary)';let color='var(--color-text-tertiary)';
+    if(pct!==null&&!isFuture){const sc=statusColor(pct,rest);bg=sc+'22';color=sc;}
+    h+=`<div class="month-cell${rec?' has-data':''}${isToday?' today-cell':''}" style="background:${bg};opacity:${isFuture?0.3:1}">
+      <span style="font-size:11px;font-weight:500;color:${color}">${rest?'R':day}</span>
+      ${inStreak&&!isFuture?`<div class="streak-dot"></div>`:''}
+    </div>`;
+  });
+  h+=`</div>
+  <div style="display:flex;gap:16px;justify-content:center;flex-wrap:wrap;margin-bottom:1.5rem;row-gap:6px">
+    <div style="display:flex;align-items:center;gap:6px"><div style="width:10px;height:10px;border-radius:2px;background:#2E9E5B22;border:0.5px solid #2E9E5B"></div><span style="font-size:11px;color:var(--color-text-tertiary)">Crushing it</span></div>
+    <div style="display:flex;align-items:center;gap:6px"><div style="width:10px;height:10px;border-radius:2px;background:#3A7EC422;border:0.5px solid #3A7EC4"></div><span style="font-size:11px;color:var(--color-text-tertiary)">Day won</span></div>
+    <div style="display:flex;align-items:center;gap:6px"><div style="width:10px;height:10px;border-radius:2px;background:#C8891A22;border:0.5px solid #C8891A"></div><span style="font-size:11px;color:var(--color-text-tertiary)">Building</span></div>
+    <div style="display:flex;align-items:center;gap:6px"><div style="width:6px;height:6px;border-radius:50%;background:#E8A020"></div><span style="font-size:11px;color:var(--color-text-tertiary)">Streak day</span></div>
+    <div style="display:flex;align-items:center;gap:6px"><span style="font-size:11px;font-weight:500;color:#3A7EC4">R</span><span style="font-size:11px;color:var(--color-text-tertiary)">Rest day</span></div>
+  </div>
+  <div style="border-top:0.5px solid var(--color-border-tertiary);padding-top:1.25rem">
+    <div class="reflection-label" style="margin-bottom:1rem">Reflections this month</div>
+    ${reflectionCards(daysData.map(({d,rec})=>({d,rec})))}
+  </div>`;
+  return h;
+}
+
+function render(){
+  const tabs=`<div class="tabs">
+    <div class="tab${activeTab==='today'?' active':''}" onclick="setTab('today')">Today</div>
+    <div class="tab${activeTab==='week'?' active':''}" onclick="setTab('week')">Week</div>
+    <div class="tab${activeTab==='month'?' active':''}" onclick="setTab('month')">Month</div>
+  </div>`;
+  let content='';
+  if(activeTab==='today')content=renderToday();
+  else if(activeTab==='week')content=renderWeek();
+  else content=renderMonth();
+  document.getElementById('app').innerHTML=tabs+content;
+  const overlay=document.getElementById('editor-overlay');
+  if(showEditor)overlay.innerHTML=renderEditor();
+  else if(showImport)overlay.innerHTML=renderImportModal();
+  else if(showRestEditor)overlay.innerHTML=renderRestEditor();
+  overlay.style.display=(showEditor||showImport||showRestEditor)?'block':'none';
+}
+
+async function toggle(id){
+  const tasks=isRestDay?restTasks():allTasks();
+  const tot=isRestDay?restTotal():total();
+  const earned=tasks.filter(t=>checked[t.id]).reduce((s,t)=>s+t.points,0);
+  prevWonState=earned/tot>=(isRestDay?restSettings.win/100:WIN);
+  checked[id]=!checked[id];await saveDay();render();
+}
+async function confirmReset(){if(confirm('Reset today?')){checked={};await saveDay();render();}}
+function setTab(t){activeTab=t;render();}
+function shiftWeek(d){weekOffset+=d;render();}
+function shiftMonth(d){monthOffset+=d;render();}
+function editWhy(){editingWhy=true;render();setTimeout(()=>{const el=document.getElementById('why-input');if(el){el.focus();el.setSelectionRange(el.value.length,el.value.length);}},50);}
+</script>
+</body>
+</html>
