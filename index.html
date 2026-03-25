@@ -250,8 +250,15 @@ function getLevelProgress(n) {
 }
 
 // ── SUPABASE ────────────────────────────────────────────────────────────────
-const sb = window.supabase.createClient(SUPABASE_URL, SUPABASE_KEY);
-let currentUser = null, currentProfile = null, authView = 'login';
+const sb = window.supabase.createClient(SUPABASE_URL, SUPABASE_KEY, {
+  auth: {
+    storageKey: 'wtd-auth',
+    autoRefreshToken: true,
+    persistSession: true,
+    detectSessionInUrl: false,
+  }
+});
+  let currentUser = null, currentProfile = null, authView = 'login';
 let adminView = 'pending', adminClientId = null, adminClientEmail = '';
 
 const storage = {
@@ -272,7 +279,7 @@ async function signUp() {
   const email = document.getElementById('a-email').value.trim(), pw = document.getElementById('a-pw').value;
   const errEl = document.getElementById('a-err'), btn = document.getElementById('a-btn');
   errEl.textContent = ''; btn.disabled = true; btn.textContent = 'Creating…';
-  const { data, error } = await sb.auth.signUp({ email, password: pw });
+  const { data, error } = await .signUp({ email, password: pw });
   if (error) { errEl.textContent = error.message; btn.disabled = false; btn.textContent = 'Create account'; return; }
   const isAdmin = email.toLowerCase() === ADMIN_EMAIL.toLowerCase();
   await sb.from('wtd_profiles').upsert({ id: data.user.id, email, approved: isAdmin, is_admin: isAdmin }, { onConflict: 'id' });
@@ -1208,8 +1215,25 @@ function shiftMonth(d) { monthOffset+=d; render(); }
 
 // ── BOOT ─────────────────────────────────────────────────────────────────────
 sb.auth.onAuthStateChange(async (event, session) => {
-  if (session) { currentUser = session.user; await renderRoot(); }
-  else { currentUser=null; currentProfile=null; resetAppState(); renderAuth(); }
+  if (event === 'TOKEN_REFRESHED' || event === 'SIGNED_IN') {
+    if (session) { currentUser = session.user; await renderRoot(); }
+  } else if (event === 'SIGNED_OUT') {
+    currentUser = null; currentProfile = null; resetAppState(); renderAuth();
+  } else if (session) {
+    currentUser = session.user; await renderRoot();
+  } else {
+    currentUser = null; currentProfile = null; resetAppState(); renderAuth();
+  }
+});
+
+// Recover silently if auth lock is stolen by another tab
+window.addEventListener('unhandledrejection', (e) => {
+  if (e.reason?.message?.includes('Lock') || e.reason?.message?.includes('lock')) {
+    e.preventDefault();
+    sb.auth.getSession().then(({ data: { session } }) => {
+      if (session && !currentUser) { currentUser = session.user; renderRoot(); }
+    }).catch(() => {});
+  }
 });
 </script>
 </body>
