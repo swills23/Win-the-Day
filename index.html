@@ -1214,7 +1214,7 @@ function shiftWeek(d) { weekOffset+=d; render(); }
 function shiftMonth(d) { monthOffset+=d; render(); }
 
 // ── BOOT ─────────────────────────────────────────────────────────────────────
-sb.auth.onAuthStateChange(async (event, session) => {
+
   if (event === 'TOKEN_REFRESHED' || event === 'SIGNED_IN') {
     if (session) { currentUser = session.user; await renderRoot(); }
   } else if (event === 'SIGNED_OUT') {
