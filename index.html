@@ -342,7 +342,7 @@ async function signIn(){
   const errEl=document.getElementById('a-err'),btn=document.getElementById('a-btn');
   errEl.textContent='';btn.disabled=true;btn.textContent='Signing in…';
   try{
-    const timeout=new Promise((_,rej)=>setTimeout(()=>rej(new Error('Request timed out — check your connection and try again.')),10000));
+    const timeout=new Promise((_,rej)=>setTimeout(()=>rej(new Error('Request timed out — check your connection and try again.')),30000));
     const signIn=sb.auth.signInWithPassword({email,password:pw});
     const{error}=await Promise.race([signIn,timeout]);
     if(error){errEl.textContent=error.message;btn.disabled=false;btn.textContent='Sign in';}
