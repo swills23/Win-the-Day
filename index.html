@@ -289,9 +289,13 @@ const LEVELS = [
   {name:'Bronze',min:0,max:10,icon:'ð¥',color:'#CD7F32'},
   {name:'Silver',min:10,max:30,icon:'ð¥',color:'#A8A9AD'},
   {name:'Gold',min:30,max:75,icon:'ð¥',color:'#D4A853'},
-  {name:'Platinum',min:75,max:150,icon:'ð',color:'#C0C0C0'},
-  {name:'Diamond',min:150,max:365,icon:'ð ',color:'#64D2FF'},
-  {name:'Obsidian',min:365,max:9999,icon:'â¬',color:'#B39DDB'},
+  {name:'Platinum',min:75,max:150,icon:'ð',cconst LEVELS = [
+  {name:'Bronze',min:0,max:10,icon:'🥉',color:'#CD7F32'},
+  {name:'Silver',min:10,max:30,icon:'🥈',color:'#A8A9AD'},
+  {name:'Gold',min:30,max:75,icon:'🥇',color:'#D4A853'},
+  {name:'Platinum',min:75,max:150,icon:'💎',color:'#C0C0C0'},
+  {name:'Diamond',min:150,max:365,icon:'💠',color:'#64D2FF'},
+  {name:'Obsidian',min:365,max:9999,icon:'⬛',color:'#B39DDB'},
 ];
 function getLevel(n){for(let i=LEVELS.length-1;i>=0;i--){if(n>=LEVELS[i].min)return{...LEVELS[i],index:i};}return{...LEVELS[0],index:0};}
 function getLevelProgress(n){const lv=getLevel(n);if(lv.index===LEVELS.length-1)return{lv,pct:1,toNext:0,nextName:''};return{lv,pct:(n-lv.min)/(lv.max-lv.min),toNext:lv.max-n,nextName:LEVELS[lv.index+1].name};}
