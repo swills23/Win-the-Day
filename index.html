@@ -276,7 +276,7 @@ body{background:var(--bg);color:var(--text);font-family:var(--font);touch-action
 </style>
 </head>
 <body>
-<div id="root"><div class="loading"><div style="font-size:24px;font-weight:600;margin-bottom:8px">Win the Day</div><div style="font-size:13px;color:var(--text3)">LoadingÃ¢ÂÂ¦</div></div></div>
+<div id="root"><div class="loading"><div style="font-size:24px;font-weight:600;margin-bottom:8px">Win the Day</div><div style="font-size:13px;color:var(--text3)">LoadingÃÂ¢ÃÂÃÂ¦</div></div></div>
 <div id="ov" style="display:none"></div>
 
 <script>
@@ -286,12 +286,12 @@ const ADMIN_EMAIL = 'scott@scottzwills.com';
 const APP_NAME = 'Win the Day';
 
 const LEVELS = [
-  {name:'Bronze',min:0,max:10,icon:'Ã°ÂÂ¥Â',color:'#CD7F32'},
-  {name:'Silver',min:10,max:30,icon:'Ã°ÂÂ¥Â',color:'#A8A9AD'},
-  {name:'Gold',min:30,max:75,icon:'Ã°ÂÂ¥Â',color:'#D4A853'},
-  {name:'Platinum',min:75,max:150,icon:'Ã°ÂÂÂ',color:'#C0C0C0'},
-  {name:'Diamond',min:150,max:365,icon:'Ã°ÂÂÂ ',color:'#64D2FF'},
-  {name:'Obsidian',min:365,max:9999,icon:'Ã¢Â¬Â',color:'#B39DDB'},
+  {name:'Bronze',min:0,max:10,icon:'🥉',color:'#CD7F32'},
+  {name:'Silver',min:10,max:30,icon:'🥈',color:'#A8A9AD'},
+  {name:'Gold',min:30,max:75,icon:'🥇',color:'#D4A853'},
+  {name:'Platinum',min:75,max:150,icon:'💎',color:'#C0C0C0'},
+  {name:'Diamond',min:150,max:365,icon:'💠',color:'#64D2FF'},
+  {name:'Obsidian',min:365,max:9999,icon:'⬛',color:'#B39DDB'},
 ];
 function getLevel(n){for(let i=LEVELS.length-1;i>=0;i--){if(n>=LEVELS[i].min)return{...LEVELS[i],index:i};}return{...LEVELS[0],index:0};}
 function getLevelProgress(n){const lv=getLevel(n);if(lv.index===LEVELS.length-1)return{lv,pct:1,toNext:0,nextName:''};return{lv,pct:(n-lv.min)/(lv.max-lv.min),toNext:lv.max-n,nextName:LEVELS[lv.index+1].name};}
@@ -318,7 +318,7 @@ const storage={
 async function signUp(){
   const email=document.getElementById('a-email').value.trim(),pw=document.getElementById('a-pw').value;
   const errEl=document.getElementById('a-err'),btn=document.getElementById('a-btn');
-  errEl.textContent='';btn.disabled=true;btn.textContent='CreatingÃ¢ÂÂ¦';
+  errEl.textContent='';btn.disabled=true;btn.textContent='CreatingÃÂ¢ÃÂÃÂ¦';
   const{data,error}=await sb.auth.signUp({email,password:pw});
   if(error){errEl.textContent=error.message;btn.disabled=false;btn.textContent='Create account';return;}
   const isAdmin=email.toLowerCase()===ADMIN_EMAIL.toLowerCase();
@@ -328,9 +328,9 @@ async function signUp(){
 async function signIn(){
   const email=document.getElementById('a-email').value.trim(),pw=document.getElementById('a-pw').value;
   const errEl=document.getElementById('a-err'),btn=document.getElementById('a-btn');
-  errEl.textContent='';btn.disabled=true;btn.textContent='Signing inÃ¢ÂÂ¦';
+  errEl.textContent='';btn.disabled=true;btn.textContent='Signing inÃÂ¢ÃÂÃÂ¦';
   try{
-    const timeout=new Promise((_,rej)=>setTimeout(()=>rej(new Error('Request timed out Ã¢ÂÂ check your connection and try again.')),10000));
+    const timeout=new Promise((_,rej)=>setTimeout(()=>rej(new Error('Request timed out ÃÂ¢ÃÂÃÂ check your connection and try again.')),10000));
     const signIn=sb.auth.signInWithPassword({email,password:pw});
     const{error}=await Promise.race([signIn,timeout]);
     if(error){errEl.textContent=error.message;btn.disabled=false;btn.textContent='Sign in';}
@@ -365,17 +365,17 @@ async function renderAdmin(){
   }
   const list=adminView==='pending'?pending:approved;
   let html=`<div class="top-bar"><span class="top-bar-email">${currentUser.email}</span><button class="top-bar-btn" onclick="switchToMyTracker()">My Tracker</button><button class="top-bar-btn" onclick="signOut()">Sign out</button></div>
-  <div class="admin"><div style="margin-bottom:1.25rem"><div style="font-size:18px;font-weight:500;">${APP_NAME} Ã¢ÂÂ Admin</div><div style="font-size:12px;color:var(--text3);margin-top:2px;">${profiles.length} total users</div></div>
+  <div class="admin"><div style="margin-bottom:1.25rem"><div style="font-size:18px;font-weight:500;">${APP_NAME} ÃÂ¢ÃÂÃÂ Admin</div><div style="font-size:12px;color:var(--text3);margin-top:2px;">${profiles.length} total users</div></div>
   <div class="admin-tabs"><div class="admin-tab${adminView==='pending'?' active':''}" onclick="setAdminView('pending')">Pending (${pending.length})</div><div class="admin-tab${adminView==='approved'?' active':''}" onclick="setAdminView('approved')">Clients (${approved.length})</div></div>`;
   if(!list.length){html+=`<div class="no-users">No ${adminView==='pending'?'pending approvals':'clients'} yet.</div>`;}
   else if(adminView==='pending'){list.forEach(p=>{html+=`<div class="user-card"><div class="user-top"><div class="user-avatar">${p.email[0].toUpperCase()}</div><div style="flex:1"><div style="font-size:14px">${p.email}</div><div style="font-size:11px;color:var(--text3)">Requested ${new Date(p.created_at).toLocaleDateString()}</div></div></div><div class="user-actions"><button class="btn-sm btn-green" onclick="approveUser('${p.id}')">Approve</button><button class="btn-outline-red" onclick="removeUser('${p.id}')">Remove</button></div></div>`;});}
-  else{list.forEach(p=>{const s=statsMap[p.id]||{};const lv=getLevel(s.won||0);const inactive=s.daysSince!==null&&s.daysSince>=2;const todayColor=s.todayPct!==null?statusColor(s.todayPct,false):'var(--text3)';html+=`<div class="user-card"><div class="user-top"><div class="user-avatar">${p.email[0].toUpperCase()}</div><div style="flex:1"><div style="font-size:14px">${p.email}</div><div style="font-size:11px;display:flex;align-items:center;gap:6px;margin-top:2px;"><span style="color:${lv.color};font-weight:500">${lv.icon} ${lv.name}</span>${inactive?`<span class="inactive-flag">Inactive ${s.daysSince}d</span>`:''}</div></div>${s.todayPct!==null?`<div style="font-size:15px;font-weight:500;color:${todayColor}">${Math.round(s.todayPct*100)}%</div>`:''}</div><div class="user-stats"><div class="user-stat"><div class="user-stat-val">${s.won||0}</div><div class="user-stat-lbl">Days won</div></div><div class="user-stat"><div class="user-stat-val" style="color:${todayColor}">${s.todayPct!==null?Math.round(s.todayPct*100)+'%':'Ã¢ÂÂ'}</div><div class="user-stat-lbl">Today</div></div><div class="user-stat"><div class="user-stat-val">${s.daysSince!==null?s.daysSince+'d':'Ã¢ÂÂ'}</div><div class="user-stat-lbl">Last active</div></div></div><div class="user-actions"><button class="btn-sm btn-green" onclick="viewClient('${p.id}','${p.email}')">View tracker</button><button class="top-bar-btn" onclick="openHabitBuilder('${p.id}','${p.email}')">Build habits</button><button class="top-bar-btn" onclick="openAssignActions('${p.id}','${p.email}')">Assign actions</button><button class="btn-outline-red" onclick="removeUser('${p.id}')">Remove</button></div></div>`;});}
+  else{list.forEach(p=>{const s=statsMap[p.id]||{};const lv=getLevel(s.won||0);const inactive=s.daysSince!==null&&s.daysSince>=2;const todayColor=s.todayPct!==null?statusColor(s.todayPct,false):'var(--text3)';html+=`<div class="user-card"><div class="user-top"><div class="user-avatar">${p.email[0].toUpperCase()}</div><div style="flex:1"><div style="font-size:14px">${p.email}</div><div style="font-size:11px;display:flex;align-items:center;gap:6px;margin-top:2px;"><span style="color:${lv.color};font-weight:500">${lv.icon} ${lv.name}</span>${inactive?`<span class="inactive-flag">Inactive ${s.daysSince}d</span>`:''}</div></div>${s.todayPct!==null?`<div style="font-size:15px;font-weight:500;color:${todayColor}">${Math.round(s.todayPct*100)}%</div>`:''}</div><div class="user-stats"><div class="user-stat"><div class="user-stat-val">${s.won||0}</div><div class="user-stat-lbl">Days won</div></div><div class="user-stat"><div class="user-stat-val" style="color:${todayColor}">${s.todayPct!==null?Math.round(s.todayPct*100)+'%':'ÃÂ¢ÃÂÃÂ'}</div><div class="user-stat-lbl">Today</div></div><div class="user-stat"><div class="user-stat-val">${s.daysSince!==null?s.daysSince+'d':'ÃÂ¢ÃÂÃÂ'}</div><div class="user-stat-lbl">Last active</div></div></div><div class="user-actions"><button class="btn-sm btn-green" onclick="viewClient('${p.id}','${p.email}')">View tracker</button><button class="top-bar-btn" onclick="openHabitBuilder('${p.id}','${p.email}')">Build habits</button><button class="top-bar-btn" onclick="openAssignActions('${p.id}','${p.email}')">Assign actions</button><button class="btn-outline-red" onclick="removeUser('${p.id}')">Remove</button></div></div>`;});}
   html+=`</div>`;document.getElementById('root').innerHTML=html;
 }
 
 async function viewClient(uid,email){adminClientId=uid;adminClientEmail=email;await loadAll(uid);const tasks=isRestDay?restTasks():allTasks();const tot=isRestDay?restTotal():total();const earned=tasks.filter(t=>checked[t.id]).reduce((s,t)=>s+t.points,0);prevWonState=earned/tot>=(isRestDay?restSettings.win/100:WIN);renderTracker();}
 function switchToMyTracker(){adminClientId=null;adminClientEmail='';loadAll().then(()=>{render();});}
-function openAssignActions(uid,email){showOv(`<div class="overlay-bg" onclick="if(event.target===this)closeOv()"><div class="modal"><div class="modal-title">Assign action items</div><div class="modal-sub">For ${email} Ã¢ÂÂ one item per line.</div><textarea class="assign-area" id="assign-inp" placeholder="Read chapter 3&#10;Write your 90-day vision"></textarea><div class="modal-actions"><button class="btn-save" onclick="doAssignActions('${uid}')">Save</button><button class="btn-cancel" onclick="closeOv()">Cancel</button></div></div></div>`);}
+function openAssignActions(uid,email){showOv(`<div class="overlay-bg" onclick="if(event.target===this)closeOv()"><div class="modal"><div class="modal-title">Assign action items</div><div class="modal-sub">For ${email} ÃÂ¢ÃÂÃÂ one item per line.</div><textarea class="assign-area" id="assign-inp" placeholder="Read chapter 3&#10;Write your 90-day vision"></textarea><div class="modal-actions"><button class="btn-save" onclick="doAssignActions('${uid}')">Save</button><button class="btn-cancel" onclick="closeOv()">Cancel</button></div></div></div>`);}
 async function doAssignActions(uid){const text=document.getElementById('assign-inp').value.trim();const items=text.split('\n').map(s=>s.trim()).filter(Boolean).map(s=>({text:s,done:false}));await storage.set('wtd-actions',JSON.stringify(items),uid);closeOv();alert('Action items saved!');}
 
 function openAccountModal(){
@@ -400,7 +400,7 @@ async function changePassword(){
   const msg=document.getElementById('acc-msg');
   if(!pw1||pw1.length<6){msg.textContent='Password must be at least 6 characters.';return;}
   if(pw1!==pw2){msg.textContent='Passwords don\'t match.';return;}
-  msg.textContent='UpdatingÃ¢ÂÂ¦';msg.style.color='var(--text3)';
+  msg.textContent='UpdatingÃÂ¢ÃÂÃÂ¦';msg.style.color='var(--text3)';
   const{error}=await sb.auth.updateUser({password:pw1});
   if(error){msg.textContent=error.message;msg.style.color='var(--red)';}
   else{msg.textContent='Password updated successfully.';msg.style.color='var(--green)';setTimeout(()=>closeOv(),1500);}
@@ -434,7 +434,7 @@ async function openHabitBuilder(uid,email){
             <option${task.tier==='A'?' selected':''}>A</option>
             <option${task.tier==='B'?' selected':''}>B</option>
           </select>
-          <button class="del-btn" onclick="hbDeleteTask(${task.id},'${type}','${uid}','${email}')">ÃÂ</button>
+          <button class="del-btn" onclick="hbDeleteTask(${task.id},'${type}','${uid}','${email}')">ÃÂÃÂ</button>
         </div>`;
       });
       h+=`</div>`;
@@ -492,7 +492,7 @@ async function renderRoot(){
 
 function renderAuth(){
   const isLogin=authView==='login';
-  document.getElementById('root').innerHTML=`<div class="screen"><h1>${APP_NAME}</h1><p>${isLogin?'Sign in to your account.':'Create your account. Your coach will approve you shortly.'}</p><div id="a-err" class="err"></div><label class="lbl">Email</label><input class="inp" id="a-email" type="email" placeholder="you@example.com" autocomplete="email"><label class="lbl">Password</label><input class="inp" id="a-pw" type="password" placeholder="Ã¢ÂÂ¢Ã¢ÂÂ¢Ã¢ÂÂ¢Ã¢ÂÂ¢Ã¢ÂÂ¢Ã¢ÂÂ¢Ã¢ÂÂ¢Ã¢ÂÂ¢" onkeydown="if(event.key==='Enter')${isLogin?'signIn()':'signUp()}"}"><button class="btn-primary" id="a-btn" onclick="${isLogin?'signIn()':'signUp()}'}"> ${isLogin?'Sign in':'Create account'}</button>${isLogin?`<a class="lnk" onclick="showForgotPassword()">Forgot password?</a>`:''}<a class="lnk" onclick="toggleAuthView()" style="margin-top:6px">${isLogin?"Don't have an account? Sign up":"Already have an account? Sign in"}</a></div>`;
+  document.getElementById('root').innerHTML=`<div class="screen"><h1>${APP_NAME}</h1><p>${isLogin?'Sign in to your account.':'Create your account. Your coach will approve you shortly.'}</p><div id="a-err" class="err"></div><label class="lbl">Email</label><input class="inp" id="a-email" type="email" placeholder="you@example.com" autocomplete="email"><label class="lbl">Password</label><input class="inp" id="a-pw" type="password" placeholder="ÃÂ¢ÃÂÃÂ¢ÃÂ¢ÃÂÃÂ¢ÃÂ¢ÃÂÃÂ¢ÃÂ¢ÃÂÃÂ¢ÃÂ¢ÃÂÃÂ¢ÃÂ¢ÃÂÃÂ¢ÃÂ¢ÃÂÃÂ¢ÃÂ¢ÃÂÃÂ¢" onkeydown="if(event.key==='Enter')${isLogin?'signIn()':'signUp()}"}"><button class="btn-primary" id="a-btn" onclick="${isLogin?'signIn()':'signUp()}'}"> ${isLogin?'Sign in':'Create account'}</button>${isLogin?`<a class="lnk" onclick="showForgotPassword()">Forgot password?</a>`:''}<a class="lnk" onclick="toggleAuthView()" style="margin-top:6px">${isLogin?"Don't have an account? Sign up":"Already have an account? Sign in"}</a></div>`;
   setTimeout(()=>document.getElementById('a-email')?.focus(),50);
 }
 
@@ -502,14 +502,14 @@ async function showForgotPassword(){
   document.getElementById('a-err').textContent='';
   const{error}=await sb.auth.resetPasswordForEmail(email,{redirectTo:window.location.href});
   if(error){document.getElementById('a-err').textContent=error.message;}
-  else{document.getElementById('a-err').style.color='var(--green)';document.getElementById('a-err').textContent='Password reset email sent Ã¢ÂÂ check your inbox.';}
+  else{document.getElementById('a-err').style.color='var(--green)';document.getElementById('a-err').textContent='Password reset email sent ÃÂ¢ÃÂÃÂ check your inbox.';}
 }
-function renderPending(){document.getElementById('root').innerHTML=`<div class="screen" style="text-align:center;margin-top:120px;"><div style="font-size:48px;margin-bottom:1rem">Ã¢ÂÂ³</div><h1 style="margin-bottom:10px;">You're on the list</h1><p>Your account is pending approval.</p><button class="btn-ghost" onclick="signOut()" style="margin-top:1rem">Sign out</button></div>`;}
+function renderPending(){document.getElementById('root').innerHTML=`<div class="screen" style="text-align:center;margin-top:120px;"><div style="font-size:48px;margin-bottom:1rem">ÃÂ¢ÃÂÃÂ³</div><h1 style="margin-bottom:10px;">You're on the list</h1><p>Your account is pending approval.</p><button class="btn-ghost" onclick="signOut()" style="margin-top:1rem">Sign out</button></div>`;}
 
 function renderTracker(){
   const isAdmin=currentProfile&&currentProfile.is_admin;
   const isViewingClient=!!adminClientId;
-  const topBar=`<div class="top-bar"><span class="top-bar-title">${isViewingClient?`Ã°ÂÂÂ ${adminClientEmail}`:APP_NAME}</span><span class="top-bar-email">${currentUser?.email||''}</span>${isViewingClient?`<button class="top-bar-btn" onclick="renderAdmin()">Ã¢ÂÂ Admin</button>`:''}${isAdmin&&!isViewingClient?`<button class="top-bar-btn" onclick="openAdmin()">Admin</button>`:''} ${!isViewingClient?`<button class="top-bar-btn" onclick="openAccountModal()">Account</button>`:''}<button class="top-bar-btn" onclick="signOut()">Sign out</button></div>`;
+  const topBar=`<div class="top-bar"><span class="top-bar-title">${isViewingClient?`ÃÂ°ÃÂÃÂÃÂ ${adminClientEmail}`:APP_NAME}</span><span class="top-bar-email">${currentUser?.email||''}</span>${isViewingClient?`<button class="top-bar-btn" onclick="renderAdmin()">ÃÂ¢ÃÂÃÂ Admin</button>`:''}${isAdmin&&!isViewingClient?`<button class="top-bar-btn" onclick="openAdmin()">Admin</button>`:''} ${!isViewingClient?`<button class="top-bar-btn" onclick="openAccountModal()">Account</button>`:''}<button class="top-bar-btn" onclick="signOut()">Sign out</button></div>`;
   const tabs=`<div class="tabs"><div class="tab${activeTab==='today'?' active':''}" onclick="setTab('today')">Today</div><div class="tab${activeTab==='week'?' active':''}" onclick="setTab('week')">Week</div><div class="tab${activeTab==='month'?' active':''}" onclick="setTab('month')">Month</div><div class="tab${activeTab==='goals'?' active':''}" onclick="setTab('goals')">Goals</div></div>`;
   let content='';
   if(activeTab==='today')content=renderToday(isViewingClient);
@@ -528,7 +528,7 @@ const DEFAULT_TIMED=[
   {id:2,block:"Morning",name:"Morning walk",points:7,tier:"A"},
   {id:3,block:"Morning",name:"Stretch + breathwork",points:8,tier:"A"},
   {id:4,block:"Morning",name:"FSN + gratitude + why statement + habit doc",sub:"Read your why. Let it land.",points:8,tier:"A"},
-  {id:5,block:"Deep Work",name:"Work block 1 Ã¢ÂÂ deep focus",points:17,tier:"S"},
+  {id:5,block:"Deep Work",name:"Work block 1 ÃÂ¢ÃÂÃÂ deep focus",points:17,tier:"S"},
   {id:6,block:"Midday",name:"Walk",points:5,tier:"B"},
   {id:7,block:"Midday",name:"10-min meditation",points:7,tier:"A"},
   {id:8,block:"Deep Work",name:"Work block 2",points:15,tier:"S"},
@@ -601,8 +601,8 @@ function getInsight(pct,earned,rest){
   const tot=rest?restTotal():total();
   const w=rest?restSettings.win/100:WIN,c=rest?restSettings.crush/100:CRUSH;
   const toWin=Math.ceil(w*tot-earned),toCrush=Math.ceil(c*tot-earned);
-  if(pct>=c)return`${rest?'Rest day Ã¢ÂÂ ':''}Crushing it. <strong>${Math.round(pct*100)}%</strong> Ã¢ÂÂ exceptional.`;
-  if(pct>=w)return`${rest?'Rest day Ã¢ÂÂ ':''}Day won. <strong>${toCrush} more pts</strong> to crush it.`;
+  if(pct>=c)return`${rest?'Rest day ÃÂ¢ÃÂÃÂ ':''}Crushing it. <strong>${Math.round(pct*100)}%</strong> ÃÂ¢ÃÂÃÂ exceptional.`;
+  if(pct>=w)return`${rest?'Rest day ÃÂ¢ÃÂÃÂ ':''}Day won. <strong>${toCrush} more pts</strong> to crush it.`;
   if(toWin>0&&toWin<=20)return`<strong>${toWin} points</strong> away from winning the day.`;
   if(pct>=0.4)return`Building. <strong>${toWin} points</strong> to win the day.`;
   if(pct>0)return`Started. <strong>${toWin} points</strong> needed to win.`;
@@ -741,7 +741,7 @@ function scheduleReminder(){
       const pct=tot>0?earned/tot:0;
       const w=isRestDay?restSettings.win/100:WIN;
       if(pct<w&&Notification.permission==='granted'){
-        new Notification('Win the Day',{body:`You're at ${Math.round(pct*100)}% Ã¢ÂÂ ${Math.ceil(w*tot-earned)} pts to win the day.`,icon:''});
+        new Notification('Win the Day',{body:`You're at ${Math.round(pct*100)}% ÃÂ¢ÃÂÃÂ ${Math.ceil(w*tot-earned)} pts to win the day.`,icon:''});
       }
     }
   },60000);
@@ -817,17 +817,17 @@ async function doImport(){
 function buildEmailBody(){
   const rec=allHistory[todayKey()];const pct=rec?rec.pct:0,earned=rec?rec.earned:0;
   const todayDate=new Date().toLocaleDateString("en-US",{weekday:"long",month:"long",day:"numeric"});
-  let body=`WIN THE DAY${isRestDay?' Ã¢ÂÂ REST DAY':''}\n${todayDate}\n\nScore: ${Math.round(pct*100)}% Ã¢ÂÂ ${statusText(pct,isRestDay)}\n\n`;
+  let body=`WIN THE DAY${isRestDay?' ÃÂ¢ÃÂÃÂ REST DAY':''}\n${todayDate}\n\nScore: ${Math.round(pct*100)}% ÃÂ¢ÃÂÃÂ ${statusText(pct,isRestDay)}\n\n`;
   const tasks=isRestDay?restTasks():allTasks();
-  body+='COMPLETED:\n';tasks.filter(t=>checked[t.id]).forEach(t=>{body+=`Ã¢ÂÂ ${t.name}\n`;});
-  body+='\nMISSED:\n';tasks.filter(t=>!checked[t.id]).forEach(t=>{body+=`Ã¢ÂÂ ${t.name}\n`;});
+  body+='COMPLETED:\n';tasks.filter(t=>checked[t.id]).forEach(t=>{body+=`ÃÂ¢ÃÂÃÂ ${t.name}\n`;});
+  body+='\nMISSED:\n';tasks.filter(t=>!checked[t.id]).forEach(t=>{body+=`ÃÂ¢ÃÂÃÂ ${t.name}\n`;});
   body+=`\nREFLECTION:\n${(rec&&rec.reflection)||'No reflection written.'}`;
   if(winOfDay)body+=`\n\nWIN OF THE DAY:\n${winOfDay}`;
   if(whyStatement)body+=`\n\nMY WHY:\n${whyStatement}`;
   if(identityStatement)body+=`\n\nI AM:\n${identityStatement}`;
   return body;
 }
-function openMailto(){const body=buildEmailBody();const subj=`Win the Day Ã¢ÂÂ ${new Date().toLocaleDateString("en-US",{month:"short",day:"numeric"})}${isRestDay?' (Rest)':''}`;window.location.href=`mailto:?subject=${encodeURIComponent(subj)}&body=${encodeURIComponent(body)}`;}
+function openMailto(){const body=buildEmailBody();const subj=`Win the Day ÃÂ¢ÃÂÃÂ ${new Date().toLocaleDateString("en-US",{month:"short",day:"numeric"})}${isRestDay?' (Rest)':''}`;window.location.href=`mailto:?subject=${encodeURIComponent(subj)}&body=${encodeURIComponent(body)}`;}
 
 function taskRow(task,pct,rest){
   const isDone=!!checked[task.id],tc=TIER[task.tier].color,isS=task.tier==='S';
@@ -838,9 +838,9 @@ function taskRow(task,pct,rest){
     </div>
     <span class="task-name${isDone?' done':''}" style="pointer-events:none">
       ${task.name}${task.sub?`<span class="task-sub">${task.sub}</span>`:''}
-      ${todayNote?`<span class="task-note-text">Ã°ÂÂÂ ${todayNote}</span>`:''}
+      ${todayNote?`<span class="task-note-text">ÃÂ°ÃÂÃÂÃÂ ${todayNote}</span>`:''}
     </span>
-    <button class="task-note-btn" onclick="event.stopPropagation();openNoteModal(${task.id},'${task.name.replace(/'/g,"\\'")}')">Ã°ÂÂÂ</button>
+    <button class="task-note-btn" onclick="event.stopPropagation();openNoteModal(${task.id},'${task.name.replace(/'/g,"\\'")}')">ÃÂ°ÃÂÃÂÃÂ</button>
     <span class="tier-badge" style="color:${tc};pointer-events:none">${task.tier}</span>
     <span class="task-pts" style="pointer-events:none">+${task.points}</span>
   </div>`;
@@ -867,24 +867,24 @@ function renderToday(readOnly){
   let h='';
   h+=`<div style="margin-bottom:14px;padding:2px 0"><div style="font-size:13px;color:var(--text3);font-weight:500">${todayDate}</div></div>`;
 
-  h+=`<div class="level-card"><div class="level-icon" style="background:${lv.color}22;border:.5px solid ${lv.color}66">${lv.icon}</div><div style="flex:1"><div style="font-size:16px;font-weight:500;color:${lv.color}">${lv.name}</div><div style="font-size:11px;color:var(--text3);margin-top:1px">${daysWon} days won${toNext>0?` ÃÂ· ${toNext} to ${nextName}`:' ÃÂ· Max level'}</div><div class="xp-bar"><div class="xp-fill" style="width:${Math.round(lvPct*100)}%;background:${lv.color}"></div></div></div></div>`;
+  h+=`<div class="level-card"><div class="level-icon" style="background:${lv.color}22;border:.5px solid ${lv.color}66">${lv.icon}</div><div style="flex:1"><div style="font-size:16px;font-weight:500;color:${lv.color}">${lv.name}</div><div style="font-size:11px;color:var(--text3);margin-top:1px">${daysWon} days won${toNext>0?` ÃÂÃÂ· ${toNext} to ${nextName}`:' ÃÂÃÂ· Max level'}</div><div class="xp-bar"><div class="xp-fill" style="width:${Math.round(lvPct*100)}%;background:${lv.color}"></div></div></div></div>`;
 
   const badges=[];
-  if(streak>=7)badges.push(`<div class="badge badge-streak">Ã°ÂÂÂ¥ ${streak}-day streak</div>`);
-  if(bestStreak>=30)badges.push(`<div class="badge badge-crush">Ã¢ÂÂ¡ ${bestStreak}-day best</div>`);
-  if(bestWeek>=CRUSH)badges.push(`<div class="badge badge-perfect">Ã°ÂÂÂ Best week ${Math.round(bestWeek*100)}%</div>`);
+  if(streak>=7)badges.push(`<div class="badge badge-streak">ÃÂ°ÃÂÃÂÃÂ¥ ${streak}-day streak</div>`);
+  if(bestStreak>=30)badges.push(`<div class="badge badge-crush">ÃÂ¢ÃÂÃÂ¡ ${bestStreak}-day best</div>`);
+  if(bestWeek>=CRUSH)badges.push(`<div class="badge badge-perfect">ÃÂ°ÃÂÃÂÃÂ Best week ${Math.round(bestWeek*100)}%</div>`);
   if(badges.length)h+=`<div class="badge-row">${badges.join('')}</div>`;
 
-  h+=`<div class="pr-card"><div class="pr-item"><div class="pr-val">${daysWon}</div><div class="pr-lbl">Days won</div></div><div class="pr-item"><div class="pr-val" style="color:var(--orange)">${bestStreak}</div><div class="pr-lbl">Best streak</div></div><div class="pr-item"><div class="pr-val">${bestWeek>0?Math.round(bestWeek*100)+'%':'Ã¢ÂÂ'}</div><div class="pr-lbl">Best week</div></div></div>`;
+  h+=`<div class="pr-card"><div class="pr-item"><div class="pr-val">${daysWon}</div><div class="pr-lbl">Days won</div></div><div class="pr-item"><div class="pr-val" style="color:var(--orange)">${bestStreak}</div><div class="pr-lbl">Best streak</div></div><div class="pr-item"><div class="pr-val">${bestWeek>0?Math.round(bestWeek*100)+'%':'ÃÂ¢ÃÂÃÂ'}</div><div class="pr-lbl">Best week</div></div></div>`;
 
   if(!readOnly)h+=`<div class="mood-row"><span style="font-size:13px;color:var(--text3)">How are you feeling?</span><div class="mood-btns">${[1,2,3,4,5].map(n=>`<div class="mood-btn${mood===n?' sel':''}" onclick="setMood(${n})">${n}</div>`).join('')}</div></div>`;
 
-  if(showCelebration){const isCrush=showCelebration==='crush';h+=`<div class="celebrate-banner ${isCrush?'crush':'won'}"><span style="font-size:26px">${isCrush?'Ã°ÂÂÂ':'Ã¢ÂÂ'}</span><div><div style="font-size:16px;font-weight:600;color:${isCrush?'#2E9E5B':'#3A7EC4'}">${isCrush?'Crushing it.':'Day won.'}</div><div style="font-size:12px;color:var(--text3);margin-top:1px">${isCrush?'Exceptional effort today. You earned it.':'You did the work. That\'s what matters.'}</div></div></div>`;}
+  if(showCelebration){const isCrush=showCelebration==='crush';h+=`<div class="celebrate-banner ${isCrush?'crush':'won'}"><span style="font-size:26px">${isCrush?'ÃÂ°ÃÂÃÂÃÂ':'ÃÂ¢ÃÂÃÂ'}</span><div><div style="font-size:16px;font-weight:600;color:${isCrush?'#2E9E5B':'#3A7EC4'}">${isCrush?'Crushing it.':'Day won.'}</div><div style="font-size:12px;color:var(--text3);margin-top:1px">${isCrush?'Exceptional effort today. You earned it.':'You did the work. That\'s what matters.'}</div></div></div>`;}
 
-  if(streak>=2)h+=`<div class="streak-banner"><span style="font-size:18px">Ã°ÂÂÂ¥</span><span style="font-size:13px;color:var(--text)"><strong style="color:#E8A020">${streak} day streak</strong> Ã¢ÂÂ keep it going</span></div>`;
+  if(streak>=2)h+=`<div class="streak-banner"><span style="font-size:18px">ÃÂ°ÃÂÃÂÃÂ¥</span><span style="font-size:13px;color:var(--text)"><strong style="color:#E8A020">${streak} day streak</strong> ÃÂ¢ÃÂÃÂ keep it going</span></div>`;
 
   if(patterns.length>0){
-    h+=`<div class="pattern-alert"><div class="pattern-label">Ã¢ÂÂ  Recurring blind spots Ã¢ÂÂ last 14 days</div>`;
+    h+=`<div class="pattern-alert"><div class="pattern-label">ÃÂ¢ÃÂÃÂ  Recurring blind spots ÃÂ¢ÃÂÃÂ last 14 days</div>`;
     patterns.forEach(p=>{h+=`<div class="pattern-item"><span>${p.name}</span><span class="pattern-count">missed ${p.count}x</span></div>`;});
     h+=`</div>`;
   }
@@ -906,23 +906,23 @@ function renderToday(readOnly){
 
   if(missedS.length>0&&pct<WIN_T){h+=`<div class="missed-alert"><div class="missed-label">Critical tasks remaining</div>${missedS.map(t=>`<div class="missed-item">${t.name}<span style="margin-left:auto;font-size:11px;color:var(--text3)">+${t.points}</span></div>`).join('')}</div>`;}
 
-  if(!readOnly)h+=`<div class="rest-banner${isRestDay?' active':''}"><div style="flex:1"><div style="font-size:13px;font-weight:500">Rest day</div><div style="font-size:11px;color:var(--text3);margin-top:2px">${isRestDay?`Lighter target Ã¢ÂÂ win at ${restSettings.win}%`:'Toggle for travel, recovery, or weekends'}<a style="font-size:11px;color:var(--blue);cursor:pointer;margin-left:6px" onclick="openRestEditor()">Customize</a></div></div><label class="toggle"><input type="checkbox" ${isRestDay?'checked':''} onchange="toggleRestDay()"><div class="toggle-track"></div><div class="toggle-thumb"></div></label></div>`;
+  if(!readOnly)h+=`<div class="rest-banner${isRestDay?' active':''}"><div style="flex:1"><div style="font-size:13px;font-weight:500">Rest day</div><div style="font-size:11px;color:var(--text3);margin-top:2px">${isRestDay?`Lighter target ÃÂ¢ÃÂÃÂ win at ${restSettings.win}%`:'Toggle for travel, recovery, or weekends'}<a style="font-size:11px;color:var(--blue);cursor:pointer;margin-left:6px" onclick="openRestEditor()">Customize</a></div></div><label class="toggle"><input type="checkbox" ${isRestDay?'checked':''} onchange="toggleRestDay()"><div class="toggle-track"></div><div class="toggle-thumb"></div></label></div>`;
   if(!readOnly)h+=`<div class="reminder-banner${reminderSettings.enabled?' active':''}"><div style="flex:1"><div style="font-size:13px;font-weight:500">Daily reminder</div><div style="font-size:11px;color:var(--text3);margin-top:2px">${reminderSettings.enabled?`Nudge at ${reminderSettings.time} if day not won`:'Get a nudge if you haven\'t won the day'}</div>${reminderSettings.enabled?`<input type="time" class="time-inp" id="reminder-time" value="${reminderSettings.time}" onchange="updateReminderTime()">`:''}</div><label class="toggle"><input type="checkbox" ${reminderSettings.enabled?'checked':''} onchange="toggleReminder()"><div class="toggle-track"></div><div class="toggle-thumb"></div></label></div>`;
 
   if(isRestDay){
     const rEss=essentialTasks.filter(t=>restSettings.taskIds.includes(t.id));
     const rTimed=BLOCKS.map(b=>({block:b,tasks:timedTasks.filter(t=>t.block===b&&restSettings.taskIds.includes(t.id))})).filter(({tasks})=>tasks.length);
-    if(rEss.length){const ee=rEss.filter(t=>checked[t.id]).reduce((s,t)=>s+t.points,0),et=rEss.reduce((s,t)=>s+t.points,0);const allDone=rEss.every(t=>checked[t.id]);h+=`<div class="block-header"><span class="block-name${allDone?' all-done':''}">Daily Essentials${allDone?` <span class="block-done">Ã¢ÂÂ</span>`:''}</span><span class="block-pct">${et>0?Math.round(ee/et*100):0}% ÃÂ· ${ee}/${et}</span></div><div class="essentials-block">${rEss.map(t=>taskRow(t,pct,true)).join('')}</div>`;}
-    rTimed.forEach(({block,tasks})=>{const be=tasks.filter(t=>checked[t.id]).reduce((s,t)=>s+t.points,0),bt=tasks.reduce((s,t)=>s+t.points,0);const allDone=tasks.every(t=>checked[t.id]);h+=`<div class="block-header"><span class="block-name${allDone?' all-done':''}"> ${block}${allDone?` <span class="block-done">Ã¢ÂÂ</span>`:''}</span><span class="block-pct">${bt>0?Math.round(be/bt*100):0}% ÃÂ· ${be}/${bt}</span></div><div class="block-tasks">${tasks.map(t=>taskRow(t,pct,true)).join('')}</div>`;});
+    if(rEss.length){const ee=rEss.filter(t=>checked[t.id]).reduce((s,t)=>s+t.points,0),et=rEss.reduce((s,t)=>s+t.points,0);const allDone=rEss.every(t=>checked[t.id]);h+=`<div class="block-header"><span class="block-name${allDone?' all-done':''}">Daily Essentials${allDone?` <span class="block-done">ÃÂ¢ÃÂÃÂ</span>`:''}</span><span class="block-pct">${et>0?Math.round(ee/et*100):0}% ÃÂÃÂ· ${ee}/${et}</span></div><div class="essentials-block">${rEss.map(t=>taskRow(t,pct,true)).join('')}</div>`;}
+    rTimed.forEach(({block,tasks})=>{const be=tasks.filter(t=>checked[t.id]).reduce((s,t)=>s+t.points,0),bt=tasks.reduce((s,t)=>s+t.points,0);const allDone=tasks.every(t=>checked[t.id]);h+=`<div class="block-header"><span class="block-name${allDone?' all-done':''}"> ${block}${allDone?` <span class="block-done">ÃÂ¢ÃÂÃÂ</span>`:''}</span><span class="block-pct">${bt>0?Math.round(be/bt*100):0}% ÃÂÃÂ· ${be}/${bt}</span></div><div class="block-tasks">${tasks.map(t=>taskRow(t,pct,true)).join('')}</div>`;});
   }else{
     const essEarned=essentialTasks.filter(t=>checked[t.id]).reduce((s,t)=>s+t.points,0);
     const essTotal=essentialTasks.reduce((s,t)=>s+t.points,0);const allEssDone=essentialTasks.every(t=>checked[t.id]);
-    h+=`<div class="block-header"><span class="block-name${allEssDone?' all-done':''}">Daily Essentials${allEssDone?` <span class="block-done">Ã¢ÂÂ</span>`:''}</span><span class="block-pct">${essTotal>0?Math.round(essEarned/essTotal*100):0}% ÃÂ· ${essEarned}/${essTotal}</span></div><div class="essentials-block">${essentialTasks.map(t=>taskRow(t,pct,false)).join('')}</div>`;
+    h+=`<div class="block-header"><span class="block-name${allEssDone?' all-done':''}">Daily Essentials${allEssDone?` <span class="block-done">ÃÂ¢ÃÂÃÂ</span>`:''}</span><span class="block-pct">${essTotal>0?Math.round(essEarned/essTotal*100):0}% ÃÂÃÂ· ${essEarned}/${essTotal}</span></div><div class="essentials-block">${essentialTasks.map(t=>taskRow(t,pct,false)).join('')}</div>`;
     BLOCKS.forEach(block=>{
       const bt=timedTasks.filter(t=>t.block===block);if(!bt.length)return;
       const be=bt.filter(t=>checked[t.id]).reduce((s,t)=>s+t.points,0),bto=bt.reduce((s,t)=>s+t.points,0),allDone=bt.every(t=>checked[t.id]);
-      h+=`<div class="block-header"><span class="block-name${allDone?' all-done':''}">${block}${allDone?` <span class="block-done">Ã¢ÂÂ</span>`:''}</span><span class="block-pct">${bto>0?Math.round(be/bto*100):0}% ÃÂ· ${be}/${bto}</span></div><div class="block-tasks">${bt.map(t=>taskRow(t,pct,false)).join('')}</div>`;
-      if(block==="Wind Down"&&allDone)h+=`<div class="winddown-done"><span style="font-size:16px">Ã°ÂÂÂ</span><div><div style="font-size:13px;font-weight:500;color:#2E9E5B">Tomorrow is set up.</div><div style="font-size:11px;color:var(--text3);margin-top:1px">Wind down complete.</div></div></div>`;
+      h+=`<div class="block-header"><span class="block-name${allDone?' all-done':''}">${block}${allDone?` <span class="block-done">ÃÂ¢ÃÂÃÂ</span>`:''}</span><span class="block-pct">${bto>0?Math.round(be/bto*100):0}% ÃÂÃÂ· ${be}/${bto}</span></div><div class="block-tasks">${bt.map(t=>taskRow(t,pct,false)).join('')}</div>`;
+      if(block==="Wind Down"&&allDone)h+=`<div class="winddown-done"><span style="font-size:16px">ÃÂ°ÃÂÃÂÃÂ</span><div><div style="font-size:13px;font-weight:500;color:#2E9E5B">Tomorrow is set up.</div><div style="font-size:11px;color:var(--text3);margin-top:1px">Wind down complete.</div></div></div>`;
     });
     h+=`<div style="display:flex;gap:14px;margin-top:.75rem;justify-content:center">${Object.entries(TIER).map(([k,v])=>`<div style="display:flex;align-items:center;gap:4px"><span style="font-size:10px;font-weight:500;color:${v.color}">${k}</span><span style="font-size:11px;color:var(--text3)">${v.label}</span></div>`).join('')}</div>`;
   }
@@ -935,10 +935,10 @@ function renderToday(readOnly){
   if((identityStatement)&&!readOnly){
     h+=`<div class="reflect-section" style="border-top:.5px solid rgba(58,126,196,.2)">
       <div class="identity-reflect-card" style="margin-bottom:0">
-        <div class="identity-reflect-question">Identity proof Ã¢ÂÂ end of day</div>
+        <div class="identity-reflect-question">Identity proof ÃÂ¢ÃÂÃÂ end of day</div>
         <div class="identity-reflect-statement">"${identityStatement}"</div>
         <textarea class="ir-note-inp" id="ir-note" placeholder="Write the specific things you did today that prove you are this person..." oninput="saveIRNote()">${todayIR.note||''}</textarea>
-        ${todayIR.note?`<div style="font-size:11px;color:var(--text3);margin-top:6px">Ã¢ÂÂ Saved</div>`:''}
+        ${todayIR.note?`<div style="font-size:11px;color:var(--text3);margin-top:6px">ÃÂ¢ÃÂÃÂ Saved</div>`:''}
       </div>
     </div>`;
   }
@@ -947,11 +947,11 @@ function renderToday(readOnly){
 
   if(!readOnly){
     h+=`<div class="settings-row">
-      <button class="settings-btn" onclick="openEditor()">Ã¢ÂÂÃ¯Â¸Â Edit habits</button>
-      <button class="settings-btn" onclick="openMailto()">Ã°ÂÂÂ§ Email summary</button>
-      <button class="settings-btn" onclick="exportData()">Ã¢ÂÂ Export</button>
-      <button class="settings-btn" onclick="openImport()">Ã¢ÂÂ Import</button>
-      <button class="settings-btn danger" onclick="confirmReset()">Ã¢ÂÂº Reset day</button>
+      <button class="settings-btn" onclick="openEditor()">ÃÂ¢ÃÂÃÂÃÂ¯ÃÂ¸ÃÂ Edit habits</button>
+      <button class="settings-btn" onclick="openMailto()">ÃÂ°ÃÂÃÂÃÂ§ Email summary</button>
+      <button class="settings-btn" onclick="exportData()">ÃÂ¢ÃÂÃÂ Export</button>
+      <button class="settings-btn" onclick="openImport()">ÃÂ¢ÃÂÃÂ Import</button>
+      <button class="settings-btn danger" onclick="confirmReset()">ÃÂ¢ÃÂÃÂº Reset day</button>
     </div>`;
   }
   return h;
@@ -970,9 +970,9 @@ async function saveIRNote(){
 function renderGoals(){
   const now=new Date();
   const sections=[
-    {type:'weekly',label:'Weekly Goals',emoji:'Ã°ÂÂÂ',note:`Resets each Monday Ã¢ÂÂ week of ${now.toLocaleDateString("en-US",{month:"short",day:"numeric"})}`},
-    {type:'monthly',label:'Monthly Goals',emoji:'Ã°ÂÂÂ',note:MONTHS[now.getMonth()]+' '+now.getFullYear()},
-    {type:'yearly',label:'Yearly Goals',emoji:'Ã°ÂÂÂ¯',note:now.getFullYear()+' goals'},
+    {type:'weekly',label:'Weekly Goals',emoji:'ÃÂ°ÃÂÃÂÃÂ',note:`Resets each Monday ÃÂ¢ÃÂÃÂ week of ${now.toLocaleDateString("en-US",{month:"short",day:"numeric"})}`},
+    {type:'monthly',label:'Monthly Goals',emoji:'ÃÂ°ÃÂÃÂÃÂ',note:MONTHS[now.getMonth()]+' '+now.getFullYear()},
+    {type:'yearly',label:'Yearly Goals',emoji:'ÃÂ°ÃÂÃÂÃÂ¯',note:now.getFullYear()+' goals'},
   ];
   let h='';
   sections.forEach(({type,label,emoji,note})=>{
@@ -988,7 +988,7 @@ function renderGoals(){
       ${list.map(g=>`<div class="goal-item${g.done?' done':''}" onclick="toggleGoal('${type}',${g.id})">
         <div class="goal-cb${g.done?' checked':''}">${g.done?'<svg width="9" height="7" viewBox="0 0 9 7" fill="none"><path d="M1 3.5L3 5.5L8 1" stroke="white" stroke-width="1.5" stroke-linecap="round"/></svg>':''}</div>
         <span class="goal-text${g.done?' done':''}">${g.text}</span>
-        <button class="goal-del" onclick="event.stopPropagation();deleteGoal('${type}',${g.id})">ÃÂ</button>
+        <button class="goal-del" onclick="event.stopPropagation();deleteGoal('${type}',${g.id})">ÃÂÃÂ</button>
       </div>`).join('')}
       ${list.length===0?`<div style="font-size:13px;color:var(--text3);padding:8px 0;font-style:italic">No ${type} goals yet.</div>`:''}
       ${addingGoal===type?`<div class="goal-add-row"><input class="goal-inp" id="goal-inp-${type}" placeholder="Add a goal..." onkeydown="if(event.key==='Enter')addGoal('${type}')"><button class="goal-save-btn" onclick="addGoal('${type}')">Add</button></div>`:''}
@@ -1002,16 +1002,16 @@ function getWeekDates(offset){const now=new Date(),day=now.getDay(),mon=new Date
 
 function renderWeek(){
   const dates=getWeekDates(weekOffset),tk=todayKey();
-  const label=`${dates[0].toLocaleDateString("en-US",{month:"short",day:"numeric"})} Ã¢ÂÂ ${dates[6].toLocaleDateString("en-US",{month:"short",day:"numeric",year:"numeric"})}`;
+  const label=`${dates[0].toLocaleDateString("en-US",{month:"short",day:"numeric"})} ÃÂ¢ÃÂÃÂ ${dates[6].toLocaleDateString("en-US",{month:"short",day:"numeric",year:"numeric"})}`;
   const hasData=dates.some(d=>allHistory[dateKey(d)]);
   const streak=calcStreak();
   const activeDays=dates.filter(d=>{const r=allHistory[dateKey(d)];return r&&!r.restDay;});
   const won=dates.filter(d=>{const r=allHistory[dateKey(d)];if(!r)return false;return r.pct>=(r.restDay?restSettings.win/100:WIN);}).length;
   const avg=activeDays.length?activeDays.reduce((s,d)=>s+(allHistory[dateKey(d)]?.pct||0),0)/activeDays.length:0;
-  let h=`<div class="history-nav"><button class="nav-btn" onclick="shiftWeek(-1)">Ã¢ÂÂ</button><span class="nav-title">${label}</span><button class="nav-btn" onclick="shiftWeek(1)">Ã¢ÂÂ</button></div>`;
+  let h=`<div class="history-nav"><button class="nav-btn" onclick="shiftWeek(-1)">ÃÂ¢ÃÂÃÂ</button><span class="nav-title">${label}</span><button class="nav-btn" onclick="shiftWeek(1)">ÃÂ¢ÃÂÃÂ</button></div>`;
   if(!hasData)return h+`<div class="no-data"><p>No data for this week yet.</p><button class="btn-ghost" onclick="setTab('today')">Go to Today</button></div>`;
-  h+=`<div class="summary-row"><div class="summary-card"><div class="summary-val">${won}/7</div><div class="summary-lbl">Days won</div></div><div class="summary-card"><div class="summary-val">${activeDays.length?Math.round(avg*100)+'%':'Ã¢ÂÂ'}</div><div class="summary-lbl">Avg (${activeDays.length} active)</div></div><div class="summary-card"><div class="summary-val">${streak} Ã°ÂÂÂ¥</div><div class="summary-lbl">Streak</div></div></div><div class="day-grid">`;
-  dates.forEach(d=>{const key=dateKey(d),rec=allHistory[key],isToday=key===tk,isFuture=d>new Date()&&!isToday;const pct=rec?rec.pct:null,rest=rec&&rec.restDay;const col=pct!==null?statusColor(pct,rest):'var(--border)';h+=`<div class="day-cell${isToday?' today':''}${isFuture?' future':''}"><div class="day-label">${DAYS[d.getDay()]}</div><div class="day-pct" style="color:${pct!==null?col:'var(--text3)'}">${rest?'R':pct!==null?Math.round(pct*100)+'%':'Ã¢ÂÂ'}</div><div class="day-dot" style="background:${col}"></div>${rec&&rec.reflection?`<div style="font-size:9px;color:var(--text3);margin-top:2px">note</div>`:''}</div>`;});
+  h+=`<div class="summary-row"><div class="summary-card"><div class="summary-val">${won}/7</div><div class="summary-lbl">Days won</div></div><div class="summary-card"><div class="summary-val">${activeDays.length?Math.round(avg*100)+'%':'ÃÂ¢ÃÂÃÂ'}</div><div class="summary-lbl">Avg (${activeDays.length} active)</div></div><div class="summary-card"><div class="summary-val">${streak} ÃÂ°ÃÂÃÂÃÂ¥</div><div class="summary-lbl">Streak</div></div></div><div class="day-grid">`;
+  dates.forEach(d=>{const key=dateKey(d),rec=allHistory[key],isToday=key===tk,isFuture=d>new Date()&&!isToday;const pct=rec?rec.pct:null,rest=rec&&rec.restDay;const col=pct!==null?statusColor(pct,rest):'var(--border)';h+=`<div class="day-cell${isToday?' today':''}${isFuture?' future':''}"><div class="day-label">${DAYS[d.getDay()]}</div><div class="day-pct" style="color:${pct!==null?col:'var(--text3)'}">${rest?'R':pct!==null?Math.round(pct*100)+'%':'ÃÂ¢ÃÂÃÂ'}</div><div class="day-dot" style="background:${col}"></div>${rec&&rec.reflection?`<div style="font-size:9px;color:var(--text3);margin-top:2px">note</div>`:''}</div>`;});
   h+=`</div><div style="margin-bottom:1.25rem">`;
   dates.map(d=>({d,rec:allHistory[dateKey(d)]})).filter(e=>e.rec).forEach(({d,rec})=>{const pct=rec.pct||0,col=statusColor(pct,rec.restDay);h+=`<div class="week-row"><span style="font-size:13px;color:var(--text2)">${d.toLocaleDateString("en-US",{weekday:"short",month:"short",day:"numeric"})}${rec.restDay?' <span style="font-size:10px;color:var(--blue)">R</span>':''}</span><div class="week-bar-track"><div class="week-bar-fill" style="width:${Math.round(pct*100)}%;background:${col}"></div></div><span style="font-size:13px;font-weight:500;color:${col};text-align:right">${Math.round(pct*100)}%</span></div>`;});
   h+=`</div><div style="border-top:.5px solid var(--border);padding-top:1.25rem"><div class="reflect-label" style="margin-bottom:1rem">Reflections this week</div>${reflectionCards(dates.map(d=>({d,rec:allHistory[dateKey(d)]})))}</div>`;
@@ -1030,9 +1030,9 @@ function renderMonth(){
   const won=daysData.filter(({rec})=>{if(!rec)return false;return rec.pct>=(rec.restDay?restSettings.win/100:WIN);}).length;
   const avg=activeDays.length?activeDays.reduce((s,{rec})=>s+(rec?.pct||0),0)/activeDays.length:0;
   const streakRanges=getStreakRanges();const isInStreak=key=>streakRanges.some(r=>key>=r.start&&key<=r.end);
-  let h=`<div class="history-nav"><button class="nav-btn" onclick="shiftMonth(-1)">Ã¢ÂÂ</button><span class="nav-title">${MONTHS[month]} ${year}</span><button class="nav-btn" onclick="shiftMonth(1)">Ã¢ÂÂ</button></div>`;
+  let h=`<div class="history-nav"><button class="nav-btn" onclick="shiftMonth(-1)">ÃÂ¢ÃÂÃÂ</button><span class="nav-title">${MONTHS[month]} ${year}</span><button class="nav-btn" onclick="shiftMonth(1)">ÃÂ¢ÃÂÃÂ</button></div>`;
   if(!hasData)return h+`<div class="no-data"><p>No data for ${MONTHS[month]} yet.</p><button class="btn-ghost" onclick="setTab('today')">Go to Today</button></div>`;
-  h+=`<div class="summary-row"><div class="summary-card"><div class="summary-val">${won}</div><div class="summary-lbl">Days won</div></div><div class="summary-card"><div class="summary-val">${activeDays.length?Math.round(avg*100)+'%':'Ã¢ÂÂ'}</div><div class="summary-lbl">Avg (${activeDays.length} active)</div></div><div class="summary-card"><div class="summary-val">${streak} Ã°ÂÂÂ¥</div><div class="summary-lbl">Streak</div></div></div><div class="month-grid">`;
+  h+=`<div class="summary-row"><div class="summary-card"><div class="summary-val">${won}</div><div class="summary-lbl">Days won</div></div><div class="summary-card"><div class="summary-val">${activeDays.length?Math.round(avg*100)+'%':'ÃÂ¢ÃÂÃÂ'}</div><div class="summary-lbl">Avg (${activeDays.length} active)</div></div><div class="summary-card"><div class="summary-val">${streak} ÃÂ°ÃÂÃÂÃÂ¥</div><div class="summary-lbl">Streak</div></div></div><div class="month-grid">`;
   DAYS.forEach(d=>{h+=`<div class="month-hdr">${d[0]}</div>`;});
   for(let i=0;i<startDay;i++)h+=`<div class="month-cell empty"></div>`;
   daysData.forEach(({day,key,rec,d})=>{const isToday=key===tk,isFuture=d>new Date()&&!isToday;const pct=rec?rec.pct:null,rest=rec&&rec.restDay,inStreak=isInStreak(key);let bg='var(--bg2)',color='var(--text3)';if(pct!==null&&!isFuture){const sc=statusColor(pct,rest);bg=sc+'22';color=sc;}h+=`<div class="month-cell${rec?' has-data':''}${isToday?' today-cell':''}" style="background:${bg};opacity:${isFuture?0.3:1}"><span style="color:${color}">${rest?'R':day}</span>${inStreak&&!isFuture?`<div class="streak-dot"></div>`:''}</div>`;});
@@ -1043,7 +1043,7 @@ function renderMonth(){
 function reflectionCards(entries){
   const withR=entries.filter(({rec})=>rec&&(rec.reflection||rec.winOfDay));
   if(!withR.length)return`<p style="font-size:13px;color:var(--text3);padding:1rem 0">No reflections written yet.</p>`;
-  return withR.map(({d,rec})=>{const timeStr=rec.reflectionTime?new Date(rec.reflectionTime).toLocaleTimeString("en-US",{hour:"numeric",minute:"2-digit"}):'';return`<div class="reflect-card"><div class="reflect-card-date"><span>${d.toLocaleDateString("en-US",{weekday:"long",month:"short",day:"numeric"})}${timeStr?` ÃÂ· ${timeStr}`:''}${rec.restDay?' ÃÂ· Rest day':''}${rec.mood?` ÃÂ· Mood ${rec.mood}/5`:''}</span><span style="font-weight:500;color:${statusColor(rec.pct||0,rec.restDay)}">${Math.round((rec.pct||0)*100)}%</span></div>${rec.winOfDay?`<div style="font-size:12px;color:var(--orange);font-weight:500;margin-bottom:4px">Ã°ÂÂÂ ${rec.winOfDay}</div>`:''} ${rec.reflection?`<div class="reflect-card-text">${rec.reflection}</div>`:''}</div>`;}).join('');
+  return withR.map(({d,rec})=>{const timeStr=rec.reflectionTime?new Date(rec.reflectionTime).toLocaleTimeString("en-US",{hour:"numeric",minute:"2-digit"}):'';return`<div class="reflect-card"><div class="reflect-card-date"><span>${d.toLocaleDateString("en-US",{weekday:"long",month:"short",day:"numeric"})}${timeStr?` ÃÂÃÂ· ${timeStr}`:''}${rec.restDay?' ÃÂÃÂ· Rest day':''}${rec.mood?` ÃÂÃÂ· Mood ${rec.mood}/5`:''}</span><span style="font-weight:500;color:${statusColor(rec.pct||0,rec.restDay)}">${Math.round((rec.pct||0)*100)}%</span></div>${rec.winOfDay?`<div style="font-size:12px;color:var(--orange);font-weight:500;margin-bottom:4px">ÃÂ°ÃÂÃÂÃÂ ${rec.winOfDay}</div>`:''} ${rec.reflection?`<div class="reflect-card-text">${rec.reflection}</div>`:''}</div>`;}).join('');
 }
 
 function showOv(html){const ov=document.getElementById('ov');ov.style.display='block';ov.innerHTML=html;}
@@ -1053,7 +1053,7 @@ function renderOvContent(){if(showEditor)showOv(renderEditorModal());else if(sho
 function renderEditorModal(){
   const blocks=[...BLOCKS.map(b=>({label:b,tasks:timedTasks.filter(t=>t.block===b),type:'timed'})),{label:"Daily Essentials",tasks:essentialTasks,type:'essential'}];
   let h=`<div class="overlay-bg" onclick="if(event.target===this)closeOv()"><div class="modal"><div class="modal-title">Edit habits</div><div style="margin-bottom:1rem"><div class="esec-label" style="margin-bottom:7px">Add task to block</div><select class="block-sel" id="new-task-block">${BLOCKS.map(b=>`<option value="timed:${b}">${b}</option>`).join('')}<option value="essential:Daily Essentials">Daily Essentials</option></select><button class="btn-ghost" style="width:auto" onclick="addTaskFromSelect()">+ Add task</button></div>`;
-  blocks.forEach(({label,tasks,type})=>{if(!tasks.length)return;h+=`<div class="esec"><div class="esec-label">${label}</div>`;tasks.forEach(task=>{h+=`<div class="editor-row"><input class="e-inp" value="${task.name.replace(/"/g,'&quot;').replace(/'/g,"&#39;")}" onchange="updateTask(${task.id},'name',this.value,'${type}')"><input class="e-pts" type="number" value="${task.points}" min="1" max="30" onchange="updateTask(${task.id},'points',parseInt(this.value)||1,'${type}')"><select class="e-tier" onchange="updateTask(${task.id},'tier',this.value,'${type}')"><option${task.tier==='S'?' selected':''}>S</option><option${task.tier==='A'?' selected':''}>A</option><option${task.tier==='B'?' selected':''}>B</option></select><button class="del-btn" onclick="deleteTask(${task.id},'${type}')">ÃÂ</button></div>`;});h+=`</div>`;});
+  blocks.forEach(({label,tasks,type})=>{if(!tasks.length)return;h+=`<div class="esec"><div class="esec-label">${label}</div>`;tasks.forEach(task=>{h+=`<div class="editor-row"><input class="e-inp" value="${task.name.replace(/"/g,'&quot;').replace(/'/g,"&#39;")}" onchange="updateTask(${task.id},'name',this.value,'${type}')"><input class="e-pts" type="number" value="${task.points}" min="1" max="30" onchange="updateTask(${task.id},'points',parseInt(this.value)||1,'${type}')"><select class="e-tier" onchange="updateTask(${task.id},'tier',this.value,'${type}')"><option${task.tier==='S'?' selected':''}>S</option><option${task.tier==='A'?' selected':''}>A</option><option${task.tier==='B'?' selected':''}>B</option></select><button class="del-btn" onclick="deleteTask(${task.id},'${type}')">ÃÂÃÂ</button></div>`;});h+=`</div>`;});
   h+=`<div class="modal-actions"><button class="btn-save" onclick="saveEdits()">Save changes</button><button class="btn-cancel" onclick="closeOv()">Cancel</button></div></div></div>`;return h;
 }
 function renderImportModal(){return`<div class="overlay-bg" onclick="if(event.target===this)closeOv()"><div class="modal"><div class="modal-title">Import data</div><p style="font-size:13px;color:var(--text2);margin-bottom:1rem;line-height:1.6">Paste your previously exported JSON.</p><textarea class="import-area" id="import-textarea" placeholder="Paste exported JSON here..."></textarea>${importError?`<p style="font-size:12px;color:var(--red);margin-top:5px">${importError}</p>`:''}<div class="modal-actions"><button class="btn-save" onclick="doImport()">Import</button><button class="btn-cancel" onclick="closeOv()">Cancel</button></div></div></div>`;}
@@ -1061,10 +1061,10 @@ function renderImportModal(){return`<div class="overlay-bg" onclick="if(event.ta
 function renderRestEditorModal(){
   const grouped=[{label:"Daily Essentials",tasks:essentialTasks},...BLOCKS.map(b=>({label:b,tasks:timedTasks.filter(t=>t.block===b)})).filter(({tasks})=>tasks.length)];
   const rt=restSettings.taskIds.reduce((s,id)=>{const t=allTasks().find(t=>t.id===id);return s+(t?t.points:0);},0);
-  return`<div class="overlay-bg" onclick="if(event.target===this)closeOv()"><div class="modal"><div class="modal-title">Customize rest day</div><div class="modal-sub">Tasks and thresholds for lighter days.</div><div class="esec"><div class="thresh-row"><label>Win at</label><input type="range" min="20" max="80" step="5" value="${restSettings.win}" oninput="restSettings.win=parseInt(this.value);document.getElementById('rv-win').textContent=this.value+'%';updateRestPreview()"><span class="thresh-val" id="rv-win">${restSettings.win}%</span></div><div class="thresh-row"><label>Crush at</label><input type="range" min="40" max="95" step="5" value="${restSettings.crush}" oninput="restSettings.crush=parseInt(this.value);document.getElementById('rv-crush').textContent=this.value+'%';updateRestPreview()"><span class="thresh-val" id="rv-crush">${restSettings.crush}%</span></div><div class="rest-preview-txt" id="rest-preview-txt"><strong>${restSettings.taskIds.length} tasks</strong> ÃÂ· <strong>${rt} pts total</strong> ÃÂ· Win at <strong>${Math.ceil(restSettings.win/100*rt)} pts</strong> ÃÂ· Crush at <strong>${Math.ceil(restSettings.crush/100*rt)} pts</strong></div></div><div class="esec"><div class="esec-label"><span>Active tasks on rest day</span><span>${restSettings.taskIds.length} selected</span></div><div class="rest-task-list">${grouped.map(({label,tasks})=>`<div><div class="rtg-label">${label}</div>${tasks.map(t=>{const on=restSettings.taskIds.includes(t.id);return`<div class="rest-task-row" onclick="toggleRestTask(${t.id})"><div class="rest-cb${on?' on':''}">${on?'<svg width="8" height="6" viewBox="0 0 8 6" fill="none"><path d="M1 3L3 5.5L7 1" stroke="white" stroke-width="1.5" stroke-linecap="round"/></svg>':''}</div><span style="flex:1;font-size:13px">${t.name}</span><span style="font-size:11px;color:var(--text3)">+${t.points}</span></div>`;}).join('')}</div>`).join('')}</div></div><div class="modal-actions"><button class="btn-save" onclick="saveRestEditor()">Save</button><button class="btn-cancel" onclick="closeOv()">Cancel</button></div></div></div>`;
+  return`<div class="overlay-bg" onclick="if(event.target===this)closeOv()"><div class="modal"><div class="modal-title">Customize rest day</div><div class="modal-sub">Tasks and thresholds for lighter days.</div><div class="esec"><div class="thresh-row"><label>Win at</label><input type="range" min="20" max="80" step="5" value="${restSettings.win}" oninput="restSettings.win=parseInt(this.value);document.getElementById('rv-win').textContent=this.value+'%';updateRestPreview()"><span class="thresh-val" id="rv-win">${restSettings.win}%</span></div><div class="thresh-row"><label>Crush at</label><input type="range" min="40" max="95" step="5" value="${restSettings.crush}" oninput="restSettings.crush=parseInt(this.value);document.getElementById('rv-crush').textContent=this.value+'%';updateRestPreview()"><span class="thresh-val" id="rv-crush">${restSettings.crush}%</span></div><div class="rest-preview-txt" id="rest-preview-txt"><strong>${restSettings.taskIds.length} tasks</strong> ÃÂÃÂ· <strong>${rt} pts total</strong> ÃÂÃÂ· Win at <strong>${Math.ceil(restSettings.win/100*rt)} pts</strong> ÃÂÃÂ· Crush at <strong>${Math.ceil(restSettings.crush/100*rt)} pts</strong></div></div><div class="esec"><div class="esec-label"><span>Active tasks on rest day</span><span>${restSettings.taskIds.length} selected</span></div><div class="rest-task-list">${grouped.map(({label,tasks})=>`<div><div class="rtg-label">${label}</div>${tasks.map(t=>{const on=restSettings.taskIds.includes(t.id);return`<div class="rest-task-row" onclick="toggleRestTask(${t.id})"><div class="rest-cb${on?' on':''}">${on?'<svg width="8" height="6" viewBox="0 0 8 6" fill="none"><path d="M1 3L3 5.5L7 1" stroke="white" stroke-width="1.5" stroke-linecap="round"/></svg>':''}</div><span style="flex:1;font-size:13px">${t.name}</span><span style="font-size:11px;color:var(--text3)">+${t.points}</span></div>`;}).join('')}</div>`).join('')}</div></div><div class="modal-actions"><button class="btn-save" onclick="saveRestEditor()">Save</button><button class="btn-cancel" onclick="closeOv()">Cancel</button></div></div></div>`;
 }
 
-function updateRestPreview(){const rt=restSettings.taskIds.reduce((s,id)=>{const t=allTasks().find(t=>t.id===id);return s+(t?t.points:0);},0);const el=document.getElementById('rest-preview-txt');if(el)el.innerHTML=`<strong>${restSettings.taskIds.length} tasks</strong> ÃÂ· <strong>${rt} pts total</strong> ÃÂ· Win at <strong>${Math.ceil(restSettings.win/100*rt)} pts</strong> ÃÂ· Crush at <strong>${Math.ceil(restSettings.crush/100*rt)} pts</strong>`;}
+function updateRestPreview(){const rt=restSettings.taskIds.reduce((s,id)=>{const t=allTasks().find(t=>t.id===id);return s+(t?t.points:0);},0);const el=document.getElementById('rest-preview-txt');if(el)el.innerHTML=`<strong>${restSettings.taskIds.length} tasks</strong> ÃÂÃÂ· <strong>${rt} pts total</strong> ÃÂÃÂ· Win at <strong>${Math.ceil(restSettings.win/100*rt)} pts</strong> ÃÂÃÂ· Crush at <strong>${Math.ceil(restSettings.crush/100*rt)} pts</strong>`;}
 function toggleRestTask(id){if(restSettings.taskIds.includes(id))restSettings.taskIds=restSettings.taskIds.filter(x=>x!==id);else restSettings.taskIds=[...restSettings.taskIds,id];renderOvContent();}
 function addTaskFromSelect(){const val=document.getElementById('new-task-block')?.value||'timed:Morning';const[type,block]=val.split(':');const newTask={id:nextId++,name:"New task",points:5,tier:"B"};if(type==='essential')essentialTasks.push(newTask);else{newTask.block=block;timedTasks.push(newTask);}renderOvContent();}
 function deleteTask(id,type){if(type==='essential')essentialTasks=essentialTasks.filter(t=>t.id!==id);else timedTasks=timedTasks.filter(t=>t.id!==id);renderOvContent();}
@@ -1138,7 +1138,7 @@ function updateBlockHeaders(){
     const nameEl=header.querySelector('.block-name');
     const pctEl=header.querySelector('.block-pct');
     if(!nameEl)return;
-    const blockText=nameEl.textContent.replace('Ã¢ÂÂ','').trim();
+    const blockText=nameEl.textContent.replace('ÃÂ¢ÃÂÃÂ','').trim();
     const blockTasks=allT.filter(t=>(t.block||'Daily Essentials')===blockText||blockText==='Daily Essentials'&&!t.block);
     if(!blockTasks.length)return;
     const be=blockTasks.filter(t=>checked[t.id]).reduce((s,t)=>s+t.points,0);
@@ -1146,9 +1146,9 @@ function updateBlockHeaders(){
     const allDone=blockTasks.every(t=>checked[t.id]);
     nameEl.classList.toggle('all-done',allDone);
     const doneSpan=nameEl.querySelector('.block-done');
-    if(allDone&&!doneSpan)nameEl.innerHTML+=` <span class="block-done">Ã¢ÂÂ</span>`;
+    if(allDone&&!doneSpan)nameEl.innerHTML+=` <span class="block-done">ÃÂ¢ÃÂÃÂ</span>`;
     else if(!allDone&&doneSpan)doneSpan.remove();
-    if(pctEl)pctEl.textContent=`${bt>0?Math.round(be/bt*100):0}% ÃÂ· ${be}/${bt}`;
+    if(pctEl)pctEl.textContent=`${bt>0?Math.round(be/bt*100):0}% ÃÂÃÂ· ${be}/${bt}`;
   });
 }
 
@@ -1157,7 +1157,7 @@ function setTab(t){activeTab=t;render();}
 function shiftWeek(d){weekOffset+=d;render();}
 function shiftMonth(d){monthOffset+=d;render();}
 
-// Ã¢ÂÂÃ¢ÂÂ BOOT Ã¢ÂÂÃ¢ÂÂ
+// ÃÂ¢ÃÂÃÂÃÂ¢ÃÂÃÂ BOOT ÃÂ¢ÃÂÃÂÃÂ¢ÃÂÃÂ
 setTimeout(()=>{
   const root=document.getElementById('root');
   if(root&&root.querySelector('.loading')){
