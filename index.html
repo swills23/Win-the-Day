@@ -494,9 +494,7 @@ async function hbSave(uid,email){
 
 // ── ROOT ROUTER ──
 async function renderRoot(){
-  const{data:{session}}=await sb.auth.getSession();
-  if(!session){renderAuth();return;}
-  currentUser=session.user;
+if(!currentUser){const{data:{session}}=await sb.auth.getSession();if(!session){renderAuth();return;}currentUser=session.user;}
   currentProfile=await loadProfile(currentUser.id);
   if(!currentProfile){const isAdmin=currentUser.email.toLowerCase()===ADMIN_EMAIL.toLowerCase();await sb.from('wtd_profiles').upsert({id:currentUser.id,email:currentUser.email,approved:isAdmin,is_admin:isAdmin},{onConflict:'id'});currentProfile=await loadProfile(currentUser.id);}
   if(!currentProfile.approved){renderPending();return;}
