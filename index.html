@@ -311,11 +311,7 @@ const sb = window.supabase.createClient(SUPABASE_URL, SUPABASE_KEY, {
     storageKey:'wtd-auth',
     autoRefreshToken:true,
     persistSession:true,
-    detectSessionInUrl:false,
-    lock: async (name, acquireTimeout, fn) => {
-      // Bypass Web Locks API to prevent deadlock bug in Supabase auth-js
-      return await fn();
-    }
+    detectSessionInUrl:false
   }
 });
 let currentUser=null,currentProfile=null,authView='login';
