@@ -1311,9 +1311,11 @@ function shiftMonth(d){monthOffset+=d;render();}
 // BOOT
 (async () => {
   try {
-    const { data: { session } } = await withTimeout(sb.auth.getSession(), 10000, { session: null });
+    const result = await withTimeout(sb.auth.getSession(), 8000, null);
+    const session = result?.data?.session || null;
     if (session) {
       currentUser = session.user;
+      currentProfile = null;
       await renderRoot();
     } else {
       renderAuth();
@@ -1322,6 +1324,10 @@ function shiftMonth(d){monthOffset+=d;render();}
     renderAuth();
   }
 })();
+sb.auth.onAuthStateChange(async (event, session) => {
+  if (event === 'SIGNED_OUT') { currentUser = null; currentProfile = null; resetAppState(); renderAuth(); }
+  else if (event === 'TOKEN_REFRESHED' && session) { currentUser = session.user; }
+});)();
 
 sb.auth.onAuthStateChange(async (event, session) => {
   if (event === 'SIGNED_OUT') {
