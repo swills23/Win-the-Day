@@ -1260,35 +1260,62 @@ function shiftWeek(d){weekOffset+=d;render();}
 function shiftMonth(d){monthOffset+=d;render();}
 
 // ── BOOT ──
-// Fallback: if nothing renders within 6 seconds, force auth screen
+// Single-fire boot gate — prevents onAuthStateChange + getSession() race condition
+let _appBooted=false;
+async function _bootOnce(session){
+  if(_appBooted)return;
+  _appBooted=true;
+  if(session){currentUser=session.user;await renderRoot();}
+  else{currentUser=null;currentProfile=null;resetAppState();renderAuth();}
+}
+
+// Hard fallback: 6s to force auth if everything else silently failed
 setTimeout(()=>{
   const root=document.getElementById('root');
   if(root&&root.querySelector('.loading')){
+    _appBooted=true;
     currentUser=null;currentProfile=null;resetAppState();renderAuth();
   }
 },6000);
 
 sb.auth.onAuthStateChange(async(event,session)=>{
-  if(event==='TOKEN_REFRESHED'||event==='SIGNED_IN'){if(session){currentUser=session.user;await renderRoot();}}
-  else if(event==='SIGNED_OUT'){currentUser=null;currentProfile=null;resetAppState();renderAuth();}
-  else if(session){currentUser=session.user;await renderRoot();}
-  else{currentUser=null;currentProfile=null;resetAppState();renderAuth();}
+  if(event==='INITIAL_SESSION'){
+    // Supabase v2 fires this on first load — primary boot path
+    await _bootOnce(session);
+    return;
+  }
+  if(event==='SIGNED_IN'){
+    if(!_appBooted){await _bootOnce(session);return;}
+    // Post-login (user clicked Sign In button) — always re-render
+    if(session){currentUser=session.user;await renderRoot();}
+    return;
+  }
+  if(event==='TOKEN_REFRESHED'){
+    // Just update the user ref; no re-render needed
+    if(session)currentUser=session.user;
+    return;
+  }
+  if(event==='SIGNED_OUT'){
+    currentUser=null;currentProfile=null;resetAppState();renderAuth();
+    return;
+  }
+  // Catch-all for any other events
+  await _bootOnce(session);
 });
 
-// Also try immediately in case onAuthStateChange doesn't fire
-sb.auth.getSession().then(({data:{session}})=>{
-  const root=document.getElementById('root');
-  if(root&&root.querySelector('.loading')){
-    if(session){currentUser=session.user;renderRoot();}
-    else{currentUser=null;currentProfile=null;resetAppState();renderAuth();}
-  }
-}).catch(()=>{
-  const root=document.getElementById('root');
-  if(root&&root.querySelector('.loading'))renderAuth();
-});
+// Fallback: 200ms after load in case INITIAL_SESSION doesn't fire (older Supabase versions)
+setTimeout(async()=>{
+  if(_appBooted)return;
+  try{
+    const{data:{session}}=await sb.auth.getSession();
+    await _bootOnce(session);
+  }catch(e){await _bootOnce(null);}
+},200);
+
 window.addEventListener('unhandledrejection',(e)=>{
   if(e.reason?.message?.includes('Lock')||e.reason?.message?.includes('lock')){
-    e.preventDefault();sb.auth.getSession().then(({data:{session}})=>{if(session&&!currentUser){currentUser=session.user;renderRoot();}}).catch(()=>{});
+    e.preventDefault();
+    sb.auth.getSession().then(({data:{session}})=>{if(session&&!currentUser){currentUser=session.user;renderRoot();}}).catch(()=>{});
   }
 });
 </script>
