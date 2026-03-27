@@ -1264,10 +1264,8 @@ async function _bootOnce(session){
   else{currentUser=null;currentProfile=null;resetAppState();renderAuth();}
 }
 
-// Safari/browser fallback: proactively call getSession() to race with INITIAL_SESSION.
-// Safari ITP can delay/block localStorage reads causing INITIAL_SESSION to fire late or not at all.
-sb.auth.getSession().then(({data:{session}})=>_bootOnce(session));
-// Secondary safety net: if still loading after 3s, force a getSession() check
+// Safari fallback: if INITIAL_SESSION hasn't fired after 3s (Safari ITP delay), force it
+// Does NOT call getSession() proactively to avoid lock contention with INITIAL_SESSION
 setTimeout(async()=>{
   if(!_appBooted){
     const {data:{session}}=await sb.auth.getSession();
