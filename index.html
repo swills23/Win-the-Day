@@ -347,7 +347,7 @@ async function signIn(){
     const timeout=new Promise((_, rej)=>setTimeout(()=>rej(new Error('Request timed out — check your connection and try again.')),30000));
     const{data,error}=await Promise.race([sb.auth.signInWithPassword({email,password:pw}),timeout]);
     if(error){errEl.textContent=error.message;btn.disabled=false;btn.textContent='Sign in';}
-    else if(data?.user){btn.textContent='Signed in';}
+    else if(data?.user){currentUser=data.user;btn.textContent='Signed in…';setTimeout(()=>renderRoot(),0);}
   }catch(e){
     errEl.textContent=e.message||'Something went wrong. Try again.';
     btn.disabled=false;btn.textContent='Sign in';
@@ -1268,14 +1268,16 @@ async function _bootOnce(session){
   else{currentUser=null;currentProfile=null;resetAppState();renderAuth();}
 }
 
-// Hard fallback: 6s to force auth if everything else silently failed
-setTimeout(()=>{
-  const root=document.getElementById('root');
-  if(root&&root.querySelector('.loading')){
-    _appBooted=true;
-    currentUser=null;currentProfile=null;resetAppState();renderAuth();
+// Safari/browser fallback: proactively call getSession() to race with INITIAL_SESSION.
+// Safari ITP can delay/block localStorage reads causing INITIAL_SESSION to fire late or not at all.
+sb.auth.getSession().then(({data:{session}})=>_bootOnce(session));
+// Secondary safety net: if still loading after 3s, force a getSession() check
+setTimeout(async()=>{
+  if(!_appBooted){
+    const {data:{session}}=await sb.auth.getSession();
+    _bootOnce(session);
   }
-},6000);
+},3000);
 
 sb.auth.onAuthStateChange(async(event,session)=>{
   if(event==='INITIAL_SESSION'){
