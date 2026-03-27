@@ -342,14 +342,10 @@ async function signIn(){
   const errEl=document.getElementById('a-err'),btn=document.getElementById('a-btn');
   errEl.textContent='';btn.disabled=true;btn.textContent='Signing in…';
   try{
-    // Race sign-in against a 10s session-check fallback (handles Supabase lock deadlock)
-    const fallback=new Promise(res=>setTimeout(async()=>{
-      const{data:{session}}=await sb.auth.getSession().catch(()=>({data:{session:null}}));
-      res({data:session?{user:session.user}:null,error:session?null:new Error('Request timed out — check your connection and try again.')});
-    },10000));
-    const{data,error}=await Promise.race([sb.auth.signInWithPassword({email,password:pw}),fallback]);
+    const timeout=new Promise((_, rej)=>setTimeout(()=>rej(new Error('Request timed out — check your connection and try again.')),30000));
+    const{data,error}=await Promise.race([sb.auth.signInWithPassword({email,password:pw}),timeout]);
     if(error){errEl.textContent=error.message;btn.disabled=false;btn.textContent='Sign in';}
-    else{currentUser=data.user;currentProfile=null;await renderRoot();}
+    else if(data?.user){btn.textContent='Signed in';}
   }catch(e){
     errEl.textContent=e.message||'Something went wrong. Try again.';
     btn.disabled=false;btn.textContent='Sign in';
@@ -1268,7 +1264,7 @@ let _appBooted=false;
 async function _bootOnce(session){
   if(_appBooted)return;
   _appBooted=true;
-  if(session){currentUser=session.user;await renderRoot();}
+  if(session){currentUser=session.user;setTimeout(()=>renderRoot(),0);}
   else{currentUser=null;currentProfile=null;resetAppState();renderAuth();}
 }
 
@@ -1289,8 +1285,8 @@ sb.auth.onAuthStateChange(async(event,session)=>{
   }
   if(event==='SIGNED_IN'){
     if(!_appBooted){await _bootOnce(session);return;}
-    // Post-login (user clicked Sign In button) — always re-render
-    if(session){currentUser=session.user;await renderRoot();}
+    // Post-login — defer renderRoot() to release auth lock first
+    if(session){currentUser=session.user;setTimeout(()=>renderRoot(),0);}
     return;
   }
   if(event==='TOKEN_REFRESHED'){
@@ -1314,7 +1310,6 @@ setTimeout(async()=>{
     await _bootOnce(session);
   }catch(e){await _bootOnce(null);}
 },200);
-
 window.addEventListener('unhandledrejection',(e)=>{
   if(e.reason?.message?.includes('Lock')||e.reason?.message?.includes('lock')){
     e.preventDefault();
