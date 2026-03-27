@@ -342,13 +342,15 @@ async function signIn(){
   const errEl=document.getElementById('a-err'),btn=document.getElementById('a-btn');
   errEl.textContent='';btn.disabled=true;btn.textContent='Signing in…';
   try{
-    const timeout=new Promise((_,rej)=>setTimeout(()=>rej(new Error('Request timed out — check your connection and try again.')),30000));
-    const signInReq=sb.auth.signInWithPassword({email,password:pw});
-    const{data,error}=await Promise.race([signInReq,timeout]);
+    const{data,error}=await sb.auth.signInWithPassword({email,password:pw});
     if(error){errEl.textContent=error.message;btn.disabled=false;btn.textContent='Sign in';}
     else{currentUser=data.user;currentProfile=null;await renderRoot();}
   }catch(e){
-    errEl.textContent=e.message||'Something went wrong. Try again.';
+    // Lock error or timeout: check if sign-in actually succeeded
+    const msg=e.message||'';
+    const{data:{session}}=await sb.auth.getSession().catch(()=>({data:{session:null}}));
+    if(session){currentUser=session.user;currentProfile=null;await renderRoot();return;}
+    errEl.textContent=msg||'Something went wrong. Try again.';
     btn.disabled=false;btn.textContent='Sign in';
   }
 }
