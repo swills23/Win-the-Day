@@ -346,6 +346,7 @@ async function signIn(){
     const signIn=sb.auth.signInWithPassword({email,password:pw});
     const{error}=await Promise.race([signIn,timeout]);
     if(error){errEl.textContent=error.message;btn.disabled=false;btn.textContent='Sign in';}
+  currentUser=data.user;currentProfile=null;await renderRoot();
   }catch(e){
     errEl.textContent=e.message||'Something went wrong. Try again.';
     btn.disabled=false;btn.textContent='Sign in';
@@ -647,19 +648,21 @@ function getMissedPatterns(){
 }
 
 async function loadAll(uid){
-  resetAppState();
-  try{const r=await storage.get('wtd-history',uid);if(r)allHistory=JSON.parse(r.value);}catch(e){}
-  try{const r=await storage.get('wtd-why',uid);if(r)whyStatement=r.value;}catch(e){}
-  try{const r=await storage.get('wtd-identity',uid);if(r)identityStatement=r.value;}catch(e){}
-  try{const r=await storage.get('wtd-tasks',uid);if(r){const s=JSON.parse(r.value);timedTasks=s.timed;essentialTasks=s.essential;}}catch(e){}
-  try{const r=await storage.get('wtd-rest',uid);if(r)restSettings=JSON.parse(r.value);}catch(e){}
-  try{const r=await storage.get('wtd-actions',uid);if(r)actionItems=JSON.parse(r.value);}catch(e){}
-  try{const r=await storage.get('wtd-notes',uid);if(r)taskNotes=JSON.parse(r.value);}catch(e){}
-  try{const r=await storage.get('wtd-goals',uid);if(r)goals=JSON.parse(r.value);}catch(e){}
-  try{const r=await storage.get('wtd-reminder',uid);if(r)reminderSettings=JSON.parse(r.value);}catch(e){}
-  try{const r=await storage.get('wtd-ir',uid);if(r)identityReflections=JSON.parse(r.value);}catch(e){}
-  const rec=allHistory[todayKey()];
-  if(rec){checked=rec.checked||{};isRestDay=rec.restDay||false;mood=rec.mood||0;winOfDay=rec.winOfDay||'';}
+  const keys=['wtd-history','wtd-why','wtd-identity','wtd-tasks','wtd-rest','wtd-actions','wtd-notes','wtd-goals','wtd-reminder','wtd-ir'];
+  const withT=(p)=>Promise.race([p,new Promise(r=>setTimeout(()=>r(null),8000))]);
+  const [r0,r1,r2,r3,r4,r5,r6,r7,r8,r9]=await Promise.all(keys.map(k=>withT(storage.get(k,uid))));
+  try{allHistory=r0?JSON.parse(r0.value):{}}catch(e){allHistory={};}
+  try{whyStatement=r1?.value||''}catch(e){whyStatement='';}
+  try{identityStatement=r2?.value||''}catch(e){identityStatement='';}
+  try{const s=r3?JSON.parse(r3.value):null;if(s){timedTasks=s.timed||DEFAULT_TIMED.map(t=>({...t}));essentialTasks=s.essential||DEFAULT_ESSENTIAL.map(t=>({...t}));}else{timedTasks=DEFAULT_TIMED.map(t=>({...t}));essentialTasks=DEFAULT_ESSENTIAL.map(t=>({...t}));}}catch(e){timedTasks=DEFAULT_TIMED.map(t=>({...t}));essentialTasks=DEFAULT_ESSENTIAL.map(t=>({...t}));}
+  try{restSettings=r4?JSON.parse(r4.value):{win:50,tasks:[]}}catch(e){restSettings={win:50,tasks:[]};}
+  try{actionItems=r5?JSON.parse(r5.value):[]}catch(e){actionItems=[];}
+  try{taskNotes=r6?JSON.parse(r6.value):{}}catch(e){taskNotes={};}
+  try{goals=r7?JSON.parse(r7.value):[]}catch(e){goals=[];}
+  try{reminderSettings=r8?JSON.parse(r8.value):{enabled:false,time:'07:00'}}catch(e){reminderSettings={enabled:false,time:'07:00'};}
+  try{identityReflections=r9?JSON.parse(r9.value):{}}catch(e){identityReflections={};}
+  const today=todayKey();const todayData=allHistory[today]||{};
+  checked=todayData.checked||{};isRestDay=todayData.rest||false;mood=todayData.mood||0;winOfDay=todayData.win||'';
 }
 
 async function saveDay(){
