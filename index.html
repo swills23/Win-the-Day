@@ -649,7 +649,9 @@ async function loadAll(uid){
   try{allHistory=r0?JSON.parse(r0.value):{}}catch(e){allHistory={};}
   try{whyStatement=r1?.value||''}catch(e){whyStatement='';}
   try{identityStatement=r2?.value||''}catch(e){identityStatement='';}
-  try{const s=r3?JSON.parse(r3.value):null;if(s){timedTasks=s.timed||DEFAULT_TIMED.map(t=>({...t}));essentialTasks=s.essential||DEFAULT_ESSENTIAL.map(t=>({...t}));}else{timedTasks=DEFAULT_TIMED.map(t=>({...t}));essentialTasks=DEFAULT_ESSENTIAL.map(t=>({...t}));}}catch(e){timedTasks=DEFAULT_TIMED.map(t=>({...t}));essentialTasks=DEFAULT_ESSENTIAL.map(t=>({timedTasks=fixTaskNames(s.timed)||DEFAULT_TIMED.map(t=>({...t}));essentialTasks=fixTaskNames(s.essential)||DEFAULT_ESSENTIAL.map(t=>({...t}))  try{actionItems=r5?JSON.parse(r5.value):[]}catch(e){actionItems=[];}
+  try{const s=r3?JSON.parse(r3.value):null;if(s){timedTasks=fixTaskNames(s.timed)||DEFAULT_TIMED.map(t=>({...t}));essentialTasks=fixTaskNames(s.essential)||DEFAULT_ESSENTIAL.map(t=>({...t}));}else{timedTasks=DEFAULT_TIMED.map(t=>({...t}));essentialTasks=DEFAULT_ESSENTIAL.map(t=>({...t}));}}catch(e){timedTasks=DEFAULT_TIMED.map(t=>({...t}));essentialTasks=DEFAULT_ESSENTIAL.map(t=>({...t}));}
+  try{const rest=r4?JSON.parse(r4.value):null;if(rest)restSettings={...DEFAULT_REST,...rest};}catch(e){restSettings={...DEFAULT_REST};}
+  try{actionItems=r5?JSON.parse(r5.value):[];}catch(e){actionItems=[];}
   try{taskNotes=r6?JSON.parse(r6.value):{}}catch(e){taskNotes={};}
   try{goals=r7?JSON.parse(r7.value):[]}catch(e){goals=[];}
   try{reminderSettings=r8?JSON.parse(r8.value):{enabled:false,time:'07:00'}}catch(e){reminderSettings={enabled:false,time:'07:00'};}
