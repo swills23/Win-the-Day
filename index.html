@@ -342,15 +342,16 @@ async function signIn(){
   const errEl=document.getElementById('a-err'),btn=document.getElementById('a-btn');
   errEl.textContent='';btn.disabled=true;btn.textContent='Signing in…';
   try{
-    const{data,error}=await sb.auth.signInWithPassword({email,password:pw});
+    // Race sign-in against a 10s session-check fallback (handles Supabase lock deadlock)
+    const fallback=new Promise(res=>setTimeout(async()=>{
+      const{data:{session}}=await sb.auth.getSession().catch(()=>({data:{session:null}}));
+      res({data:session?{user:session.user}:null,error:session?null:new Error('Request timed out — check your connection and try again.')});
+    },10000));
+    const{data,error}=await Promise.race([sb.auth.signInWithPassword({email,password:pw}),fallback]);
     if(error){errEl.textContent=error.message;btn.disabled=false;btn.textContent='Sign in';}
     else{currentUser=data.user;currentProfile=null;await renderRoot();}
   }catch(e){
-    // Lock error or timeout: check if sign-in actually succeeded
-    const msg=e.message||'';
-    const{data:{session}}=await sb.auth.getSession().catch(()=>({data:{session:null}}));
-    if(session){currentUser=session.user;currentProfile=null;await renderRoot();return;}
-    errEl.textContent=msg||'Something went wrong. Try again.';
+    errEl.textContent=e.message||'Something went wrong. Try again.';
     btn.disabled=false;btn.textContent='Sign in';
   }
 }
