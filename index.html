@@ -321,6 +321,36 @@ body{background:var(--bg);color:var(--text);font-family:var(--font);touch-action
 .pl-quality-btn.sel-hot{background:rgba(226,75,74,.12);color:var(--red);border-color:var(--red);}
 .pl-quality-btn.sel-warm{background:rgba(200,137,26,.12);color:var(--orange);border-color:var(--orange);}
 .pl-quality-btn.sel-cold{background:rgba(58,126,196,.12);color:var(--blue);border-color:var(--blue);}
+
+/* ── Follow-up Alerts ── */
+.pl-alert{display:flex;align-items:center;gap:8px;padding:9px 13px;margin-bottom:1rem;background:rgba(226,75,74,.06);border:.5px solid rgba(226,75,74,.2);border-radius:var(--r);font-size:12px;color:var(--red);}
+.pl-alert-count{font-weight:600;font-size:14px;}
+.pl-alert-link{color:var(--red);text-decoration:underline;cursor:pointer;margin-left:auto;font-size:11px;white-space:nowrap;}
+.pl-stale-badge{font-size:9px;padding:1px 6px;border-radius:10px;background:rgba(226,75,74,.1);color:var(--red);border:.5px solid rgba(226,75,74,.25);margin-left:4px;white-space:nowrap;}
+
+/* ── Response Time ── */
+.pl-resp-time{font-size:10px;color:var(--text3);white-space:nowrap;}
+.pl-resp-fast{color:var(--green);}
+.pl-resp-slow{color:var(--red);}
+
+/* ── Lead Score ── */
+.pl-score{display:inline-flex;align-items:center;justify-content:center;width:22px;height:22px;border-radius:50%;font-size:10px;font-weight:600;flex-shrink:0;}
+.pl-score-a{background:rgba(46,158,91,.15);color:var(--green);border:.5px solid rgba(46,158,91,.4);}
+.pl-score-b{background:rgba(58,126,196,.12);color:var(--blue);border:.5px solid rgba(58,126,196,.3);}
+.pl-score-c{background:rgba(200,137,26,.12);color:var(--orange);border:.5px solid rgba(200,137,26,.3);}
+.pl-score-d{background:rgba(226,75,74,.1);color:var(--red);border:.5px solid rgba(226,75,74,.25);}
+
+/* ── Setter Scripts ── */
+.pl-script{margin-top:10px;padding:10px 13px;background:var(--bg);border-radius:var(--r);border:.5px solid var(--border);font-size:12px;line-height:1.6;color:var(--text2);}
+.pl-script-title{font-size:10px;text-transform:uppercase;letter-spacing:.06em;color:var(--text3);margin-bottom:4px;display:flex;align-items:center;gap:6px;}
+.pl-script-copy{font-size:10px;color:var(--blue);cursor:pointer;margin-left:auto;}
+
+/* ── Funnel Viz ── */
+.pl-funnel{margin-bottom:1.5rem;}
+.pl-funnel-step{display:flex;align-items:center;gap:10px;margin-bottom:4px;}
+.pl-funnel-bar{height:26px;border-radius:4px;display:flex;align-items:center;padding:0 10px;font-size:11px;font-weight:500;color:#fff;min-width:36px;transition:width .3s ease;}
+.pl-funnel-label{font-size:11px;color:var(--text3);white-space:nowrap;min-width:90px;}
+.pl-funnel-pct{font-size:11px;color:var(--text2);min-width:40px;text-align:right;}
 </style>
 </head>
 <body>
@@ -359,6 +389,13 @@ let adminView='pending',adminClientId=null,adminClientEmail='';
 const SOURCE_MAP={REWIRE:'video',SHIFT:'story'};
 const STATUS_LABELS={new:'New',in_conversation:'In Conversation',booked:'Booked',completed_call:'Completed Call',closed_won:'Closed Won',closed_lost:'Closed Lost',ghosted:'Ghosted',not_qualified:'Not Qualified'};
 let pipelineLeads=[],pipelineFilters={status:'all',source:'all',dateFrom:'',dateTo:''},pipelineSort={field:'dm_date',dir:'desc'};
+const STALE_DAYS=3; // leads with no update in 3+ days get flagged
+const SETTER_SCRIPTS={
+  new:{title:'Opening DM',lines:['Hey {{name}}! Saw you checked out our content.','What made you reach out today?','What\'s the biggest thing you\'re working on right now?']},
+  in_conversation:{title:'Qualifying',lines:['How long have you been dealing with this?','What have you already tried?','If you could change one thing in the next 90 days, what would it be?','Sounds like you\'re in the gap between knowing and doing — that\'s exactly what we work on.']},
+  booked:{title:'Pre-call warmup',lines:['Hey {{name}}, looking forward to your call!','Before we chat — what would make this the most valuable 30 min of your week?','No prep needed, just come ready to be honest about where you\'re at.']},
+  ghosted:{title:'Re-engage',lines:['Hey {{name}} — no pressure at all.','Just wanted to check in. Still thinking about what we talked about?','The door\'s open whenever you\'re ready.']},
+};
 
 function fixMojibake(s){if(typeof s!=='string')return s;const c=[...s].map(x=>x.charCodeAt(0));if(!c.some(x=>x>127&&x<256))return s;try{return new TextDecoder('utf-8').decode(new Uint8Array(c));}catch(e){return s;}}
 function fixTaskNames(tasks){return(tasks||[]).map(t=>({...t,name:fixMojibake(t.name)}));}
@@ -447,7 +484,7 @@ async function savePipelineLeads(){
 }
 function addPipelineLead(d){
   const now=new Date().toISOString();
-  pipelineLeads.push({id:crypto.randomUUID(),name:d.name,ig_handle:d.ig_handle,source_keyword:d.source_keyword,source_type:SOURCE_MAP[d.source_keyword]||'other',dm_date:d.dm_date,status:d.status||'new',lead_quality:d.lead_quality||'warm',setter_notes:d.setter_notes||'',objections:d.objections||'',outcome_notes:'',booked_date:'',created_at:now,updated_at:now});
+  pipelineLeads.push({id:crypto.randomUUID(),name:d.name,ig_handle:d.ig_handle,source_keyword:d.source_keyword,source_type:SOURCE_MAP[d.source_keyword]||'other',dm_date:d.dm_date,first_reply_at:d.first_reply_at||'',status:d.status||'new',lead_quality:d.lead_quality||'warm',setter_notes:d.setter_notes||'',objections:d.objections||'',outcome_notes:'',booked_date:'',created_at:now,updated_at:now});
   savePipelineLeads();
 }
 function updatePipelineLead(id,d){
@@ -489,17 +526,129 @@ function setPipelineSort(field){
   renderAdmin();
 }
 
+// ── STALE LEAD DETECTION ──
+function getStaleLeads(){
+  const now=Date.now(),cutoff=STALE_DAYS*24*60*60*1000;
+  const activeStatuses=['new','in_conversation','booked'];
+  return pipelineLeads.filter(l=>{
+    if(!activeStatuses.includes(l.status))return false;
+    const lastTouch=new Date(l.updated_at||l.created_at).getTime();
+    return(now-lastTouch)>cutoff;
+  });
+}
+function staleDays(l){return Math.floor((Date.now()-new Date(l.updated_at||l.created_at).getTime())/(24*60*60*1000));}
+
+// ── RESPONSE TIME ──
+function getResponseTime(l){
+  if(!l.dm_date||!l.first_reply_at)return null;
+  const dm=new Date(l.dm_date+'T00:00:00').getTime(),reply=new Date(l.first_reply_at).getTime();
+  if(reply<=dm)return null;
+  const hrs=Math.round((reply-dm)/(1000*60*60));
+  return hrs;
+}
+function fmtResponseTime(hrs){
+  if(hrs===null)return'';
+  if(hrs<1)return'<1h';
+  if(hrs<24)return hrs+'h';
+  return Math.round(hrs/24)+'d';
+}
+function avgResponseTime(){
+  const times=pipelineLeads.map(getResponseTime).filter(t=>t!==null);
+  if(!times.length)return null;
+  return Math.round(times.reduce((a,b)=>a+b,0)/times.length);
+}
+
+// ── LEAD SCORING ──
+function calcLeadScore(l){
+  let score=50;
+  // Quality bonus
+  if(l.lead_quality==='hot')score+=25;
+  else if(l.lead_quality==='warm')score+=10;
+  else if(l.lead_quality==='cold')score-=10;
+  // Engagement: has notes = engaged setter convo
+  if(l.setter_notes&&l.setter_notes.length>20)score+=10;
+  // Objections noted (means deeper convo happened)
+  if(l.objections&&l.objections.length>10)score+=5;
+  // Response time: fast reply = higher intent
+  const rt=getResponseTime(l);
+  if(rt!==null){if(rt<=2)score+=15;else if(rt<=12)score+=8;else if(rt>48)score-=10;}
+  // Recency: recent leads score higher
+  const age=Math.floor((Date.now()-new Date(l.dm_date+'T00:00:00').getTime())/(24*60*60*1000));
+  if(age<=2)score+=10;else if(age>14)score-=15;
+  // Status progression
+  if(l.status==='booked')score+=20;
+  else if(l.status==='in_conversation')score+=5;
+  // Stale penalty
+  if(getStaleLeads().find(s=>s.id===l.id))score-=15;
+  return Math.max(0,Math.min(100,score));
+}
+function scoreGrade(s){if(s>=75)return'A';if(s>=55)return'B';if(s>=35)return'C';return'D';}
+
+// ── SETTER SCRIPT ──
+function getSetterScript(status,name){
+  const tpl=SETTER_SCRIPTS[status];
+  if(!tpl)return null;
+  return{title:tpl.title,lines:tpl.lines.map(l=>l.replace('{{name}}',name||''))};
+}
+function copyScript(status,name){
+  const s=getSetterScript(status,name);
+  if(!s)return;
+  navigator.clipboard.writeText(s.lines.join('\n')).then(()=>{
+    const btn=document.getElementById('pl-copy-btn');
+    if(btn){btn.textContent='Copied!';setTimeout(()=>{btn.textContent='Copy';},1500);}
+  });
+}
+
+// ── FUNNEL VIZ ──
+function getFunnelData(){
+  const total=pipelineLeads.length;
+  if(!total)return[];
+  const stages=[
+    {key:'total',label:'Total leads',count:total},
+    {key:'in_conversation',label:'In Conversation',count:pipelineLeads.filter(l=>['in_conversation','booked','completed_call','closed_won','closed_lost'].includes(l.status)).length},
+    {key:'booked',label:'Booked',count:pipelineLeads.filter(l=>['booked','completed_call','closed_won','closed_lost'].includes(l.status)).length},
+    {key:'completed_call',label:'Completed Call',count:pipelineLeads.filter(l=>['completed_call','closed_won','closed_lost'].includes(l.status)).length},
+    {key:'closed_won',label:'Closed Won',count:pipelineLeads.filter(l=>l.status==='closed_won').length},
+  ];
+  const colors=['var(--blue)','var(--orange)','#8B5CF6','var(--green)','var(--green)'];
+  return stages.map((s,i)=>({...s,pct:Math.round(s.count/total*100),color:colors[i]}));
+}
+
 function renderPipelineDashboard(){
   const stats=getPipelineStats();
   const filtered=getFilteredLeads();
   const allKeywords=[...new Set(pipelineLeads.map(l=>l.source_keyword).filter(Boolean))];
+  const stale=getStaleLeads();
+  const avgRT=avgResponseTime();
+  const funnel=getFunnelData();
   let h='';
-  // Stats row
+
+  // Stale lead alert
+  if(stale.length){
+    h+=`<div class="pl-alert"><span class="pl-alert-count">${stale.length}</span> lead${stale.length>1?'s':''} need${stale.length===1?'s':''} follow-up (${STALE_DAYS}+ days stale)<span class="pl-alert-link" onclick="setPipelineFilter('status','all');pipelineSort={field:'updated_at',dir:'asc'};renderAdmin();">Show stale</span></div>`;
+  }
+
+  // Stats row — expanded with response time + avg score
+  const activeLeads=pipelineLeads.filter(l=>['new','in_conversation','booked'].includes(l.status));
+  const avgScore=activeLeads.length?Math.round(activeLeads.reduce((s,l)=>s+calcLeadScore(l),0)/activeLeads.length):0;
   h+=`<div class="pl-stats">
     <div class="pl-stat"><div class="pl-stat-val">${stats.total}</div><div class="pl-stat-lbl">Leads (month)</div></div>
     <div class="pl-stat"><div class="pl-stat-val">${stats.dmToBooked}%</div><div class="pl-stat-lbl">DM → Booked</div></div>
     <div class="pl-stat"><div class="pl-stat-val">${stats.bookedToClosed}%</div><div class="pl-stat-lbl">Booked → Closed</div></div>
+    <div class="pl-stat"><div class="pl-stat-val">${avgRT!==null?fmtResponseTime(avgRT):'—'}</div><div class="pl-stat-lbl">Avg reply time</div></div>
+    <div class="pl-stat"><div class="pl-stat-val">${avgScore||'—'}</div><div class="pl-stat-lbl">Avg lead score</div></div>
   </div>`;
+
+  // Conversion funnel
+  if(funnel.length&&funnel[0].count>0){
+    const maxW=100;
+    h+=`<div class="pl-funnel">`;
+    funnel.forEach(s=>{
+      const w=Math.max(12,Math.round(s.pct/100*maxW));
+      h+=`<div class="pl-funnel-step"><span class="pl-funnel-label">${s.label}</span><div class="pl-funnel-bar" style="width:${w}%;background:${s.color}">${s.count}</div><span class="pl-funnel-pct">${s.pct}%</span></div>`;
+    });
+    h+=`</div>`;
+  }
   // Source breakdown
   if(Object.keys(stats.bySource).length){
     h+=`<div class="pl-source-row">${Object.entries(stats.bySource).map(([k,v])=>`<span class="pl-source-pill"><strong>${v}</strong> ${k} (${SOURCE_MAP[k]||'other'})</span>`).join('')}</div>`;
@@ -517,14 +666,20 @@ function renderPipelineDashboard(){
   if(!filtered.length){h+=`<div class="pl-empty">No leads${pipelineFilters.status!=='all'||pipelineFilters.source!=='all'?' match your filters':' yet'}. Add your first lead above.</div>`;}
   else{filtered.forEach(l=>{
     const dateStr=l.dm_date?new Date(l.dm_date+'T12:00:00').toLocaleDateString('en-US',{month:'short',day:'numeric'}):'';
+    const score=calcLeadScore(l),grade=scoreGrade(score);
+    const isStale=stale.find(s=>s.id===l.id);
+    const rt=getResponseTime(l),rtStr=fmtResponseTime(rt);
+    const rtClass=rt!==null?(rt<=4?'pl-resp-fast':rt>=48?'pl-resp-slow':''):'';
     h+=`<div class="pl-lead" onclick="openEditLeadModal('${l.id}')">
       <div class="pl-lead-top">
-        <div class="pl-lead-name">${esc(l.name||'Unnamed')}${l.ig_handle?` <span class="pl-lead-ig">@${esc(l.ig_handle.replace(/^@/,''))}</span>`:''}</div>
+        <span class="pl-score pl-score-${grade.toLowerCase()}" title="Score: ${score}">${grade}</span>
+        <div class="pl-lead-name">${esc(l.name||'Unnamed')}${l.ig_handle?` <span class="pl-lead-ig">@${esc(l.ig_handle.replace(/^@/,''))}</span>`:''}${isStale?`<span class="pl-stale-badge">${staleDays(l)}d stale</span>`:''}</div>
       </div>
       <div class="pl-lead-meta">
         <span class="pl-badge pl-badge-${l.status}">${STATUS_LABELS[l.status]||l.status}</span>
         ${l.source_keyword?`<span class="pl-source-pill" style="font-size:10px;padding:1px 7px">${esc(l.source_keyword)}</span>`:''}
         ${l.lead_quality?`<span class="pl-quality pl-quality-${l.lead_quality}" title="${l.lead_quality}"></span>`:''}
+        ${rtStr?`<span class="pl-resp-time ${rtClass}" title="Reply time">⚡${rtStr}</span>`:''}
         <span class="pl-lead-date">${dateStr}</span>
       </div>
       ${l.setter_notes?`<div class="pl-lead-notes">${esc(l.setter_notes)}</div>`:''}
@@ -555,6 +710,8 @@ function openAddLeadModal(){
     <input class="inp" id="pl-keyword-custom" placeholder="Custom keyword" style="display:none">
     <label class="lbl">DM date</label>
     <input class="inp" id="pl-date" type="date" value="${todayKey()}">
+    <label class="lbl">First reply (when setter responded)</label>
+    <input class="inp" id="pl-reply" type="datetime-local">
     <label class="lbl">Status</label>
     <select class="inp" id="pl-status">
       ${Object.entries(STATUS_LABELS).map(([k,v])=>`<option value="${k}">${v}</option>`).join('')}
@@ -585,11 +742,13 @@ function saveNewLead(){
   const name=document.getElementById('pl-name').value.trim();
   if(!name){alert('Please enter a name.');return;}
   const keyword=document.getElementById('pl-keyword').value==='__custom'?document.getElementById('pl-keyword-custom').value.trim().toUpperCase():document.getElementById('pl-keyword').value;
+  const replyVal=document.getElementById('pl-reply').value;
   addPipelineLead({
     name,
     ig_handle:document.getElementById('pl-ig').value.trim(),
     source_keyword:keyword,
     dm_date:document.getElementById('pl-date').value,
+    first_reply_at:replyVal?new Date(replyVal).toISOString():'',
     status:document.getElementById('pl-status').value,
     lead_quality:window._plQuality||'warm',
     setter_notes:document.getElementById('pl-notes').value.trim(),
@@ -606,9 +765,13 @@ function openEditLeadModal(id){
   const keywords=[...new Set([...defaultKeywords,...allKeywords])];
   const isCustom=!keywords.includes(l.source_keyword)&&l.source_keyword;
   const showBooked=['booked','completed_call','closed_won','closed_lost'].includes(l.status);
+  const score=calcLeadScore(l),grade=scoreGrade(score);
+  const rt=getResponseTime(l),rtStr=fmtResponseTime(rt);
+  const replyLocal=l.first_reply_at?new Date(l.first_reply_at).toISOString().slice(0,16):'';
+  const script=getSetterScript(l.status,l.name);
   showOv(`<div class="overlay-bg" onclick="if(event.target===this)closeOv()"><div class="modal" style="max-height:90vh;overflow-y:auto">
     <div class="modal-title">Edit lead</div>
-    <div class="modal-sub">${esc(l.name)}${l.ig_handle?' — @'+esc(l.ig_handle.replace(/^@/,'')):''}</div>
+    <div class="modal-sub" style="display:flex;align-items:center;gap:8px">${esc(l.name)}${l.ig_handle?' — @'+esc(l.ig_handle.replace(/^@/,'')):''} <span class="pl-score pl-score-${grade.toLowerCase()}" title="Score: ${score}">${grade} (${score})</span>${rtStr?` <span style="font-size:11px;color:var(--text3)">Reply: ${rtStr}</span>`:''}</div>
     <label class="lbl">Name</label>
     <input class="inp" id="pl-name" value="${esc(l.name)}">
     <label class="lbl">Instagram handle</label>
@@ -621,6 +784,8 @@ function openEditLeadModal(id){
     <input class="inp" id="pl-keyword-custom" value="${isCustom?esc(l.source_keyword):''}" placeholder="Custom keyword" style="display:${isCustom?'block':'none'}">
     <label class="lbl">DM date</label>
     <input class="inp" id="pl-date" type="date" value="${l.dm_date||''}">
+    <label class="lbl">First reply (when setter responded)</label>
+    <input class="inp" id="pl-reply" type="datetime-local" value="${replyLocal}">
     <label class="lbl">Status</label>
     <select class="inp" id="pl-status" onchange="document.getElementById('pl-booked-row').style.display=['booked','completed_call','closed_won','closed_lost'].includes(this.value)?'block':'none'">
       ${Object.entries(STATUS_LABELS).map(([k,v])=>`<option value="${k}"${l.status===k?' selected':''}>${v}</option>`).join('')}
@@ -641,6 +806,7 @@ function openEditLeadModal(id){
     <textarea class="inp" id="pl-objections" style="min-height:60px;resize:vertical">${esc(l.objections||'')}</textarea>
     <label class="lbl">Outcome notes</label>
     <textarea class="inp" id="pl-outcome" style="min-height:60px;resize:vertical">${esc(l.outcome_notes||'')}</textarea>
+    ${script?`<div class="pl-script"><div class="pl-script-title">Suggested script — ${script.title} <span class="pl-script-copy" id="pl-copy-btn" onclick="event.stopPropagation();copyScript('${l.status}','${esc(l.name)}')">Copy</span></div>${script.lines.map(line=>`<div>${line}</div>`).join('')}</div>`:''}
     <div class="modal-actions">
       <button class="btn-save" onclick="saveEditLead('${id}')">Save</button>
       <button class="btn-cancel" onclick="closeOv()">Cancel</button>
@@ -650,11 +816,13 @@ function openEditLeadModal(id){
 }
 function saveEditLead(id){
   const keyword=document.getElementById('pl-keyword').value==='__custom'?document.getElementById('pl-keyword-custom').value.trim().toUpperCase():document.getElementById('pl-keyword').value;
+  const replyVal=document.getElementById('pl-reply').value;
   updatePipelineLead(id,{
     name:document.getElementById('pl-name').value.trim(),
     ig_handle:document.getElementById('pl-ig').value.trim(),
     source_keyword:keyword,
     dm_date:document.getElementById('pl-date').value,
+    first_reply_at:replyVal?new Date(replyVal).toISOString():'',
     status:document.getElementById('pl-status').value,
     booked_date:document.getElementById('pl-booked-date')?.value||'',
     lead_quality:window._plQuality||'warm',
