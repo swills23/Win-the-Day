@@ -507,6 +507,12 @@ const LEAD_SOURCES=['story_reply','reel_comment','dm_first','referral','comment'
 const LEAD_SOURCE_LABELS={story_reply:'Story Reply',reel_comment:'Reel/Comment',dm_first:'DM First',referral:'Referral',comment:'Post Comment',ad:'Ad',link_in_bio:'Link in Bio',live:'Live',other:'Other'};
 const OBJECTION_CATEGORIES=['price','timing','not_ready','spouse','already_tried','skeptical','no_response','other'];
 const OBJECTION_LABELS={price:'Price/Money',timing:'Bad Timing',not_ready:'Not Ready',spouse:'Need to Ask Spouse',already_tried:'Already Tried Coaching',skeptical:'Skeptical',no_response:'No Response',other:'Other'};
+// Content format — tracks which format drove the DM (drawing video vs carousel etc.)
+const CONTENT_FORMATS=['drawing_video','carousel','story','reel','live','ad','other'];
+const CONTENT_FORMAT_LABELS={drawing_video:'Drawing Video',carousel:'Carousel',story:'Story',reel:'Reel',live:'Live',ad:'Ad',other:'Other'};
+// Call outcome — tracks what happened after Booked stage
+const CALL_OUTCOMES=['showed_closed','showed_not_closed','no_show','rescheduled','pending'];
+const CALL_OUTCOME_LABELS={showed_closed:'Showed + Closed',showed_not_closed:'Showed + Not Closed',no_show:'No Show',rescheduled:'Rescheduled',pending:'Pending'};
 let pipelineLeads=[],pipelineFilters={status:'all',source:'all',leadSource:'all',setter:'all',dateFrom:'',dateTo:''},pipelineSort={field:'dm_date',dir:'desc'};
 let pipelineSetters=[];
 let mcApiKey='';
@@ -1212,6 +1218,76 @@ function renderPipelineDashboard(){
     h+=`</div>`;
   }
 
+  // Content format performance — shows which format drives bookings
+  const fmtStats={};
+  pipelineLeads.forEach(l=>{
+    const fmt=l.content_format||'';if(!fmt)return;
+    if(!fmtStats[fmt])fmtStats[fmt]={total:0,booked:0,closed:0};
+    fmtStats[fmt].total++;
+    const st=getLeadStage(l);
+    if(st==='Booked')fmtStats[fmt].booked++;
+    if(l.call_outcome==='showed_closed')fmtStats[fmt].closed++;
+  });
+  const fmtEntries=Object.entries(fmtStats).sort((a,b)=>b[1].total-a[1].total);
+  if(fmtEntries.length){
+    h+=`<div style="margin-bottom:1rem"><div class="mini-label" style="margin-bottom:6px">Content format performance</div><div class="pl-source-row">${fmtEntries.map(([fmt,s])=>`<span class="pl-source-pill"><strong>${s.total}</strong> ${CONTENT_FORMAT_LABELS[fmt]||fmt} <span style="font-size:9px;color:var(--text3)">${s.total?Math.round(s.booked/s.total*100):0}% book${s.closed?' \u00B7 '+s.closed+' closed':''}</span></span>`).join('')}</div></div>`;
+  }
+
+  // Call outcome breakdown for booked leads
+  const outcomeStats={};
+  pipelineLeads.forEach(l=>{
+    if(getLeadStage(l)!=='Booked'||!l.call_outcome)return;
+    outcomeStats[l.call_outcome]=(outcomeStats[l.call_outcome]||0)+1;
+  });
+  const outcomeEntries=Object.entries(outcomeStats).sort((a,b)=>b[1]-a[1]);
+  if(outcomeEntries.length){
+    h+=`<div style="margin-bottom:1rem"><div class="mini-label" style="margin-bottom:6px">Call outcomes</div><div class="pl-source-row">${outcomeEntries.map(([o,n])=>`<span class="pl-source-pill"><strong>${n}</strong> ${CALL_OUTCOME_LABELS[o]||o}</span>`).join('')}</div></div>`;
+  }
+
+  // Approach effectiveness — which booking approaches actually close
+  const approachStats={};
+  pipelineLeads.forEach(l=>{
+    if(!l.approach_used)return;
+    if(!approachStats[l.approach_used])approachStats[l.approach_used]={total:0,closed:0};
+    approachStats[l.approach_used].total++;
+    if(l.call_outcome==='showed_closed')approachStats[l.approach_used].closed++;
+  });
+  const approachEntries=Object.entries(approachStats).sort((a,b)=>b[1].total-a[1].total);
+  if(approachEntries.length){
+    h+=`<div style="margin-bottom:1rem"><div class="mini-label" style="margin-bottom:6px">Approach effectiveness</div><div class="pl-source-row">${approachEntries.map(([a,s])=>`<span class="pl-source-pill"><strong>${s.total}</strong> ${a} <span style="font-size:9px;color:var(--text3)">${s.total?Math.round(s.closed/s.total*100):0}% close</span></span>`).join('')}</div></div>`;
+  }
+
+  // Break reason frequency — why leads die
+  const breakStats={};
+  pipelineLeads.forEach(l=>{
+    if(getLeadStage(l)!=='Dead'||!l.break_reason)return;
+    breakStats[l.break_reason]=(breakStats[l.break_reason]||0)+1;
+  });
+  const breakEntries=Object.entries(breakStats).sort((a,b)=>b[1]-a[1]);
+  if(breakEntries.length){
+    h+=`<div style="margin-bottom:1rem"><div class="mini-label" style="margin-bottom:6px">Why leads die</div><div class="pl-source-row">${breakEntries.map(([r,n])=>`<span class="pl-source-pill"><strong>${n}</strong> ${r}</span>`).join('')}</div></div>`;
+  }
+
+  // Country tier conversion — validates whether the country gate correlates with actual closings
+  const tierStats={green:{total:0,booked:0,closed:0},yellow:{total:0,booked:0,closed:0},red:{total:0,booked:0,closed:0}};
+  pipelineLeads.forEach(l=>{
+    const tier=getCountryTier(l.country);
+    if(!tierStats[tier])return;
+    tierStats[tier].total++;
+    if(getLeadStage(l)==='Booked')tierStats[tier].booked++;
+    if(l.call_outcome==='showed_closed')tierStats[tier].closed++;
+  });
+  const hasTierData=Object.values(tierStats).some(s=>s.total>0);
+  if(hasTierData){
+    h+=`<div style="margin-bottom:1rem"><div class="mini-label" style="margin-bottom:6px">Country tier conversion</div><div class="pl-source-row">`;
+    ['green','yellow','red'].forEach(t=>{
+      const s=tierStats[t];if(!s.total)return;
+      const color=t==='green'?'var(--green)':t==='yellow'?'var(--orange)':'var(--red)';
+      h+=`<span class="pl-source-pill"><strong style="color:${color}">${s.total}</strong> ${t} <span style="font-size:9px;color:var(--text3)">${Math.round(s.booked/s.total*100)}% book${s.closed?' \u00B7 '+Math.round(s.closed/s.total*100)+'% close':''}</span></span>`;
+    });
+    h+=`</div></div>`;
+  }
+
   // ManyChat settings
   h+=renderMcSettings();
 
@@ -1307,6 +1383,11 @@ function openAddLeadModal(){
       <option value="">Select source...</option>
       ${LEAD_SOURCES.map(s=>`<option value="${s}">${LEAD_SOURCE_LABELS[s]}</option>`).join('')}
     </select>
+    <label class="lbl">Content format</label>
+    <select class="inp" id="pl-content-format">
+      <option value="">Select format...</option>
+      ${CONTENT_FORMATS.map(f=>`<option value="${f}">${CONTENT_FORMAT_LABELS[f]}</option>`).join('')}
+    </select>
     <label class="lbl">Content keyword (which post/video)</label>
     <select class="inp" id="pl-keyword" onchange="document.getElementById('pl-keyword-custom').style.display=this.value==='__custom'?'block':'none'">
       <option value="">None</option>
@@ -1377,6 +1458,7 @@ async function saveNewLead(){
     lead_quality:window._plQuality||'warm',
     setter_notes:document.getElementById('pl-notes').value.trim(),
     country:country,
+    content_format:document.getElementById('pl-content-format')?.value||'',
     stage_entered_at:new Date().toISOString(),
     mc_subscriber_id:window._mcSubId||'',
     mc_tags:(window._mcSubData&&window._mcSubData.tags)||[],
@@ -1436,6 +1518,11 @@ function openLeadDetail(id){
       <option value="">Select source...</option>
       ${LEAD_SOURCES.map(s=>`<option value="${s}"${l.lead_source===s?' selected':''}>${LEAD_SOURCE_LABELS[s]}</option>`).join('')}
     </select>
+    <label class="lbl">Content format</label>
+    <select class="inp" id="pl-content-format">
+      <option value="">Select format...</option>
+      ${CONTENT_FORMATS.map(f=>`<option value="${f}"${l.content_format===f?' selected':''}>${CONTENT_FORMAT_LABELS[f]}</option>`).join('')}
+    </select>
     <label class="lbl">Content keyword</label>
     <select class="inp" id="pl-keyword" onchange="document.getElementById('pl-keyword-custom').style.display=this.value==='__custom'?'block':'none'">
       <option value="">None</option>
@@ -1466,6 +1553,11 @@ function openLeadDetail(id){
     <textarea class="inp" id="pl-notes" style="min-height:80px;resize:vertical">${esc(l.setter_notes||'')}</textarea>
     <label class="lbl">Outcome notes</label>
     <textarea class="inp" id="pl-outcome" style="min-height:60px;resize:vertical">${esc(l.outcome_notes||'')}</textarea>
+    ${stage==='Booked'?`<label class="lbl">Call outcome</label>
+    <select class="inp" id="pl-call-outcome">
+      <option value="">Pending...</option>
+      ${CALL_OUTCOMES.map(o=>`<option value="${o}"${l.call_outcome===o?' selected':''}>${CALL_OUTCOME_LABELS[o]}</option>`).join('')}
+    </select>`:''}
 
     ${l.pain_signal!==undefined||l.urgency_signal!==undefined||l.income_signal!==undefined?`<div style="margin-bottom:1rem;padding:10px 13px;background:var(--bg2);border-radius:var(--r);border:.5px solid var(--border)">
       <div class="lbl" style="margin-bottom:6px">Qualification signals</div>
@@ -1524,6 +1616,10 @@ async function saveEditLead(id){
   };
   const countryEl=document.getElementById('pl-country');
   if(countryEl)updates.country=countryEl.value;
+  const fmtEl=document.getElementById('pl-content-format');
+  if(fmtEl)updates.content_format=fmtEl.value;
+  const callEl=document.getElementById('pl-call-outcome');
+  if(callEl&&callEl.value)updates.call_outcome=callEl.value;
   await updatePipelineLead(id,updates);
   window._plObjCats=[];
   closeOv();renderAdmin();
