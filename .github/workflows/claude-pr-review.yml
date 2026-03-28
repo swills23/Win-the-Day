@@ -1,0 +1,33 @@
+name: Claude PR Review
+
+on:
+  pull_request:
+    types: [opened, synchronize, ready_for_review]
+
+jobs:
+  review:
+    runs-on: ubuntu-latest
+    permissions:
+      contents: read
+      pull-requests: write
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+        with:
+          fetch-depth: 0
+
+      - name: Claude Code Review
+        uses: anthropics/claude-code-action@v1
+        with:
+          anthropic_api_key: ${{ secrets.ANTHROPIC_API_KEY }}
+          model: "claude-sonnet-4-6"
+          allowed_tools: "Read,Glob,Grep,WebFetch"
+          prompt: |
+            Review this pull request. Check for:
+            1. Breaking changes to the live site (app.scottzwills.com)
+            2. Security issues (exposed keys, XSS, injection)
+            3. Mobile responsiveness (audience is on phones)
+            4. Supabase query correctness
+            5. Code clarity (Scott is not a developer — keep it simple)
+
+            Be direct and specific. No fluff. Flag blockers clearly.
