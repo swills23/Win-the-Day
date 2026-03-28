@@ -403,6 +403,57 @@ body{background:var(--bg);color:var(--text);font-family:var(--font);touch-action
 .mc-settings{background:var(--bg2);border-radius:var(--rl);padding:14px;border:.5px solid var(--border);margin-bottom:1rem;}
 .mc-settings-title{font-size:13px;font-weight:500;margin-bottom:8px;display:flex;align-items:center;gap:6px;}
 .mc-imported{font-size:10px;padding:1px 6px;border-radius:8px;background:rgba(58,126,196,.08);color:var(--blue);border:.5px solid rgba(58,126,196,.15);white-space:nowrap;}
+
+/* ── Pipeline Kanban ── */
+.pipeline-bar{display:flex;gap:6px;align-items:center;margin-bottom:1rem;flex-wrap:wrap;}
+.pipeline-filter-btn{font-size:12px;padding:5px 13px;border-radius:20px;border:.5px solid var(--border);background:var(--bg);color:var(--text2);cursor:pointer;font-family:var(--font);transition:all .15s;white-space:nowrap;}
+.pipeline-filter-btn.active{background:var(--text);color:var(--bg);border-color:var(--text);}
+.pipeline-sel{font-size:12px;padding:5px 8px;border-radius:var(--r);border:.5px solid var(--border);background:var(--bg);color:var(--text);font-family:var(--font);outline:none;}
+.pipeline-stages{display:flex;gap:10px;overflow-x:auto;padding-bottom:8px;-webkit-overflow-scrolling:touch;scroll-snap-type:x mandatory;}
+.pipeline-col{min-width:260px;max-width:320px;flex:1;background:var(--bg2);border-radius:var(--rl);border:.5px solid var(--border);padding:10px;scroll-snap-align:start;}
+.pipeline-col-header{display:flex;align-items:center;justify-content:space-between;margin-bottom:10px;padding:0 2px;}
+.pipeline-col-title{font-size:11px;text-transform:uppercase;letter-spacing:.08em;font-weight:600;color:var(--text3);}
+.pipeline-col-count{font-size:10px;padding:1px 7px;border-radius:20px;background:var(--bg);border:.5px solid var(--border);color:var(--text3);}
+.lead-card{background:var(--bg);border-radius:var(--r);border:.5px solid var(--border);padding:10px 12px;margin-bottom:8px;cursor:pointer;transition:all .15s;}
+.lead-card:hover{border-color:var(--border2);box-shadow:0 1px 4px rgba(0,0,0,.06);}
+.lead-card:last-child{margin-bottom:0;}
+.lead-country{display:flex;align-items:center;gap:5px;margin-bottom:4px;}
+.lead-country-flag{font-size:14px;line-height:1;}
+.lead-country-name{font-size:11px;color:var(--text3);}
+.lead-country-dot{width:7px;height:7px;border-radius:50%;flex-shrink:0;}
+.lead-country-dot.green{background:var(--green);}
+.lead-country-dot.yellow{background:var(--orange);}
+.lead-country-dot.red{background:var(--red);}
+.lead-name{font-size:13px;font-weight:500;color:var(--text);margin-bottom:2px;}
+.lead-handle{font-size:11px;color:var(--blue);margin-bottom:5px;}
+.lead-badges{display:flex;gap:4px;flex-wrap:wrap;align-items:center;}
+.lead-badge{font-size:9px;padding:2px 7px;border-radius:12px;font-weight:500;white-space:nowrap;border:.5px solid transparent;}
+.badge-qual-green{background:rgba(46,158,91,.12);color:var(--green);border-color:rgba(46,158,91,.3);}
+.badge-qual-yellow{background:rgba(200,137,26,.12);color:var(--orange);border-color:rgba(200,137,26,.3);}
+.badge-qual-red{background:rgba(226,75,74,.1);color:var(--red);border-color:rgba(226,75,74,.25);}
+.badge-disqualified{background:rgba(226,75,74,.1);color:var(--red);border-color:rgba(226,75,74,.25);font-weight:600;}
+.badge-auto{background:rgba(46,158,91,.1);color:var(--green);border-color:rgba(46,158,91,.2);}
+.badge-stage{background:rgba(58,126,196,.1);color:var(--blue);border-color:rgba(58,126,196,.2);}
+.lead-time{font-size:10px;color:var(--text3);margin-top:4px;}
+.urgent-orange{color:var(--orange);font-weight:500;}
+.urgent-red{color:var(--red);font-weight:500;}
+.pipeline-empty{text-align:center;padding:1.5rem .5rem;font-size:12px;color:var(--text3);}
+
+/* ── Stage Transition Modal ── */
+.mdm-label{font-size:12px;color:var(--text2);margin-bottom:6px;font-weight:500;}
+.mdm-radios{display:flex;flex-direction:column;gap:6px;margin-bottom:1rem;}
+.mdm-radio{font-size:13px;padding:8px 12px;border-radius:var(--r);border:.5px solid var(--border);background:var(--bg2);color:var(--text2);cursor:pointer;transition:all .15s;text-align:left;}
+.mdm-radio:hover{border-color:var(--border2);}
+.mdm-radio.selected{background:var(--text);color:var(--bg);border-color:var(--text);}
+.mdm-yn-row{display:flex;gap:6px;margin-bottom:10px;align-items:center;}
+.mdm-yn-row .mdm-label{margin-bottom:0;flex:1;}
+.mdm-yn{padding:5px 14px;border-radius:20px;font-size:12px;cursor:pointer;font-family:var(--font);border:.5px solid var(--border);background:var(--bg2);color:var(--text2);transition:all .15s;}
+.mdm-yn.yes{background:var(--green);color:#fff;border-color:var(--green);}
+.mdm-yn.no{background:var(--red);color:#fff;border-color:var(--red);}
+@media(max-width:640px){
+  .pipeline-stages{flex-direction:column;}
+  .pipeline-col{min-width:100%;max-width:100%;}
+}
 </style>
 </head>
 <body>
@@ -440,6 +491,18 @@ let adminView='pending',adminClientId=null,adminClientEmail='';
 // ── PIPELINE STATE ──
 const SOURCE_MAP={REWIRE:'video',SHIFT:'story'};
 const STATUS_LABELS={new:'New',in_conversation:'In Conversation',booked:'Booked',no_show:'No Show',completed_call:'Completed Call',closed_won:'Closed Won',closed_lost:'Closed Lost',ghosted:'Ghosted',not_qualified:'Not Qualified'};
+const PIPELINE_STAGES=['New','Qualifying','Hot','Booked','Dead'];
+const COUNTRY_RED={IN:{name:'India',flag:'\u{1F1EE}\u{1F1F3}'},PH:{name:'Philippines',flag:'\u{1F1F5}\u{1F1ED}'},NG:{name:'Nigeria',flag:'\u{1F1F3}\u{1F1EC}'},PK:{name:'Pakistan',flag:'\u{1F1F5}\u{1F1F0}'},BD:{name:'Bangladesh',flag:'\u{1F1E7}\u{1F1E9}'},KE:{name:'Kenya',flag:'\u{1F1F0}\u{1F1EA}'},GH:{name:'Ghana',flag:'\u{1F1EC}\u{1F1ED}'},ID:{name:'Indonesia',flag:'\u{1F1EE}\u{1F1E9}'},EG:{name:'Egypt',flag:'\u{1F1EA}\u{1F1EC}'}};
+const COUNTRY_YELLOW={BR:{name:'Brazil',flag:'\u{1F1E7}\u{1F1F7}'},MX:{name:'Mexico',flag:'\u{1F1F2}\u{1F1FD}'},CO:{name:'Colombia',flag:'\u{1F1E8}\u{1F1F4}'},ZA:{name:'South Africa',flag:'\u{1F1FF}\u{1F1E6}'},VN:{name:'Vietnam',flag:'\u{1F1FB}\u{1F1F3}'},TH:{name:'Thailand',flag:'\u{1F1F9}\u{1F1ED}'},MM:{name:'Myanmar',flag:'\u{1F1F2}\u{1F1F2}'},KH:{name:'Cambodia',flag:'\u{1F1F0}\u{1F1ED}'},LA:{name:'Laos',flag:'\u{1F1F1}\u{1F1E6}'}};
+const COUNTRY_GREEN={US:{name:'United States',flag:'\u{1F1FA}\u{1F1F8}'},CA:{name:'Canada',flag:'\u{1F1E8}\u{1F1E6}'},GB:{name:'United Kingdom',flag:'\u{1F1EC}\u{1F1E7}'},AU:{name:'Australia',flag:'\u{1F1E6}\u{1F1FA}'},NZ:{name:'New Zealand',flag:'\u{1F1F3}\u{1F1FF}'},IE:{name:'Ireland',flag:'\u{1F1EE}\u{1F1EA}'},SG:{name:'Singapore',flag:'\u{1F1F8}\u{1F1EC}'},AE:{name:'UAE',flag:'\u{1F1E6}\u{1F1EA}'},SA:{name:'Saudi Arabia',flag:'\u{1F1F8}\u{1F1E6}'},QA:{name:'Qatar',flag:'\u{1F1F6}\u{1F1E6}'},KW:{name:'Kuwait',flag:'\u{1F1F0}\u{1F1FC}'},BH:{name:'Bahrain',flag:'\u{1F1E7}\u{1F1ED}'},OM:{name:'Oman',flag:'\u{1F1F4}\u{1F1F2}'},CH:{name:'Switzerland',flag:'\u{1F1E8}\u{1F1ED}'},NO:{name:'Norway',flag:'\u{1F1F3}\u{1F1F4}'},SE:{name:'Sweden',flag:'\u{1F1F8}\u{1F1EA}'},DK:{name:'Denmark',flag:'\u{1F1E9}\u{1F1F0}'},NL:{name:'Netherlands',flag:'\u{1F1F3}\u{1F1F1}'},DE:{name:'Germany',flag:'\u{1F1E9}\u{1F1EA}'},FR:{name:'France',flag:'\u{1F1EB}\u{1F1F7}'},JP:{name:'Japan',flag:'\u{1F1EF}\u{1F1F5}'},KR:{name:'South Korea',flag:'\u{1F1F0}\u{1F1F7}'},HK:{name:'Hong Kong',flag:'\u{1F1ED}\u{1F1F0}'},TW:{name:'Taiwan',flag:'\u{1F1F9}\u{1F1FC}'}};
+function getCountryTier(code){if(!code)return'unknown';if(COUNTRY_GREEN[code])return'green';if(COUNTRY_YELLOW[code])return'yellow';if(COUNTRY_RED[code])return'red';return'unknown';}
+function getCountryInfo(code){return COUNTRY_GREEN[code]||COUNTRY_YELLOW[code]||COUNTRY_RED[code]||{name:code||'Unknown',flag:'\u{1F30D}'};}
+function getQualScore(lead){const tier=getCountryTier(lead.country);if(tier==='red')return-1;let s=0;if(lead.pain_signal)s++;if(lead.urgency_signal)s++;if(lead.income_signal)s++;return s;}
+function qualScoreBadge(lead){const s=getQualScore(lead);if(s===-1)return'<span class="lead-badge badge-disqualified">\u{1F6AB} Disqualified</span>';if(s===3)return'<span class="lead-badge badge-qual-green">3/3</span>';if(s===2)return'<span class="lead-badge badge-qual-yellow">2/3</span>';return'<span class="lead-badge badge-qual-red">'+s+'/3</span>';}
+function hoursSince(dateStr){if(!dateStr)return null;return(Date.now()-new Date(dateStr).getTime())/(1000*60*60);}
+function timeAgoLabel(dateStr){const h=hoursSince(dateStr);if(h===null)return'';if(h<1)return'<1h ago';if(h<24)return Math.floor(h)+'h ago';return Math.floor(h/24)+'d ago';}
+function getLeadStage(lead){const s=lead.status;if(s==='new')return'New';if(s==='qualifying'||s==='in_conversation')return'Qualifying';if(s==='hot')return'Hot';if(s==='booked'||s==='completed_call'||s==='closed_won'||s==='no_show')return'Booked';if(s==='dead'||s==='closed_lost'||s==='ghosted'||s==='not_qualified')return'Dead';return'New';}
+let plQuickFilter='all',plStageFilter='all',plCountryFilter='all',plSortOrder='newest';
 const LEAD_SOURCES=['story_reply','reel_comment','dm_first','referral','comment','ad','link_in_bio','live','other'];
 const LEAD_SOURCE_LABELS={story_reply:'Story Reply',reel_comment:'Reel/Comment',dm_first:'DM First',referral:'Referral',comment:'Post Comment',ad:'Ad',link_in_bio:'Link in Bio',live:'Live',other:'Other'};
 const OBJECTION_CATEGORIES=['price','timing','not_ready','spouse','already_tried','skeptical','no_response','other'];
@@ -578,7 +641,27 @@ async function addPipelineLead(d){
     mc_email:d.mc_email||'',
     mc_source:d.mc_source||'manual'
   };
+  // New pipeline fields — add gracefully
+  if(d.country!==undefined)row.country=d.country;
+  if(d.pain_signal!==undefined)row.pain_signal=d.pain_signal;
+  if(d.urgency_signal!==undefined)row.urgency_signal=d.urgency_signal;
+  if(d.income_signal!==undefined)row.income_signal=d.income_signal;
+  if(d.break_reason!==undefined)row.break_reason=d.break_reason;
+  if(d.approach_used!==undefined)row.approach_used=d.approach_used;
+  if(d.qual_score!==undefined)row.qual_score=d.qual_score;
+  if(d.stage_entered_at!==undefined)row.stage_entered_at=d.stage_entered_at;
   const{data,error}=await sb.from('pipeline_leads').insert(row).select().single();
+  if(error&&error.message){
+    // If columns don't exist yet, retry without new fields
+    const{data:d2}=await sb.from('pipeline_leads').insert({owner_id:row.owner_id,name:row.name,ig_handle:row.ig_handle,source_keyword:row.source_keyword,source_type:row.source_type,lead_source:row.lead_source,dm_date:row.dm_date,first_reply_at:row.first_reply_at,status:row.status,lead_quality:row.lead_quality,setter:row.setter,setter_notes:row.setter_notes,objections:row.objections,objection_categories:row.objection_categories,outcome_notes:row.outcome_notes,booked_date:row.booked_date,touchpoints:row.touchpoints,followups:row.followups,mc_subscriber_id:row.mc_subscriber_id,mc_tags:row.mc_tags,mc_email:row.mc_email,mc_source:row.mc_source}).select().single();
+    if(d2){
+      if(d2.dm_date&&d2.dm_date.includes('T'))d2.dm_date=d2.dm_date.split('T')[0];
+      if(d2.booked_date&&d2.booked_date.includes('T'))d2.booked_date=d2.booked_date.split('T')[0];
+      if(!Array.isArray(d2.followups))d2.followups=[];
+      pipelineLeads.unshift(d2);
+    }
+    return d2;
+  }
   if(data){
     if(data.dm_date&&data.dm_date.includes('T'))data.dm_date=data.dm_date.split('T')[0];
     if(data.booked_date&&data.booked_date.includes('T'))data.booked_date=data.booked_date.split('T')[0];
@@ -1070,7 +1153,7 @@ async function mcRefreshLead(leadId){
       mc_email:sub.email,
       ig_handle:sub.ig_username||lead.ig_handle
     });
-    openEditLeadModal(leadId);
+    openLeadDetail(leadId);
   }catch(e){alert('Error refreshing: '+e.message);}
 }
 
@@ -1094,8 +1177,6 @@ function getFunnelData(){
 
 function renderPipelineDashboard(){
   const stats=getPipelineStats();
-  const filtered=getFilteredLeads();
-  const allKeywords=[...new Set(pipelineLeads.map(l=>l.source_keyword).filter(Boolean))];
   const stale=getStaleLeads();
   const avgRT=avgResponseTime();
   const funnel=getFunnelData();
@@ -1103,23 +1184,21 @@ function renderPipelineDashboard(){
 
   // Stale lead alert
   if(stale.length){
-    h+=`<div class="pl-alert"><span class="pl-alert-count">${stale.length}</span> lead${stale.length>1?'s':''} need${stale.length===1?'s':''} follow-up (${STALE_DAYS}+ days stale)<span class="pl-alert-link" onclick="setPipelineFilter('status','all');pipelineSort={field:'updated_at',dir:'asc'};renderAdmin();">Show stale</span></div>`;
+    h+=`<div class="pl-alert"><span class="pl-alert-count">${stale.length}</span> lead${stale.length>1?'s':''} need${stale.length===1?'s':''} follow-up (${STALE_DAYS}+ days stale)<span class="pl-alert-link" onclick="plQuickFilter='attention';renderAdmin();">Show stale</span></div>`;
   }
 
   // Stats row
-  const activeLeads=pipelineLeads.filter(l=>['new','in_conversation','booked'].includes(l.status));
-  const avgScore=activeLeads.length?Math.round(activeLeads.reduce((s,l)=>s+calcLeadScore(l),0)/activeLeads.length):0;
   const showRate=getShowRate();
   const avgTTB=avgTimeToBook();
   const fuStats=getFollowupStats();
   h+=`<div class="pl-stats">
     <div class="pl-stat"><div class="pl-stat-val">${stats.total}</div><div class="pl-stat-lbl">Leads (month)</div></div>
-    <div class="pl-stat"><div class="pl-stat-val">${stats.dmToBooked}%</div><div class="pl-stat-lbl">DM → Booked</div></div>
-    <div class="pl-stat"><div class="pl-stat-val">${showRate!==null?showRate+'%':'—'}</div><div class="pl-stat-lbl">Show rate</div></div>
-    <div class="pl-stat"><div class="pl-stat-val">${stats.bookedToClosed}%</div><div class="pl-stat-lbl">Showed → Closed</div></div>
-    <div class="pl-stat"><div class="pl-stat-val">${avgRT!==null?fmtResponseTime(avgRT):'—'}</div><div class="pl-stat-lbl">Avg reply time</div></div>
-    <div class="pl-stat"><div class="pl-stat-val">${avgTTB!==null?avgTTB+'d':'—'}</div><div class="pl-stat-lbl">Avg time-to-book</div></div>
-    <div class="pl-stat"><div class="pl-stat-val">${fuStats.total?fuStats.rate+'%':'—'}</div><div class="pl-stat-lbl">Follow-up response</div></div>
+    <div class="pl-stat"><div class="pl-stat-val">${stats.dmToBooked}%</div><div class="pl-stat-lbl">DM \u2192 Booked</div></div>
+    <div class="pl-stat"><div class="pl-stat-val">${showRate!==null?showRate+'%':'\u2014'}</div><div class="pl-stat-lbl">Show rate</div></div>
+    <div class="pl-stat"><div class="pl-stat-val">${stats.bookedToClosed}%</div><div class="pl-stat-lbl">Showed \u2192 Closed</div></div>
+    <div class="pl-stat"><div class="pl-stat-val">${avgRT!==null?fmtResponseTime(avgRT):'\u2014'}</div><div class="pl-stat-lbl">Avg reply time</div></div>
+    <div class="pl-stat"><div class="pl-stat-val">${avgTTB!==null?avgTTB+'d':'\u2014'}</div><div class="pl-stat-lbl">Avg time-to-book</div></div>
+    <div class="pl-stat"><div class="pl-stat-val">${fuStats.total?fuStats.rate+'%':'\u2014'}</div><div class="pl-stat-lbl">Follow-up response</div></div>
   </div>`;
 
   // Conversion funnel
@@ -1132,76 +1211,79 @@ function renderPipelineDashboard(){
     });
     h+=`</div>`;
   }
-  // Lead source breakdown
-  const srcStats=getLeadSourceStats();
-  if(srcStats.length){
-    h+=`<div style="margin-bottom:1rem"><div class="mini-label" style="margin-bottom:6px">Lead sources</div><div class="pl-source-row">${srcStats.map(([src,s])=>`<span class="pl-source-pill"><strong>${s.total}</strong> ${LEAD_SOURCE_LABELS[src]||src} <span style="font-size:9px;color:var(--text3)">${s.total?Math.round(s.booked/s.total*100):0}% book</span></span>`).join('')}</div></div>`;
-  }
-  // Content keyword breakdown
-  if(Object.keys(stats.bySource).length){
-    h+=`<div style="margin-bottom:1rem"><div class="mini-label" style="margin-bottom:6px">Content keywords</div><div class="pl-source-row">${Object.entries(stats.bySource).map(([k,v])=>`<span class="pl-source-pill"><strong>${v}</strong> ${k}</span>`).join('')}</div></div>`;
-  }
-  // Objection breakdown
-  const objBreakdown=getObjectionBreakdown();
-  if(objBreakdown.length){
-    h+=`<div style="margin-bottom:1rem"><div class="mini-label" style="margin-bottom:6px">Top objections</div><div class="pl-source-row">${objBreakdown.map(([cat,count])=>`<span class="pl-source-pill"><strong>${count}</strong> ${OBJECTION_LABELS[cat]||cat}</span>`).join('')}</div></div>`;
-  }
-  // Setter performance
-  const setterStats=getSetterStats();
-  if(setterStats.length){
-    h+=`<div style="margin-bottom:1rem"><div class="mini-label" style="margin-bottom:6px">Setter performance</div><div class="pl-source-row">${setterStats.map(s=>`<span class="pl-source-pill"><strong>${s.name}</strong> ${s.total} leads · ${s.convRate}% book${s.noShows?` · ${s.noShows} no-show`:''}</span>`).join('')}</div></div>`;
-  }
-  // Filters
-  const allSetters=getSetters();
-  h+=`<div class="pl-filters">
-    <select onchange="setPipelineFilter('status',this.value)"><option value="all">All statuses</option>${Object.entries(STATUS_LABELS).map(([k,v])=>`<option value="${k}"${pipelineFilters.status===k?' selected':''}>${v}</option>`).join('')}</select>
-    <select onchange="setPipelineFilter('leadSource',this.value)"><option value="all">All lead sources</option>${LEAD_SOURCES.map(s=>`<option value="${s}"${pipelineFilters.leadSource===s?' selected':''}>${LEAD_SOURCE_LABELS[s]}</option>`).join('')}</select>
-    <select onchange="setPipelineFilter('source',this.value)"><option value="all">All keywords</option>${allKeywords.map(k=>`<option value="${k}"${pipelineFilters.source===k?' selected':''}>${k}</option>`).join('')}</select>
-    ${allSetters.length?`<select onchange="setPipelineFilter('setter',this.value)"><option value="all">All setters</option>${allSetters.map(s=>`<option value="${s}"${pipelineFilters.setter===s?' selected':''}>${s}</option>`).join('')}</select>`:''}
-    <input type="date" value="${pipelineFilters.dateFrom}" onchange="setPipelineFilter('dateFrom',this.value)" title="From date">
-    <input type="date" value="${pipelineFilters.dateTo}" onchange="setPipelineFilter('dateTo',this.value)" title="To date">
-  </div>`;
+
   // ManyChat settings
   h+=renderMcSettings();
-  // Add button
-  h+=`<button class="btn-primary" style="max-width:180px;margin-bottom:1rem" onclick="openAddLeadModal()">+ Add lead</button>`;
-  // Lead list
-  if(!filtered.length){h+=`<div class="pl-empty">No leads${pipelineFilters.status!=='all'||pipelineFilters.source!=='all'?' match your filters':' yet'}. Add your first lead above.</div>`;}
-  else{filtered.forEach(l=>{
-    const dateStr=l.dm_date?new Date(l.dm_date+'T12:00:00').toLocaleDateString('en-US',{month:'short',day:'numeric'}):'';
-    const score=calcLeadScore(l),grade=scoreGrade(score);
-    const isStale=stale.find(s=>s.id===l.id);
-    const rt=getResponseTime(l),rtStr=fmtResponseTime(rt);
-    const rtClass=rt!==null?(rt<=4?'pl-resp-fast':rt>=48?'pl-resp-slow':''):'';
-    const ttb=calcTimeToBook(l);
-    const ttbClass=ttb!==null?(ttb<=3?'pl-ttb-fast':ttb>=14?'pl-ttb-slow':''):'';
-    const fuCount=(l.followups||[]).length;
-    const fuResponded=(l.followups||[]).filter(f=>f.got_response).length;
-    h+=`<div class="pl-lead" onclick="openEditLeadModal('${l.id}')">
-      <div class="pl-lead-top">
-        <span class="pl-score pl-score-${grade.toLowerCase()}" title="Score: ${score}">${grade}</span>
-        <div class="pl-lead-name">${esc(l.name||'Unnamed')}${l.ig_handle?` <span class="pl-lead-ig">@${esc(l.ig_handle.replace(/^@/,''))}</span>`:''}${isStale?`<span class="pl-stale-badge">${staleDays(l)}d stale</span>`:''}</div>
-      </div>
-      <div class="pl-lead-meta">
-        <span class="pl-badge pl-badge-${l.status}">${STATUS_LABELS[l.status]||l.status}</span>
-        ${l.lead_source?`<span class="pl-source-pill" style="font-size:10px;padding:1px 7px">${LEAD_SOURCE_LABELS[l.lead_source]||l.lead_source}</span>`:''}
-        ${l.source_keyword?`<span class="pl-source-pill" style="font-size:10px;padding:1px 7px">${esc(l.source_keyword)}</span>`:''}
-        ${l.setter?`<span class="pl-setter-pill">${esc(l.setter)}</span>`:''}
-        ${l.lead_quality?`<span class="pl-quality pl-quality-${l.lead_quality}" title="${l.lead_quality}"></span>`:''}
-        ${rtStr?`<span class="pl-resp-time ${rtClass}" title="Reply time">⚡${rtStr}</span>`:''}
-        ${ttb!==null?`<span class="pl-ttb ${ttbClass}" title="Time to book">${ttb}d to book</span>`:''}
-        ${l.touchpoints?`<span class="pl-tp" title="Content touchpoints before DM">${l.touchpoints} touches</span>`:''}
-        ${fuCount?`<span class="pl-tp" title="Follow-ups">${fuResponded}/${fuCount} FU</span>`:''}
-        ${l.mc_source==='webhook'?'<span class="mc-imported" title="Auto-imported via webhook" style="background:rgba(46,158,91,.1);color:var(--green);border-color:rgba(46,158,91,.2)">AUTO</span>':l.mc_source==='sync'?'<span class="mc-imported" title="Imported via bulk sync" style="background:rgba(200,137,26,.1);color:var(--orange);border-color:rgba(200,137,26,.2)">SYNC</span>':l.mc_subscriber_id?'<span class="mc-imported" title="Linked to ManyChat">MC</span>':''}
-        <span class="pl-lead-date">${dateStr}</span>
-      </div>
-      ${l.setter_notes?`<div class="pl-lead-notes">${esc(l.setter_notes)}</div>`:''}
-    </div>`;
-  });}
+
+  // Filter bar
+  h+=`<div class="pipeline-bar">
+    <button class="pipeline-filter-btn${plQuickFilter==='all'?' active':''}" onclick="plQuickFilter='all';renderAdmin()">All</button>
+    <button class="pipeline-filter-btn${plQuickFilter==='hot'?' active':''}" onclick="plQuickFilter='hot';renderAdmin()">Hot Leads</button>
+    <button class="pipeline-filter-btn${plQuickFilter==='attention'?' active':''}" onclick="plQuickFilter='attention';renderAdmin()">Needs Attention</button>
+    <select class="pipeline-sel" onchange="plStageFilter=this.value;renderAdmin()"><option value="all">All stages</option>${PIPELINE_STAGES.map(s=>`<option value="${s}"${plStageFilter===s?' selected':''}>${s}</option>`).join('')}</select>
+    <select class="pipeline-sel" onchange="plCountryFilter=this.value;renderAdmin()"><option value="all">All countries</option><option value="green"${plCountryFilter==='green'?' selected':''}>Green markets</option><option value="yellow"${plCountryFilter==='yellow'?' selected':''}>Caution</option><option value="red"${plCountryFilter==='red'?' selected':''}>Disqualified</option></select>
+    <select class="pipeline-sel" onchange="plSortOrder=this.value;renderAdmin()"><option value="newest"${plSortOrder==='newest'?' selected':''}>Newest</option><option value="oldest"${plSortOrder==='oldest'?' selected':''}>Oldest</option></select>
+    <button class="pipeline-filter-btn" style="background:var(--text);color:var(--bg);border-color:var(--text)" onclick="openAddLeadModal()">+ Add lead</button>
+  </div>`;
+
+  // Get filtered leads for kanban
+  let kanbanLeads=[...pipelineLeads];
+  if(plQuickFilter==='hot')kanbanLeads=kanbanLeads.filter(l=>getLeadStage(l)==='Hot');
+  else if(plQuickFilter==='attention')kanbanLeads=kanbanLeads.filter(l=>{const stage=getLeadStage(l);if(stage!=='Qualifying')return false;const h=hoursSince(l.stage_entered_at||l.updated_at||l.created_at);return h!==null&&h>=24;});
+  if(plStageFilter!=='all')kanbanLeads=kanbanLeads.filter(l=>getLeadStage(l)===plStageFilter);
+  if(plCountryFilter!=='all')kanbanLeads=kanbanLeads.filter(l=>getCountryTier(l.country)===plCountryFilter);
+  kanbanLeads.sort((a,b)=>{const da=new Date(a.dm_date||a.created_at||0),db=new Date(b.dm_date||b.created_at||0);return plSortOrder==='newest'?db-da:da-db;});
+
+  // Kanban columns
+  h+=`<div class="pipeline-stages">`;
+  PIPELINE_STAGES.forEach(stage=>{
+    const stageLeads=kanbanLeads.filter(l=>getLeadStage(l)===stage);
+    h+=`<div class="pipeline-col">
+      <div class="pipeline-col-header">
+        <span class="pipeline-col-title">${stage}</span>
+        <span class="pipeline-col-count">${stageLeads.length}</span>
+      </div>`;
+    if(!stageLeads.length){
+      h+=`<div class="pipeline-empty">No leads</div>`;
+    } else {
+      stageLeads.forEach(l=>{
+        const cInfo=getCountryInfo(l.country);
+        const cTier=getCountryTier(l.country);
+        const cDotClass=cTier==='green'?'green':cTier==='yellow'?'yellow':cTier==='red'?'red':'';
+        const hrs=hoursSince(l.stage_entered_at||l.updated_at||l.created_at);
+        const timeLabel=timeAgoLabel(l.stage_entered_at||l.updated_at||l.created_at);
+        let timeClass='';
+        if(getLeadStage(l)==='Qualifying'){if(hrs>=48)timeClass='urgent-red';else if(hrs>=24)timeClass='urgent-orange';}
+        const isAuto=l.mc_source==='webhook'||l.mc_source==='sync';
+        h+=`<div class="lead-card" onclick="openLeadDetail('${l.id}')">
+          ${l.country?`<div class="lead-country"><span class="lead-country-flag">${cInfo.flag}</span><span class="lead-country-name">${esc(cInfo.name)}</span>${cDotClass?`<span class="lead-country-dot ${cDotClass}"></span>`:''}</div>`:''}
+          <div class="lead-name">${esc(l.name||'Unnamed')}${l.ig_handle?` <span class="lead-handle">@${esc(l.ig_handle.replace(/^@/,''))}</span>`:''}</div>
+          <div class="lead-badges">
+            ${qualScoreBadge(l)}
+            ${isAuto?'<span class="lead-badge badge-auto">AUTO</span>':''}
+          </div>
+          ${timeLabel?`<div class="lead-time ${timeClass}">${timeLabel}</div>`:''}
+        </div>`;
+      });
+    }
+    h+=`</div>`;
+  });
+  h+=`</div>`;
   return h;
 }
 function esc(s){return String(s).replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;').replace(/"/g,'&quot;').replace(/'/g,'&#39;');}
 
+function buildCountryOptions(selected){
+  let opts='<option value="">Select country...</option>';
+  opts+='<optgroup label="Green markets">';
+  Object.entries(COUNTRY_GREEN).forEach(([c,info])=>{opts+=`<option value="${c}"${selected===c?' selected':''}>${info.flag} ${info.name}</option>`;});
+  opts+='</optgroup><optgroup label="Caution">';
+  Object.entries(COUNTRY_YELLOW).forEach(([c,info])=>{opts+=`<option value="${c}"${selected===c?' selected':''}>${info.flag} ${info.name}</option>`;});
+  opts+='</optgroup><optgroup label="Disqualified">';
+  Object.entries(COUNTRY_RED).forEach(([c,info])=>{opts+=`<option value="${c}"${selected===c?' selected':''}>${info.flag} ${info.name}</option>`;});
+  opts+='</optgroup>';
+  return opts;
+}
 function openAddLeadModal(){
   let quality='warm';
   window._plQuality=quality;
@@ -1218,6 +1300,8 @@ function openAddLeadModal(){
     <input class="inp" id="pl-name" placeholder="Lead name">
     <label class="lbl">Instagram handle</label>
     <input class="inp" id="pl-ig" placeholder="handle (without @)">
+    <label class="lbl">Country</label>
+    <select class="inp" id="pl-country">${buildCountryOptions('')}</select>
     <label class="lbl">Where did this lead come from?</label>
     <select class="inp" id="pl-lead-source">
       <option value="">Select source...</option>
@@ -1245,10 +1329,6 @@ function openAddLeadModal(){
     <input class="inp" id="pl-date" type="date" value="${todayKey()}">
     <label class="lbl">First reply (when setter responded)</label>
     <input class="inp" id="pl-reply" type="datetime-local">
-    <label class="lbl">Status</label>
-    <select class="inp" id="pl-status">
-      ${Object.entries(STATUS_LABELS).map(([k,v])=>`<option value="${k}">${v}</option>`).join('')}
-    </select>
     <label class="lbl">Lead quality</label>
     <div class="pl-quality-sel" id="pl-qual-sel" style="margin-bottom:1rem">
       <button class="pl-quality-btn" onclick="plSetQuality('hot',this)" type="button">Hot</button>
@@ -1257,12 +1337,6 @@ function openAddLeadModal(){
     </div>
     <label class="lbl">Setter notes</label>
     <textarea class="inp" id="pl-notes" style="min-height:80px;resize:vertical" placeholder="Conversation summary..."></textarea>
-    <label class="lbl">Objection categories</label>
-    <div class="pl-obj-tags" id="pl-obj-cats" style="margin-bottom:8px">
-      ${OBJECTION_CATEGORIES.map(c=>`<span class="pl-obj-tag" onclick="plToggleObjCat(this,'${c}')" data-cat="${c}">${OBJECTION_LABELS[c]}</span>`).join('')}
-    </div>
-    <label class="lbl">Objection details</label>
-    <textarea class="inp" id="pl-objections" style="min-height:60px;resize:vertical" placeholder="Specifics of what they said..."></textarea>
     <div class="modal-actions">
       <button class="btn-save" onclick="saveNewLead()">Add lead</button>
       <button class="btn-cancel" onclick="closeOv()">Cancel</button>
@@ -1289,6 +1363,7 @@ async function saveNewLead(){
   const replyVal=document.getElementById('pl-reply').value;
   const setterEl=document.getElementById('pl-setter');
   const setter=setterEl.value==='__new'?document.getElementById('pl-setter-new').value.trim():setterEl.value;
+  const country=document.getElementById('pl-country')?.value||'';
   await addPipelineLead({
     name,
     ig_handle:document.getElementById('pl-ig').value.trim(),
@@ -1298,11 +1373,11 @@ async function saveNewLead(){
     touchpoints:parseInt(document.getElementById('pl-touchpoints').value)||0,
     dm_date:document.getElementById('pl-date').value,
     first_reply_at:replyVal?new Date(replyVal).toISOString():'',
-    status:document.getElementById('pl-status').value,
+    status:'new',
     lead_quality:window._plQuality||'warm',
     setter_notes:document.getElementById('pl-notes').value.trim(),
-    objections:document.getElementById('pl-objections').value.trim(),
-    objection_categories:window._plObjCats||[],
+    country:country,
+    stage_entered_at:new Date().toISOString(),
     mc_subscriber_id:window._mcSubId||'',
     mc_tags:(window._mcSubData&&window._mcSubData.tags)||[],
     mc_email:(window._mcSubData&&window._mcSubData.email)||''
@@ -1311,36 +1386,57 @@ async function saveNewLead(){
   closeOv();renderAdmin();
 }
 
-function openEditLeadModal(id){
+function openEditLeadModal(id){openLeadDetail(id);}
+
+function openLeadDetail(id){
   const l=pipelineLeads.find(x=>x.id===id);if(!l)return;
   window._plQuality=l.lead_quality||'warm';
   window._plObjCats=[...(l.objection_categories||[])];
   window._plEditId=id;
+  const cInfo=getCountryInfo(l.country);
+  const cTier=getCountryTier(l.country);
+  const cDotClass=cTier==='green'?'green':cTier==='yellow'?'yellow':cTier==='red'?'red':'';
+  const score=calcLeadScore(l),grade=scoreGrade(score);
+  const stage=getLeadStage(l);
+  const script=getSetterScript(l.status,l.name);
+  const fups=l.followups||[];
+  const allSetters=getSetters();
   const allKeywords=[...new Set(pipelineLeads.map(x=>x.source_keyword).filter(Boolean))];
   const defaultKeywords=Object.keys(SOURCE_MAP);
   const keywords=[...new Set([...defaultKeywords,...allKeywords])];
   const isCustom=l.source_keyword&&!keywords.includes(l.source_keyword);
-  const showBooked=['booked','no_show','completed_call','closed_won','closed_lost'].includes(l.status);
-  const score=calcLeadScore(l),grade=scoreGrade(score);
-  const rt=getResponseTime(l),rtStr=fmtResponseTime(rt);
-  const ttb=calcTimeToBook(l);
   const replyLocal=l.first_reply_at?new Date(l.first_reply_at).toISOString().slice(0,16):'';
-  const script=getSetterScript(l.status,l.name);
-  const allSetters=getSetters();
-  const fups=l.followups||[];
+
+  // Build stage transition buttons
+  let stageBtns='';
+  if(stage==='New')stageBtns=`<button class="btn-save" onclick="openStageModal('${id}','New','Qualifying')">Move to Qualifying \u2192</button>`;
+  else if(stage==='Qualifying')stageBtns=`<button class="btn-save" onclick="openStageModal('${id}','Qualifying','Hot')">Move to Hot \u2192</button><button class="btn-outline-red" onclick="openStageModal('${id}','Qualifying','Dead')">Move to Dead</button>`;
+  else if(stage==='Hot')stageBtns=`<button class="btn-save" onclick="openStageModal('${id}','Hot','Booked')">Move to Booked \u2192</button><button class="btn-outline-red" onclick="openStageModal('${id}','Hot','Dead')">Move to Dead</button>`;
+
   showOv(`<div class="overlay-bg" onclick="if(event.target===this)closeOv()"><div class="modal" style="max-height:90vh;overflow-y:auto">
-    <div class="modal-title">Edit lead</div>
-    <div class="modal-sub" style="display:flex;align-items:center;gap:8px;flex-wrap:wrap">${esc(l.name)}${l.ig_handle?' — @'+esc(l.ig_handle.replace(/^@/,'')):''} <span class="pl-score pl-score-${grade.toLowerCase()}" title="Score: ${score}">${grade} (${score})</span>${rtStr?`<span style="font-size:11px;color:var(--text3)">Reply: ${rtStr}</span>`:''}${ttb!==null?`<span style="font-size:11px;color:var(--text3)">${ttb}d to book</span>`:''}</div>
+    <div class="modal-title">${esc(l.name||'Unnamed')}</div>
+    <div class="modal-sub" style="display:flex;align-items:center;gap:8px;flex-wrap:wrap">
+      ${l.ig_handle?'@'+esc(l.ig_handle.replace(/^@/,''))+' \u00B7 ':''}
+      ${l.country?cInfo.flag+' '+esc(cInfo.name):''} ${cDotClass?'<span class="lead-country-dot '+cDotClass+'" style="display:inline-block"></span>':''}
+      <span class="lead-badge badge-stage">${stage}</span>
+      ${qualScoreBadge(l)}
+      <span class="pl-score pl-score-${grade.toLowerCase()}" title="Score: ${score}">${grade}</span>
+    </div>
+
+    ${stageBtns?`<div style="display:flex;gap:8px;margin-bottom:1rem;flex-wrap:wrap">${stageBtns}</div>`:''}
+
     <label class="lbl">Name</label>
     <input class="inp" id="pl-name" value="${esc(l.name)}">
     <label class="lbl">Instagram handle</label>
     <input class="inp" id="pl-ig" value="${esc(l.ig_handle||'')}">
+    <label class="lbl">Country</label>
+    <select class="inp" id="pl-country">${buildCountryOptions(l.country||'')}</select>
     <label class="lbl">Where did this lead come from?</label>
     <select class="inp" id="pl-lead-source">
       <option value="">Select source...</option>
       ${LEAD_SOURCES.map(s=>`<option value="${s}"${l.lead_source===s?' selected':''}>${LEAD_SOURCE_LABELS[s]}</option>`).join('')}
     </select>
-    <label class="lbl">Content keyword (which post/video)</label>
+    <label class="lbl">Content keyword</label>
     <select class="inp" id="pl-keyword" onchange="document.getElementById('pl-keyword-custom').style.display=this.value==='__custom'?'block':'none'">
       <option value="">None</option>
       ${keywords.map(k=>`<option value="${k}"${l.source_keyword===k?' selected':''}>${k} (${SOURCE_MAP[k]||'other'})</option>`).join('')}
@@ -1356,20 +1452,10 @@ function openEditLeadModal(id){
       </select>
       <input class="inp" id="pl-setter-new" placeholder="Setter name" style="display:none;margin-bottom:0;flex:1">
     </div>
-    <label class="lbl">Content touchpoints before DM</label>
-    <input class="inp" id="pl-touchpoints" type="number" min="0" value="${l.touchpoints||0}">
     <label class="lbl">DM date</label>
     <input class="inp" id="pl-date" type="date" value="${l.dm_date||''}">
-    <label class="lbl">First reply (when setter responded)</label>
+    <label class="lbl">First reply</label>
     <input class="inp" id="pl-reply" type="datetime-local" value="${replyLocal}">
-    <label class="lbl">Status</label>
-    <select class="inp" id="pl-status" onchange="document.getElementById('pl-booked-row').style.display=['booked','no_show','completed_call','closed_won','closed_lost'].includes(this.value)?'block':'none'">
-      ${Object.entries(STATUS_LABELS).map(([k,v])=>`<option value="${k}"${l.status===k?' selected':''}>${v}</option>`).join('')}
-    </select>
-    <div id="pl-booked-row" style="display:${showBooked?'block':'none'}">
-      <label class="lbl">Booked date</label>
-      <input class="inp" id="pl-booked-date" type="date" value="${l.booked_date||''}">
-    </div>
     <label class="lbl">Lead quality</label>
     <div class="pl-quality-sel" id="pl-qual-sel" style="margin-bottom:1rem">
       <button class="pl-quality-btn${l.lead_quality==='hot'?' sel-hot':''}" onclick="plSetQuality('hot',this)" type="button">Hot</button>
@@ -1378,20 +1464,22 @@ function openEditLeadModal(id){
     </div>
     <label class="lbl">Setter notes</label>
     <textarea class="inp" id="pl-notes" style="min-height:80px;resize:vertical">${esc(l.setter_notes||'')}</textarea>
-    <label class="lbl">Objection categories</label>
-    <div class="pl-obj-tags" id="pl-obj-cats" style="margin-bottom:8px">
-      ${OBJECTION_CATEGORIES.map(c=>`<span class="pl-obj-tag${(l.objection_categories||[]).includes(c)?' sel':''}" onclick="plToggleObjCat(this,'${c}')" data-cat="${c}">${OBJECTION_LABELS[c]}</span>`).join('')}
-    </div>
-    <label class="lbl">Objection details</label>
-    <textarea class="inp" id="pl-objections" style="min-height:60px;resize:vertical">${esc(l.objections||'')}</textarea>
     <label class="lbl">Outcome notes</label>
     <textarea class="inp" id="pl-outcome" style="min-height:60px;resize:vertical">${esc(l.outcome_notes||'')}</textarea>
-    <label class="lbl">Follow-up history (${fups.length} sent${fups.filter(f=>f.got_response).length?' · '+fups.filter(f=>f.got_response).length+' responded':''})</label>
+
+    ${l.pain_signal!==undefined||l.urgency_signal!==undefined||l.income_signal!==undefined?`<div style="margin-bottom:1rem;padding:10px 13px;background:var(--bg2);border-radius:var(--r);border:.5px solid var(--border)">
+      <div class="lbl" style="margin-bottom:6px">Qualification signals</div>
+      <div style="font-size:12px;color:var(--text2)">Pain: ${l.pain_signal?'Yes':'No'} \u00B7 Urgency: ${l.urgency_signal?'Yes':'No'} \u00B7 Income: ${l.income_signal?'Yes':'No'}</div>
+    </div>`:''}
+    ${l.break_reason?`<div style="margin-bottom:1rem;font-size:12px;color:var(--text3)">Break reason: <strong style="color:var(--text2)">${esc(l.break_reason)}</strong></div>`:''}
+    ${l.approach_used?`<div style="margin-bottom:1rem;font-size:12px;color:var(--text3)">Approach used: <strong style="color:var(--text2)">${esc(l.approach_used)}</strong></div>`:''}
+
+    <label class="lbl">Follow-ups (${fups.length})</label>
     <div class="pl-fu-list">
       ${fups.length?fups.map((f,i)=>`<div class="pl-fu-item">
         <span class="pl-fu-date">${new Date(f.date).toLocaleDateString('en-US',{month:'short',day:'numeric'})}</span>
         <span class="pl-fu-msg">${esc(f.message)}</span>
-        <span class="pl-fu-resp ${f.got_response?'pl-fu-resp-yes':'pl-fu-resp-no'}" onclick="event.stopPropagation();toggleFollowupResponse('${id}',${i});openEditLeadModal('${id}')">${f.got_response?'Responded':'No reply'}</span>
+        <span class="pl-fu-resp ${f.got_response?'pl-fu-resp-yes':'pl-fu-resp-no'}" onclick="event.stopPropagation();toggleFollowupResponse('${id}',${i});openLeadDetail('${id}')">${f.got_response?'Responded':'No reply'}</span>
       </div>`).join(''):'<div style="font-size:12px;color:var(--text3);padding:4px 0">No follow-ups logged yet.</div>'}
     </div>
     <div class="pl-fu-add">
@@ -1399,11 +1487,10 @@ function openEditLeadModal(id){
       <button onclick="plAddFollowup('${id}')">+ Log</button>
     </div>
     ${l.mc_subscriber_id?`<div style="margin-top:10px;padding:10px 13px;background:rgba(58,126,196,.04);border-radius:var(--r);border:.5px solid rgba(58,126,196,.15)">
-      <div style="font-size:10px;text-transform:uppercase;letter-spacing:.06em;color:var(--blue);margin-bottom:4px;display:flex;align-items:center;gap:6px">ManyChat subscriber <span class="mc-imported">ID: ${esc(String(l.mc_subscriber_id))}</span><span style="margin-left:auto;font-size:10px;color:var(--blue);cursor:pointer;text-decoration:underline" onclick="event.stopPropagation();mcRefreshLead('${id}')">Refresh</span></div>
+      <div style="font-size:10px;text-transform:uppercase;letter-spacing:.06em;color:var(--blue);margin-bottom:4px;display:flex;align-items:center;gap:6px">ManyChat <span class="mc-imported">ID: ${esc(String(l.mc_subscriber_id))}</span><span style="margin-left:auto;font-size:10px;color:var(--blue);cursor:pointer;text-decoration:underline" onclick="event.stopPropagation();mcRefreshLead('${id}')">Refresh</span></div>
       ${l.mc_tags&&l.mc_tags.length?'<div style="display:flex;gap:3px;flex-wrap:wrap;margin-top:4px">'+l.mc_tags.map(t=>'<span class="mc-tag">'+esc(t)+'</span>').join('')+'</div>':''}
-      ${l.mc_email?'<div style="font-size:11px;color:var(--text3);margin-top:3px">'+esc(l.mc_email)+'</div>':''}
     </div>`:''}
-    ${script?`<div class="pl-script"><div class="pl-script-title">Suggested script — ${script.title} <span class="pl-script-copy" id="pl-copy-btn" onclick="event.stopPropagation();copyScript('${l.status}','${esc(l.name)}')">Copy</span></div>${script.lines.map(line=>`<div>${line}</div>`).join('')}</div>`:''}
+    ${script?`<div class="pl-script"><div class="pl-script-title">Suggested script \u2014 ${script.title} <span class="pl-script-copy" id="pl-copy-btn" onclick="event.stopPropagation();copyScript('${l.status}','${esc(l.name)}')">Copy</span></div>${script.lines.map(line=>`<div>${line}</div>`).join('')}</div>`:''}
     <div class="modal-actions">
       <button class="btn-save" onclick="saveEditLead('${id}')">Save</button>
       <button class="btn-cancel" onclick="closeOv()">Cancel</button>
@@ -1415,7 +1502,7 @@ async function plAddFollowup(id){
   const msg=document.getElementById('pl-fu-msg')?.value.trim();
   if(!msg)return;
   await addFollowup(id,msg);
-  openEditLeadModal(id);
+  openLeadDetail(id);
 }
 async function saveEditLead(id){
   const kwEl=document.getElementById('pl-keyword');
@@ -1423,24 +1510,163 @@ async function saveEditLead(id){
   const replyVal=document.getElementById('pl-reply').value;
   const setterEl=document.getElementById('pl-setter');
   const setter=setterEl.value==='__new'?document.getElementById('pl-setter-new').value.trim():setterEl.value;
-  await updatePipelineLead(id,{
+  const updates={
     name:document.getElementById('pl-name').value.trim(),
     ig_handle:document.getElementById('pl-ig').value.trim(),
     lead_source:document.getElementById('pl-lead-source').value,
     source_keyword:keyword,
     setter:setter,
-    touchpoints:parseInt(document.getElementById('pl-touchpoints').value)||0,
     dm_date:document.getElementById('pl-date').value,
     first_reply_at:replyVal?new Date(replyVal).toISOString():'',
-    status:document.getElementById('pl-status').value,
-    booked_date:document.getElementById('pl-booked-date')?.value||'',
     lead_quality:window._plQuality||'warm',
     setter_notes:document.getElementById('pl-notes').value.trim(),
-    objection_categories:window._plObjCats||[],
-    objections:document.getElementById('pl-objections').value.trim(),
-    outcome_notes:document.getElementById('pl-outcome').value.trim()
-  });
+    outcome_notes:document.getElementById('pl-outcome')?.value.trim()||''
+  };
+  const countryEl=document.getElementById('pl-country');
+  if(countryEl)updates.country=countryEl.value;
+  await updatePipelineLead(id,updates);
   window._plObjCats=[];
+  closeOv();renderAdmin();
+}
+
+// ── STAGE TRANSITION MODALS ──
+window._stageModalState={};
+function openStageModal(leadId,fromStage,toStage){
+  window._stageModalState={leadId,fromStage,toStage,pain:null,urgency:null,income:null,breakReason:null,approach:null};
+  let h='';
+  const title=fromStage+' \u2192 '+toStage;
+
+  if(fromStage==='New'&&toStage==='Qualifying'){
+    // Simple confirm
+    h=`<div class="overlay-bg" onclick="if(event.target===this)closeOv()"><div class="modal">
+      <div class="modal-title">Move to Qualifying</div>
+      <div class="modal-sub">Confirm moving this lead to the Qualifying stage.</div>
+      <div class="modal-actions">
+        <button class="btn-save" onclick="confirmStageMove()">Confirm</button>
+        <button class="btn-cancel" onclick="closeOv()">Cancel</button>
+      </div>
+    </div></div>`;
+  } else if(fromStage==='Qualifying'&&toStage==='Hot'){
+    h=`<div class="overlay-bg" onclick="if(event.target===this)closeOv()"><div class="modal">
+      <div class="modal-title">Qualify \u2192 Hot</div>
+      <div class="modal-sub">Capture qualification signals before promoting.</div>
+      <div class="mdm-yn-row"><span class="mdm-label">Pain signal?</span><button class="mdm-yn" id="yn-pain-y" onclick="toggleYN('pain',true)">Yes</button><button class="mdm-yn" id="yn-pain-n" onclick="toggleYN('pain',false)">No</button></div>
+      <div class="mdm-yn-row"><span class="mdm-label">Urgency?</span><button class="mdm-yn" id="yn-urgency-y" onclick="toggleYN('urgency',true)">Yes</button><button class="mdm-yn" id="yn-urgency-n" onclick="toggleYN('urgency',false)">No</button></div>
+      <div class="mdm-yn-row"><span class="mdm-label">Income signal?</span><button class="mdm-yn" id="yn-income-y" onclick="toggleYN('income',true)">Yes</button><button class="mdm-yn" id="yn-income-n" onclick="toggleYN('income',false)">No</button></div>
+      <div class="modal-actions">
+        <button class="btn-save" id="stage-confirm-btn" onclick="confirmStageMove()" disabled>Confirm</button>
+        <button class="btn-cancel" onclick="closeOv()">Cancel</button>
+      </div>
+    </div></div>`;
+  } else if(fromStage==='Qualifying'&&toStage==='Dead'){
+    h=`<div class="overlay-bg" onclick="if(event.target===this)closeOv()"><div class="modal">
+      <div class="modal-title">Qualifying \u2192 Dead</div>
+      <div class="modal-sub">Select the reason this lead is dead.</div>
+      <div class="mdm-label">Reason</div>
+      <div class="mdm-radios">
+        <button class="mdm-radio" onclick="selectBreakReason(this,'ghosted')">Ghosted</button>
+        <button class="mdm-radio" onclick="selectBreakReason(this,'price objection')">Price objection</button>
+        <button class="mdm-radio" onclick="selectBreakReason(this,'not ready')">Not ready</button>
+        <button class="mdm-radio" onclick="selectBreakReason(this,'wrong fit')">Wrong fit</button>
+        <button class="mdm-radio" onclick="selectBreakReason(this,'disqualified by country')">Disqualified by country</button>
+      </div>
+      <div class="modal-actions">
+        <button class="btn-save" id="stage-confirm-btn" onclick="confirmStageMove()" disabled>Confirm</button>
+        <button class="btn-cancel" onclick="closeOv()">Cancel</button>
+      </div>
+    </div></div>`;
+  } else if(fromStage==='Hot'&&toStage==='Booked'){
+    h=`<div class="overlay-bg" onclick="if(event.target===this)closeOv()"><div class="modal">
+      <div class="modal-title">Hot \u2192 Booked</div>
+      <div class="modal-sub">What approach got the booking?</div>
+      <div class="mdm-label">Approach used</div>
+      <div class="mdm-radios">
+        <button class="mdm-radio" onclick="selectApproach(this,'asked direct question')">Asked direct question</button>
+        <button class="mdm-radio" onclick="selectApproach(this,'shared story')">Shared story</button>
+        <button class="mdm-radio" onclick="selectApproach(this,'sent content')">Sent content</button>
+        <button class="mdm-radio" onclick="selectApproach(this,'other')">Other</button>
+      </div>
+      <div class="modal-actions">
+        <button class="btn-save" id="stage-confirm-btn" onclick="confirmStageMove()" disabled>Confirm</button>
+        <button class="btn-cancel" onclick="closeOv()">Cancel</button>
+      </div>
+    </div></div>`;
+  } else if(fromStage==='Hot'&&toStage==='Dead'){
+    h=`<div class="overlay-bg" onclick="if(event.target===this)closeOv()"><div class="modal">
+      <div class="modal-title">Hot \u2192 Dead</div>
+      <div class="modal-sub">Select the reason this lead is dead.</div>
+      <div class="mdm-label">Reason</div>
+      <div class="mdm-radios">
+        <button class="mdm-radio" onclick="selectBreakReason(this,'ghosted')">Ghosted</button>
+        <button class="mdm-radio" onclick="selectBreakReason(this,'price objection')">Price objection</button>
+        <button class="mdm-radio" onclick="selectBreakReason(this,'not ready')">Not ready</button>
+        <button class="mdm-radio" onclick="selectBreakReason(this,'went cold')">Went cold</button>
+        <button class="mdm-radio" onclick="selectBreakReason(this,'other')">Other</button>
+      </div>
+      <div class="modal-actions">
+        <button class="btn-save" id="stage-confirm-btn" onclick="confirmStageMove()" disabled>Confirm</button>
+        <button class="btn-cancel" onclick="closeOv()">Cancel</button>
+      </div>
+    </div></div>`;
+  }
+  showOv(h);
+}
+
+function toggleYN(field,val){
+  const st=window._stageModalState;
+  st[field]=val;
+  // Update button styling
+  const yBtn=document.getElementById('yn-'+field+'-y');
+  const nBtn=document.getElementById('yn-'+field+'-n');
+  if(yBtn){yBtn.className='mdm-yn'+(val===true?' yes':'');}
+  if(nBtn){nBtn.className='mdm-yn'+(val===false?' no':'');}
+  // Enable confirm when all answered
+  const allAnswered=st.pain!==null&&st.urgency!==null&&st.income!==null;
+  const btn=document.getElementById('stage-confirm-btn');
+  if(btn)btn.disabled=!allAnswered;
+}
+function selectBreakReason(el,reason){
+  window._stageModalState.breakReason=reason;
+  el.parentElement.querySelectorAll('.mdm-radio').forEach(b=>b.classList.remove('selected'));
+  el.classList.add('selected');
+  const btn=document.getElementById('stage-confirm-btn');
+  if(btn)btn.disabled=false;
+}
+function selectApproach(el,approach){
+  window._stageModalState.approach=approach;
+  el.parentElement.querySelectorAll('.mdm-radio').forEach(b=>b.classList.remove('selected'));
+  el.classList.add('selected');
+  const btn=document.getElementById('stage-confirm-btn');
+  if(btn)btn.disabled=false;
+}
+async function confirmStageMove(){
+  const st=window._stageModalState;
+  const lead=pipelineLeads.find(l=>l.id===st.leadId);
+  if(!lead)return;
+  const updates={stage_entered_at:new Date().toISOString()};
+
+  if(st.fromStage==='New'&&st.toStage==='Qualifying'){
+    updates.status='qualifying';
+  } else if(st.fromStage==='Qualifying'&&st.toStage==='Hot'){
+    updates.status='hot';
+    updates.pain_signal=st.pain===true;
+    updates.urgency_signal=st.urgency===true;
+    updates.income_signal=st.income===true;
+    const qs=(st.pain===true?1:0)+(st.urgency===true?1:0)+(st.income===true?1:0);
+    if(getCountryTier(lead.country)==='red')updates.qual_score=-1;
+    else updates.qual_score=qs;
+  } else if(st.toStage==='Dead'){
+    updates.status='dead';
+    updates.break_reason=st.breakReason||'';
+  } else if(st.fromStage==='Hot'&&st.toStage==='Booked'){
+    updates.status='booked';
+    updates.approach_used=st.approach||'';
+    updates.booked_date=todayKey();
+  }
+
+  await updatePipelineLead(st.leadId,updates);
+  // Also update local object for qual_score
+  if(updates.qual_score!==undefined){const ll=pipelineLeads.find(x=>x.id===st.leadId);if(ll)ll.qual_score=updates.qual_score;}
   closeOv();renderAdmin();
 }
 
