@@ -381,6 +381,28 @@ body{background:var(--bg);color:var(--text);font-family:var(--font);touch-action
 .pl-ttb{font-size:10px;color:var(--text3);white-space:nowrap;}
 .pl-ttb-fast{color:var(--green);}
 .pl-ttb-slow{color:var(--red);}
+
+/* ── ManyChat Integration ── */
+.mc-search-bar{display:flex;gap:6px;margin-bottom:12px;padding:10px 13px;background:rgba(58,126,196,.04);border-radius:var(--r);border:.5px solid rgba(58,126,196,.2);}
+.mc-search-bar input{flex:1;font-size:13px;padding:6px 10px;border-radius:var(--r);border:.5px solid var(--border);background:var(--bg);color:var(--text);font-family:var(--font);outline:none;}
+.mc-search-bar button{font-size:12px;padding:6px 14px;border-radius:var(--r);border:none;background:var(--blue);color:#fff;cursor:pointer;font-family:var(--font);white-space:nowrap;}
+.mc-search-bar button:disabled{opacity:.5;cursor:not-allowed;}
+.mc-results{margin-bottom:12px;}
+.mc-result{display:flex;align-items:center;gap:10px;padding:9px 12px;background:var(--bg2);border-radius:var(--r);border:.5px solid var(--border);margin-bottom:6px;cursor:pointer;transition:background .15s;}
+.mc-result:hover{background:var(--bg);border-color:var(--blue);}
+.mc-result-name{flex:1;font-size:13px;font-weight:500;}
+.mc-result-meta{font-size:11px;color:var(--text3);}
+.mc-result-tags{display:flex;gap:4px;flex-wrap:wrap;}
+.mc-tag{font-size:9px;padding:1px 6px;border-radius:8px;background:rgba(58,126,196,.08);color:var(--blue);border:.5px solid rgba(58,126,196,.2);}
+.mc-status{display:flex;align-items:center;gap:6px;font-size:11px;margin-bottom:1rem;padding:6px 10px;border-radius:var(--r);}
+.mc-status-ok{background:rgba(46,158,91,.08);color:var(--green);border:.5px solid rgba(46,158,91,.2);}
+.mc-status-err{background:rgba(226,75,74,.06);color:var(--red);border:.5px solid rgba(226,75,74,.2);}
+.mc-status-dot{width:6px;height:6px;border-radius:50%;flex-shrink:0;}
+.mc-status-ok .mc-status-dot{background:var(--green);}
+.mc-status-err .mc-status-dot{background:var(--red);}
+.mc-settings{background:var(--bg2);border-radius:var(--rl);padding:14px;border:.5px solid var(--border);margin-bottom:1rem;}
+.mc-settings-title{font-size:13px;font-weight:500;margin-bottom:8px;display:flex;align-items:center;gap:6px;}
+.mc-imported{font-size:10px;padding:1px 6px;border-radius:8px;background:rgba(58,126,196,.08);color:var(--blue);border:.5px solid rgba(58,126,196,.15);white-space:nowrap;}
 </style>
 </head>
 <body>
@@ -424,7 +446,10 @@ const OBJECTION_CATEGORIES=['price','timing','not_ready','spouse','already_tried
 const OBJECTION_LABELS={price:'Price/Money',timing:'Bad Timing',not_ready:'Not Ready',spouse:'Need to Ask Spouse',already_tried:'Already Tried Coaching',skeptical:'Skeptical',no_response:'No Response',other:'Other'};
 let pipelineLeads=[],pipelineFilters={status:'all',source:'all',leadSource:'all',setter:'all',dateFrom:'',dateTo:''},pipelineSort={field:'dm_date',dir:'desc'};
 let pipelineSetters=[];
+let mcApiKey='';
+let mcConnected=false;
 const STALE_DAYS=3;
+const MC_CORS_PROXY='https://corsproxy.io/?url=';
 const SETTER_SCRIPTS={
   new:{title:'Opening DM',lines:['Hey {{name}}! Saw you checked out our content.','What made you reach out today?','What\'s the biggest thing you\'re working on right now?']},
   in_conversation:{title:'Qualifying',lines:['How long have you been dealing with this?','What have you already tried?','If you could change one thing in the next 90 days, what would it be?','Sounds like you\'re in the gap between knowing and doing — that\'s exactly what we work on.']},
@@ -513,6 +538,7 @@ async function doAssignActions(uid){const text=document.getElementById('assign-i
 async function loadPipelineLeads(){
   const r=await storage.get('pipeline-leads');
   try{pipelineLeads=r?JSON.parse(r.value):[];}catch(e){pipelineLeads=[];}
+  if(!mcApiKey)await loadMcApiKey();
 }
 async function savePipelineLeads(){
   await storage.set('pipeline-leads',JSON.stringify(pipelineLeads));
@@ -531,6 +557,9 @@ function addPipelineLead(d){
     outcome_notes:'',booked_date:'',
     touchpoints:d.touchpoints||0,
     followups:[], // {date, message, got_response}
+    mc_subscriber_id:d.mc_subscriber_id||'',
+    mc_tags:d.mc_tags||[],
+    mc_email:d.mc_email||'',
     created_at:now,updated_at:now
   });
   savePipelineLeads();
@@ -739,6 +768,163 @@ function getLeadSourceStats(){
   return Object.entries(stats).sort((a,b)=>b[1].total-a[1].total);
 }
 
+// ── MANYCHAT INTEGRATION ──
+async function loadMcApiKey(){
+  const r=await storage.get('mc-api-key');
+  if(r)mcApiKey=r.value||'';
+  if(mcApiKey)await testMcConnection();
+}
+async function saveMcApiKey(key){
+  mcApiKey=key;
+  await storage.set('mc-api-key',key);
+  if(key)await testMcConnection();
+  else mcConnected=false;
+}
+async function testMcConnection(){
+  try{
+    const resp=await mcFetch('/fb/page/getInfo');
+    mcConnected=resp&&resp.status==='success';
+  }catch(e){mcConnected=false;}
+  return mcConnected;
+}
+async function mcFetch(path){
+  if(!mcApiKey)return null;
+  const url=MC_CORS_PROXY+encodeURIComponent('https://api.manychat.com'+path);
+  const resp=await fetch(url,{headers:{'Authorization':'Bearer '+mcApiKey,'Accept':'application/json'}});
+  if(!resp.ok)return null;
+  return await resp.json();
+}
+async function mcSearchByName(name){
+  if(!mcApiKey||!name)return[];
+  const data=await mcFetch('/fb/subscriber/findByName?name='+encodeURIComponent(name));
+  if(!data||data.status!=='success'||!data.data)return[];
+  return data.data.map(s=>({
+    id:s.id,
+    name:s.name||((s.first_name||'')+' '+(s.last_name||'')).trim(),
+    first_name:s.first_name||'',
+    last_name:s.last_name||'',
+    gender:s.gender||'',
+    ig_username:s.ig_username||'',
+    phone:s.phone||'',
+    email:s.email||'',
+    subscribed:s.subscribed_date||s.created_at||'',
+    tags:(s.tags||[]).map(t=>t.name||t),
+    custom_fields:s.custom_fields||{},
+    last_interaction:s.last_interaction||s.last_seen||'',
+    live_chat_url:s.live_chat_url||''
+  }));
+}
+async function mcGetSubscriber(subId){
+  const data=await mcFetch('/fb/subscriber/getInfo?subscriber_id='+subId);
+  if(!data||data.status!=='success'||!data.data)return null;
+  const s=data.data;
+  return{
+    id:s.id,
+    name:s.name||((s.first_name||'')+' '+(s.last_name||'')).trim(),
+    first_name:s.first_name||'',
+    last_name:s.last_name||'',
+    gender:s.gender||'',
+    ig_username:s.ig_username||'',
+    phone:s.phone||'',
+    email:s.email||'',
+    subscribed:s.subscribed_date||s.created_at||'',
+    tags:(s.tags||[]).map(t=>t.name||t),
+    custom_fields:s.custom_fields||{},
+    last_interaction:s.last_interaction||s.last_seen||'',
+    live_chat_url:s.live_chat_url||''
+  };
+}
+function mcFillLeadForm(sub){
+  const nameEl=document.getElementById('pl-name');
+  const igEl=document.getElementById('pl-ig');
+  if(nameEl&&sub.name)nameEl.value=sub.name;
+  if(igEl&&sub.ig_username)igEl.value=sub.ig_username.replace(/^@/,'');
+  // Store MC subscriber ID on the form for saving
+  window._mcSubId=sub.id;
+  window._mcSubData=sub;
+  // Show imported indicator
+  const indicator=document.getElementById('mc-imported-indicator');
+  if(indicator)indicator.innerHTML=`<span class="mc-imported">Imported from ManyChat</span>${sub.tags.length?'<span class="mc-result-tags" style="display:inline-flex;gap:3px;margin-left:4px">'+sub.tags.slice(0,4).map(t=>'<span class="mc-tag">'+esc(t)+'</span>').join('')+'</span>':''}`;
+  // Hide search results
+  const resultsEl=document.getElementById('mc-search-results');
+  if(resultsEl)resultsEl.innerHTML='';
+}
+async function mcSearchAndShow(){
+  const input=document.getElementById('mc-search-input');
+  const resultsEl=document.getElementById('mc-search-results');
+  const btn=document.getElementById('mc-search-btn');
+  if(!input||!resultsEl)return;
+  const q=input.value.trim();
+  if(!q){resultsEl.innerHTML='<div style="font-size:12px;color:var(--text3);padding:4px">Type a name to search.</div>';return;}
+  btn.disabled=true;btn.textContent='Searching…';
+  try{
+    const results=await mcSearchByName(q);
+    if(!results.length){
+      resultsEl.innerHTML='<div style="font-size:12px;color:var(--text3);padding:4px">No subscribers found for "'+esc(q)+'"</div>';
+    }else{
+      window._mcSearchResults=results;
+      resultsEl.innerHTML=results.slice(0,8).map((s,i)=>`<div class="mc-result" onclick="mcFillLeadForm(window._mcSearchResults[${i}])">
+        <div class="mc-result-name">${esc(s.name)}${s.ig_username?' <span style="font-size:11px;color:var(--blue)">@'+esc(s.ig_username)+'</span>':''}</div>
+        <div class="mc-result-meta">${s.tags.length?s.tags.slice(0,3).map(t=>'<span class="mc-tag">'+esc(t)+'</span>').join(' '):''}${s.email?' · '+esc(s.email):''}</div>
+      </div>`).join('');
+    }
+  }catch(e){
+    resultsEl.innerHTML='<div style="font-size:12px;color:var(--red);padding:4px">Search failed: '+esc(e.message)+'</div>';
+  }
+  btn.disabled=false;btn.textContent='Search';
+}
+function renderMcSettings(){
+  return`<div class="mc-settings">
+    <div class="mc-settings-title">ManyChat Integration ${mcConnected?'<span class="mc-status-dot" style="background:var(--green)"></span>':'<span class="mc-status-dot" style="background:var(--red)"></span>'}</div>
+    ${mcConnected?'<div class="mc-status mc-status-ok"><span class="mc-status-dot"></span>Connected — search subscribers when adding leads</div>':'<div class="mc-status mc-status-err"><span class="mc-status-dot"></span>Not connected</div>'}
+    <label class="lbl">API Key</label>
+    <div style="display:flex;gap:6px">
+      <input class="inp" id="mc-key-input" type="password" value="${mcApiKey?'••••••••'+mcApiKey.slice(-6):''}" placeholder="Paste your ManyChat API key" style="margin-bottom:0;flex:1" onfocus="if(this.value.startsWith('••'))this.value=''">
+      <button class="btn-ghost" style="white-space:nowrap" onclick="saveMcKey()">Save</button>
+      ${mcApiKey?'<button class="btn-ghost" style="white-space:nowrap;color:var(--red)" onclick="clearMcKey()">Clear</button>':''}
+    </div>
+  </div>`;
+}
+async function saveMcKey(){
+  const input=document.getElementById('mc-key-input');
+  if(!input)return;
+  const key=input.value.trim();
+  if(!key||key.startsWith('••')){alert('Please enter a valid API key.');return;}
+  await saveMcApiKey(key);
+  renderAdmin();
+}
+async function clearMcKey(){
+  if(!confirm('Remove ManyChat API key?'))return;
+  await saveMcApiKey('');
+  renderAdmin();
+}
+function renderMcSearchBar(){
+  if(!mcApiKey||!mcConnected)return'';
+  return`<div style="margin-bottom:4px"><div style="font-size:10px;text-transform:uppercase;letter-spacing:.06em;color:var(--blue);margin-bottom:6px;font-weight:500">Import from ManyChat</div>
+    <div class="mc-search-bar">
+      <input id="mc-search-input" placeholder="Search subscriber by name…" onkeydown="if(event.key==='Enter')mcSearchAndShow()">
+      <button id="mc-search-btn" onclick="mcSearchAndShow()">Search</button>
+    </div>
+    <div id="mc-search-results" class="mc-results"></div>
+    <div id="mc-imported-indicator" style="margin-bottom:8px"></div>
+  </div>`;
+}
+
+async function mcRefreshLead(leadId){
+  const lead=pipelineLeads.find(l=>l.id===leadId);
+  if(!lead||!lead.mc_subscriber_id){alert('No ManyChat subscriber linked.');return;}
+  try{
+    const sub=await mcGetSubscriber(lead.mc_subscriber_id);
+    if(!sub){alert('Could not fetch subscriber data.');return;}
+    updatePipelineLead(leadId,{
+      mc_tags:sub.tags,
+      mc_email:sub.email,
+      ig_handle:sub.ig_username||lead.ig_handle
+    });
+    openEditLeadModal(leadId);
+  }catch(e){alert('Error refreshing: '+e.message);}
+}
+
 // ── FUNNEL VIZ ──
 function getFunnelData(){
   const total=pipelineLeads.length;
@@ -826,6 +1012,8 @@ function renderPipelineDashboard(){
     <input type="date" value="${pipelineFilters.dateFrom}" onchange="setPipelineFilter('dateFrom',this.value)" title="From date">
     <input type="date" value="${pipelineFilters.dateTo}" onchange="setPipelineFilter('dateTo',this.value)" title="To date">
   </div>`;
+  // ManyChat settings
+  h+=renderMcSettings();
   // Add button
   h+=`<button class="btn-primary" style="max-width:180px;margin-bottom:1rem" onclick="openAddLeadModal()">+ Add lead</button>`;
   // Lead list
@@ -855,6 +1043,7 @@ function renderPipelineDashboard(){
         ${ttb!==null?`<span class="pl-ttb ${ttbClass}" title="Time to book">${ttb}d to book</span>`:''}
         ${l.touchpoints?`<span class="pl-tp" title="Content touchpoints before DM">${l.touchpoints} touches</span>`:''}
         ${fuCount?`<span class="pl-tp" title="Follow-ups">${fuResponded}/${fuCount} FU</span>`:''}
+        ${l.mc_subscriber_id?'<span class="mc-imported" title="Imported from ManyChat">MC</span>':''}
         <span class="pl-lead-date">${dateStr}</span>
       </div>
       ${l.setter_notes?`<div class="pl-lead-notes">${esc(l.setter_notes)}</div>`:''}
@@ -871,9 +1060,11 @@ function openAddLeadModal(){
   const defaultKeywords=Object.keys(SOURCE_MAP);
   const keywords=[...new Set([...defaultKeywords,...allKeywords])];
   const allSetters=getSetters();
+  window._mcSubId=null;window._mcSubData=null;window._mcSearchResults=[];
   showOv(`<div class="overlay-bg" onclick="if(event.target===this)closeOv()"><div class="modal" style="max-height:90vh;overflow-y:auto">
     <div class="modal-title">Add lead</div>
     <div class="modal-sub">Track a new DM conversation.</div>
+    ${renderMcSearchBar()}
     <label class="lbl">Name</label>
     <input class="inp" id="pl-name" placeholder="Lead name">
     <label class="lbl">Instagram handle</label>
@@ -962,9 +1153,12 @@ function saveNewLead(){
     lead_quality:window._plQuality||'warm',
     setter_notes:document.getElementById('pl-notes').value.trim(),
     objections:document.getElementById('pl-objections').value.trim(),
-    objection_categories:window._plObjCats||[]
+    objection_categories:window._plObjCats||[],
+    mc_subscriber_id:window._mcSubId||'',
+    mc_tags:(window._mcSubData&&window._mcSubData.tags)||[],
+    mc_email:(window._mcSubData&&window._mcSubData.email)||''
   });
-  window._plObjCats=[];
+  window._plObjCats=[];window._mcSubId=null;window._mcSubData=null;window._mcSearchResults=[];
   closeOv();renderAdmin();
 }
 
@@ -1055,6 +1249,11 @@ function openEditLeadModal(id){
       <input id="pl-fu-msg" placeholder="Follow-up message sent..." onkeydown="if(event.key==='Enter'){plAddFollowup('${id}');}">
       <button onclick="plAddFollowup('${id}')">+ Log</button>
     </div>
+    ${l.mc_subscriber_id?`<div style="margin-top:10px;padding:10px 13px;background:rgba(58,126,196,.04);border-radius:var(--r);border:.5px solid rgba(58,126,196,.15)">
+      <div style="font-size:10px;text-transform:uppercase;letter-spacing:.06em;color:var(--blue);margin-bottom:4px;display:flex;align-items:center;gap:6px">ManyChat subscriber <span class="mc-imported">ID: ${esc(String(l.mc_subscriber_id))}</span><span style="margin-left:auto;font-size:10px;color:var(--blue);cursor:pointer;text-decoration:underline" onclick="event.stopPropagation();mcRefreshLead('${id}')">Refresh</span></div>
+      ${l.mc_tags&&l.mc_tags.length?'<div style="display:flex;gap:3px;flex-wrap:wrap;margin-top:4px">'+l.mc_tags.map(t=>'<span class="mc-tag">'+esc(t)+'</span>').join('')+'</div>':''}
+      ${l.mc_email?'<div style="font-size:11px;color:var(--text3);margin-top:3px">'+esc(l.mc_email)+'</div>':''}
+    </div>`:''}
     ${script?`<div class="pl-script"><div class="pl-script-title">Suggested script — ${script.title} <span class="pl-script-copy" id="pl-copy-btn" onclick="event.stopPropagation();copyScript('${l.status}','${esc(l.name)}')">Copy</span></div>${script.lines.map(line=>`<div>${line}</div>`).join('')}</div>`:''}
     <div class="modal-actions">
       <button class="btn-save" onclick="saveEditLead('${id}')">Save</button>
