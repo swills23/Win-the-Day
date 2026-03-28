@@ -283,6 +283,44 @@ body{background:var(--bg);color:var(--text);font-family:var(--font);touch-action
 .inactive-flag{font-size:11px;color:var(--red);background:rgba(226,75,74,.08);border:.5px solid rgba(226,75,74,.25);border-radius:20px;padding:2px 8px;}
 .no-users{text-align:center;padding:2.5rem 1rem;font-size:13px;color:var(--text3);}
 .assign-area{width:100%;font-size:13px;padding:8px 10px;border-radius:var(--r);border:.5px solid var(--border);background:var(--bg);color:var(--text);resize:none;outline:none;font-family:var(--font);min-height:80px;margin-bottom:8px;}
+
+/* ── Pipeline ── */
+.pl-stats{display:flex;gap:10px;margin-bottom:1.25rem;flex-wrap:wrap;}
+.pl-stat{flex:1;min-width:70px;background:var(--bg2);border-radius:var(--r);padding:11px;border:.5px solid var(--border);text-align:center;}
+.pl-stat-val{font-size:21px;font-weight:500;}
+.pl-stat-lbl{font-size:10px;color:var(--text3);margin-top:2px;}
+.pl-source-row{display:flex;gap:6px;margin-bottom:1.25rem;flex-wrap:wrap;}
+.pl-source-pill{font-size:11px;padding:3px 10px;border-radius:20px;background:var(--bg2);border:.5px solid var(--border);color:var(--text2);}
+.pl-source-pill strong{color:var(--text);margin-right:3px;}
+.pl-filters{display:flex;gap:8px;margin-bottom:1rem;flex-wrap:wrap;}
+.pl-filters select,.pl-filters input[type=date]{font-size:12px;padding:5px 8px;border-radius:var(--r);border:.5px solid var(--border);background:var(--bg);color:var(--text);font-family:var(--font);outline:none;}
+.pl-lead{background:var(--bg2);border-radius:var(--rl);padding:13px 15px;border:.5px solid var(--border);margin-bottom:9px;cursor:pointer;transition:background .15s;}
+.pl-lead:hover{background:var(--bg);}
+.pl-lead-top{display:flex;align-items:center;gap:10px;margin-bottom:6px;}
+.pl-lead-name{font-size:14px;font-weight:500;flex:1;}
+.pl-lead-ig{font-size:12px;color:var(--blue);}
+.pl-lead-meta{display:flex;gap:8px;align-items:center;flex-wrap:wrap;}
+.pl-badge{font-size:10px;padding:2px 8px;border-radius:20px;font-weight:500;white-space:nowrap;}
+.pl-badge-new{background:rgba(58,126,196,.12);color:var(--blue);border:.5px solid rgba(58,126,196,.3);}
+.pl-badge-in_conversation{background:rgba(200,137,26,.12);color:var(--orange);border:.5px solid rgba(200,137,26,.3);}
+.pl-badge-booked{background:rgba(46,158,91,.12);color:var(--green);border:.5px solid rgba(46,158,91,.3);}
+.pl-badge-completed_call{background:rgba(58,126,196,.12);color:var(--blue);border:.5px solid rgba(58,126,196,.3);}
+.pl-badge-closed_won{background:var(--green);color:#fff;border:.5px solid var(--green);}
+.pl-badge-closed_lost{background:rgba(226,75,74,.12);color:var(--red);border:.5px solid rgba(226,75,74,.3);}
+.pl-badge-ghosted{background:var(--bg);color:var(--text3);border:.5px solid var(--border);}
+.pl-badge-not_qualified{background:var(--bg);color:var(--text3);border:.5px solid var(--border);}
+.pl-quality{width:8px;height:8px;border-radius:50%;flex-shrink:0;}
+.pl-quality-hot{background:var(--red);}
+.pl-quality-warm{background:var(--orange);}
+.pl-quality-cold{background:var(--blue);}
+.pl-lead-date{font-size:11px;color:var(--text3);}
+.pl-lead-notes{font-size:12px;color:var(--text3);margin-top:4px;line-height:1.5;display:-webkit-box;-webkit-line-clamp:2;-webkit-box-orient:vertical;overflow:hidden;}
+.pl-empty{text-align:center;padding:2.5rem 1rem;font-size:13px;color:var(--text3);}
+.pl-quality-sel{display:flex;gap:6px;}
+.pl-quality-btn{padding:5px 13px;border-radius:20px;font-size:12px;cursor:pointer;font-family:var(--font);border:.5px solid var(--border);background:var(--bg);color:var(--text2);transition:all .15s;}
+.pl-quality-btn.sel-hot{background:rgba(226,75,74,.12);color:var(--red);border-color:var(--red);}
+.pl-quality-btn.sel-warm{background:rgba(200,137,26,.12);color:var(--orange);border-color:var(--orange);}
+.pl-quality-btn.sel-cold{background:rgba(58,126,196,.12);color:var(--blue);border-color:var(--blue);}
 </style>
 </head>
 <body>
@@ -316,6 +354,11 @@ const sb = window.supabase.createClient(SUPABASE_URL, SUPABASE_KEY, {
 });
 let currentUser=null,currentProfile=null,authView='login';
 let adminView='pending',adminClientId=null,adminClientEmail='';
+
+// ── PIPELINE STATE ──
+const SOURCE_MAP={REWIRE:'video',SHIFT:'story'};
+const STATUS_LABELS={new:'New',in_conversation:'In Conversation',booked:'Booked',completed_call:'Completed Call',closed_won:'Closed Won',closed_lost:'Closed Lost',ghosted:'Ghosted',not_qualified:'Not Qualified'};
+let pipelineLeads=[],pipelineFilters={status:'all',source:'all',dateFrom:'',dateTo:''},pipelineSort={field:'dm_date',dir:'desc'};
 
 function fixMojibake(s){if(typeof s!=='string')return s;const c=[...s].map(x=>x.charCodeAt(0));if(!c.some(x=>x>127&&x<256))return s;try{return new TextDecoder('utf-8').decode(new Uint8Array(c));}catch(e){return s;}}
 function fixTaskNames(tasks){return(tasks||[]).map(t=>({...t,name:fixMojibake(t.name)}));}
@@ -377,7 +420,12 @@ async function renderAdmin(){
   const list=adminView==='pending'?pending:approved;
   let html=`<div class="top-bar"><span class="top-bar-email">${currentUser.email}</span><button class="top-bar-btn" onclick="switchToMyTracker()">My Tracker</button><button class="top-bar-btn" onclick="signOut()">Sign out</button></div>
   <div class="admin"><div style="margin-bottom:1.25rem"><div style="font-size:18px;font-weight:500;">${APP_NAME} — Admin</div><div style="font-size:12px;color:var(--text3);margin-top:2px;">${profiles.length} total users</div></div>
-  <div class="admin-tabs"><div class="admin-tab${adminView==='pending'?' active':''}" onclick="setAdminView('pending')">Pending (${pending.length})</div><div class="admin-tab${adminView==='approved'?' active':''}" onclick="setAdminView('approved')">Clients (${approved.length})</div></div>`;
+  <div class="admin-tabs"><div class="admin-tab${adminView==='pending'?' active':''}" onclick="setAdminView('pending')">Pending (${pending.length})</div><div class="admin-tab${adminView==='approved'?' active':''}" onclick="setAdminView('approved')">Clients (${approved.length})</div><div class="admin-tab${adminView==='pipeline'?' active':''}" onclick="setAdminView('pipeline')">Pipeline</div></div>`;
+  if(adminView==='pipeline'){
+    await loadPipelineLeads();
+    html+=renderPipelineDashboard();
+    html+=`</div>`;document.getElementById('root').innerHTML=html;return;
+  }
   if(!list.length){html+=`<div class="no-users">No ${adminView==='pending'?'pending approvals':'clients'} yet.</div>`;}
   else if(adminView==='pending'){list.forEach(p=>{html+=`<div class="user-card"><div class="user-top"><div class="user-avatar">${p.email[0].toUpperCase()}</div><div style="flex:1"><div style="font-size:14px">${p.email}</div><div style="font-size:11px;color:var(--text3)">Requested ${new Date(p.created_at).toLocaleDateString()}</div></div></div><div class="user-actions"><button class="btn-sm btn-green" onclick="approveUser('${p.id}')">Approve</button><button class="btn-outline-red" onclick="removeUser('${p.id}')">Remove</button></div></div>`;});}
   else{list.forEach(p=>{const s=statsMap[p.id]||{};const lv=getLevel(s.won||0);const inactive=s.daysSince!==null&&s.daysSince>=2;const todayColor=s.todayPct!==null?statusColor(s.todayPct,false):'var(--text3)';html+=`<div class="user-card"><div class="user-top"><div class="user-avatar">${p.email[0].toUpperCase()}</div><div style="flex:1"><div style="font-size:14px">${p.email}</div><div style="font-size:11px;display:flex;align-items:center;gap:6px;margin-top:2px;"><span style="color:${lv.color};font-weight:500">${lv.icon} ${lv.name}</span>${inactive?`<span class="inactive-flag">Inactive ${s.daysSince}d</span>`:''}</div></div>${s.todayPct!==null?`<div style="font-size:15px;font-weight:500;color:${todayColor}">${Math.round(s.todayPct*100)}%</div>`:''}</div><div class="user-stats"><div class="user-stat"><div class="user-stat-val">${s.won||0}</div><div class="user-stat-lbl">Days won</div></div><div class="user-stat"><div class="user-stat-val" style="color:${todayColor}">${s.todayPct!==null?Math.round(s.todayPct*100)+'%':'—'}</div><div class="user-stat-lbl">Today</div></div><div class="user-stat"><div class="user-stat-val">${s.daysSince!==null?s.daysSince+'d':'—'}</div><div class="user-stat-lbl">Last active</div></div></div><div class="user-actions"><button class="btn-sm btn-green" onclick="viewClient('${p.id}','${p.email}')">View tracker</button><button class="top-bar-btn" onclick="openHabitBuilder('${p.id}','${p.email}')">Build habits</button><button class="top-bar-btn" onclick="openAssignActions('${p.id}','${p.email}')">Assign actions</button><button class="btn-outline-red" onclick="removeUser('${p.id}')">Remove</button></div></div>`;});}
@@ -388,6 +436,234 @@ async function viewClient(uid,email){adminClientId=uid;adminClientEmail=email;aw
 function switchToMyTracker(){adminClientId=null;adminClientEmail='';loadAll().then(()=>{render();});}
 function openAssignActions(uid,email){showOv(`<div class="overlay-bg" onclick="if(event.target===this)closeOv()"><div class="modal"><div class="modal-title">Assign action items</div><div class="modal-sub">For ${email} — one item per line.</div><textarea class="assign-area" id="assign-inp" placeholder="Read chapter 3&#10;Write your 90-day vision"></textarea><div class="modal-actions"><button class="btn-save" onclick="doAssignActions('${uid}')">Save</button><button class="btn-cancel" onclick="closeOv()">Cancel</button></div></div></div>`);}
 async function doAssignActions(uid){const text=document.getElementById('assign-inp').value.trim();const items=text.split('\n').map(s=>s.trim()).filter(Boolean).map(s=>({text:s,done:false}));await storage.set('wtd-actions',JSON.stringify(items),uid);closeOv();alert('Action items saved!');}
+
+// ── PIPELINE ──
+async function loadPipelineLeads(){
+  const r=await storage.get('pipeline-leads');
+  try{pipelineLeads=r?JSON.parse(r.value):[];}catch(e){pipelineLeads=[];}
+}
+async function savePipelineLeads(){
+  await storage.set('pipeline-leads',JSON.stringify(pipelineLeads));
+}
+function addPipelineLead(d){
+  const now=new Date().toISOString();
+  pipelineLeads.push({id:crypto.randomUUID(),name:d.name,ig_handle:d.ig_handle,source_keyword:d.source_keyword,source_type:SOURCE_MAP[d.source_keyword]||'other',dm_date:d.dm_date,status:d.status||'new',lead_quality:d.lead_quality||'warm',setter_notes:d.setter_notes||'',objections:d.objections||'',outcome_notes:'',booked_date:'',created_at:now,updated_at:now});
+  savePipelineLeads();
+}
+function updatePipelineLead(id,d){
+  const lead=pipelineLeads.find(l=>l.id===id);if(!lead)return;
+  Object.assign(lead,d,{updated_at:new Date().toISOString()});
+  if(d.source_keyword)lead.source_type=SOURCE_MAP[d.source_keyword]||'other';
+  savePipelineLeads();
+}
+function deletePipelineLead(id){
+  if(!confirm('Delete this lead?'))return;
+  pipelineLeads=pipelineLeads.filter(l=>l.id!==id);
+  savePipelineLeads();closeOv();renderAdmin();
+}
+function getPipelineStats(){
+  const now=new Date(),y=now.getFullYear(),m=now.getMonth();
+  const thisMonth=pipelineLeads.filter(l=>{const d=new Date(l.dm_date);return d.getFullYear()===y&&d.getMonth()===m;});
+  const total=thisMonth.length;
+  const booked=thisMonth.filter(l=>['booked','completed_call','closed_won','closed_lost'].includes(l.status)).length;
+  const closed=thisMonth.filter(l=>l.status==='closed_won').length;
+  const closedOrLost=thisMonth.filter(l=>['closed_won','closed_lost'].includes(l.status)).length;
+  const dmToBooked=total>0?Math.round(booked/total*100):0;
+  const bookedToClosed=closedOrLost>0?Math.round(closed/closedOrLost*100):0;
+  const bySource={};pipelineLeads.forEach(l=>{const k=l.source_keyword||'Unknown';bySource[k]=(bySource[k]||0)+1;});
+  return{total,dmToBooked,bookedToClosed,bySource};
+}
+function getFilteredLeads(){
+  let leads=[...pipelineLeads];
+  if(pipelineFilters.status!=='all')leads=leads.filter(l=>l.status===pipelineFilters.status);
+  if(pipelineFilters.source!=='all')leads=leads.filter(l=>l.source_keyword===pipelineFilters.source);
+  if(pipelineFilters.dateFrom)leads=leads.filter(l=>l.dm_date>=pipelineFilters.dateFrom);
+  if(pipelineFilters.dateTo)leads=leads.filter(l=>l.dm_date<=pipelineFilters.dateTo);
+  leads.sort((a,b)=>{const va=a[pipelineSort.field]||'',vb=b[pipelineSort.field]||'';return pipelineSort.dir==='desc'?vb.localeCompare(va):va.localeCompare(vb);});
+  return leads;
+}
+function setPipelineFilter(field,value){pipelineFilters[field]=value;renderAdmin();}
+function setPipelineSort(field){
+  if(pipelineSort.field===field)pipelineSort.dir=pipelineSort.dir==='desc'?'asc':'desc';
+  else{pipelineSort.field=field;pipelineSort.dir='desc';}
+  renderAdmin();
+}
+
+function renderPipelineDashboard(){
+  const stats=getPipelineStats();
+  const filtered=getFilteredLeads();
+  const allKeywords=[...new Set(pipelineLeads.map(l=>l.source_keyword).filter(Boolean))];
+  let h='';
+  // Stats row
+  h+=`<div class="pl-stats">
+    <div class="pl-stat"><div class="pl-stat-val">${stats.total}</div><div class="pl-stat-lbl">Leads (month)</div></div>
+    <div class="pl-stat"><div class="pl-stat-val">${stats.dmToBooked}%</div><div class="pl-stat-lbl">DM → Booked</div></div>
+    <div class="pl-stat"><div class="pl-stat-val">${stats.bookedToClosed}%</div><div class="pl-stat-lbl">Booked → Closed</div></div>
+  </div>`;
+  // Source breakdown
+  if(Object.keys(stats.bySource).length){
+    h+=`<div class="pl-source-row">${Object.entries(stats.bySource).map(([k,v])=>`<span class="pl-source-pill"><strong>${v}</strong> ${k} (${SOURCE_MAP[k]||'other'})</span>`).join('')}</div>`;
+  }
+  // Filters
+  h+=`<div class="pl-filters">
+    <select onchange="setPipelineFilter('status',this.value)"><option value="all">All statuses</option>${Object.entries(STATUS_LABELS).map(([k,v])=>`<option value="${k}"${pipelineFilters.status===k?' selected':''}>${v}</option>`).join('')}</select>
+    <select onchange="setPipelineFilter('source',this.value)"><option value="all">All sources</option>${allKeywords.map(k=>`<option value="${k}"${pipelineFilters.source===k?' selected':''}>${k}</option>`).join('')}</select>
+    <input type="date" value="${pipelineFilters.dateFrom}" onchange="setPipelineFilter('dateFrom',this.value)" title="From date">
+    <input type="date" value="${pipelineFilters.dateTo}" onchange="setPipelineFilter('dateTo',this.value)" title="To date">
+  </div>`;
+  // Add button
+  h+=`<button class="btn-primary" style="max-width:180px;margin-bottom:1rem" onclick="openAddLeadModal()">+ Add lead</button>`;
+  // Lead list
+  if(!filtered.length){h+=`<div class="pl-empty">No leads${pipelineFilters.status!=='all'||pipelineFilters.source!=='all'?' match your filters':' yet'}. Add your first lead above.</div>`;}
+  else{filtered.forEach(l=>{
+    const dateStr=l.dm_date?new Date(l.dm_date+'T12:00:00').toLocaleDateString('en-US',{month:'short',day:'numeric'}):'';
+    h+=`<div class="pl-lead" onclick="openEditLeadModal('${l.id}')">
+      <div class="pl-lead-top">
+        <div class="pl-lead-name">${esc(l.name||'Unnamed')}${l.ig_handle?` <span class="pl-lead-ig">@${esc(l.ig_handle.replace(/^@/,''))}</span>`:''}</div>
+      </div>
+      <div class="pl-lead-meta">
+        <span class="pl-badge pl-badge-${l.status}">${STATUS_LABELS[l.status]||l.status}</span>
+        ${l.source_keyword?`<span class="pl-source-pill" style="font-size:10px;padding:1px 7px">${esc(l.source_keyword)}</span>`:''}
+        ${l.lead_quality?`<span class="pl-quality pl-quality-${l.lead_quality}" title="${l.lead_quality}"></span>`:''}
+        <span class="pl-lead-date">${dateStr}</span>
+      </div>
+      ${l.setter_notes?`<div class="pl-lead-notes">${esc(l.setter_notes)}</div>`:''}
+    </div>`;
+  });}
+  return h;
+}
+function esc(s){return String(s).replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;').replace(/"/g,'&quot;').replace(/'/g,'&#39;');}
+
+function openAddLeadModal(){
+  let quality='warm';
+  window._plQuality=quality;
+  const allKeywords=[...new Set(pipelineLeads.map(l=>l.source_keyword).filter(Boolean))];
+  const defaultKeywords=Object.keys(SOURCE_MAP);
+  const keywords=[...new Set([...defaultKeywords,...allKeywords])];
+  showOv(`<div class="overlay-bg" onclick="if(event.target===this)closeOv()"><div class="modal" style="max-height:90vh;overflow-y:auto">
+    <div class="modal-title">Add lead</div>
+    <div class="modal-sub">Track a new DM conversation.</div>
+    <label class="lbl">Name</label>
+    <input class="inp" id="pl-name" placeholder="Lead name">
+    <label class="lbl">Instagram handle</label>
+    <input class="inp" id="pl-ig" placeholder="handle (without @)">
+    <label class="lbl">Source keyword</label>
+    <select class="inp" id="pl-keyword" onchange="document.getElementById('pl-keyword-custom').style.display=this.value==='__custom'?'block':'none'">
+      ${keywords.map(k=>`<option value="${k}">${k} (${SOURCE_MAP[k]||'other'})</option>`).join('')}
+      <option value="__custom">Custom...</option>
+    </select>
+    <input class="inp" id="pl-keyword-custom" placeholder="Custom keyword" style="display:none">
+    <label class="lbl">DM date</label>
+    <input class="inp" id="pl-date" type="date" value="${todayKey()}">
+    <label class="lbl">Status</label>
+    <select class="inp" id="pl-status">
+      ${Object.entries(STATUS_LABELS).map(([k,v])=>`<option value="${k}">${v}</option>`).join('')}
+    </select>
+    <label class="lbl">Lead quality</label>
+    <div class="pl-quality-sel" id="pl-qual-sel" style="margin-bottom:1rem">
+      <button class="pl-quality-btn" onclick="plSetQuality('hot',this)" type="button">Hot</button>
+      <button class="pl-quality-btn sel-warm" onclick="plSetQuality('warm',this)" type="button">Warm</button>
+      <button class="pl-quality-btn" onclick="plSetQuality('cold',this)" type="button">Cold</button>
+    </div>
+    <label class="lbl">Setter notes</label>
+    <textarea class="inp" id="pl-notes" style="min-height:80px;resize:vertical" placeholder="Conversation summary..."></textarea>
+    <label class="lbl">Objections</label>
+    <textarea class="inp" id="pl-objections" style="min-height:60px;resize:vertical" placeholder="Any objections raised..."></textarea>
+    <div class="modal-actions">
+      <button class="btn-save" onclick="saveNewLead()">Add lead</button>
+      <button class="btn-cancel" onclick="closeOv()">Cancel</button>
+    </div>
+  </div></div>`);
+}
+function plSetQuality(q,btn){
+  window._plQuality=q;
+  const btns=btn.parentElement.querySelectorAll('.pl-quality-btn');
+  btns.forEach(b=>{b.className='pl-quality-btn';});
+  btn.classList.add('sel-'+q);
+}
+function saveNewLead(){
+  const name=document.getElementById('pl-name').value.trim();
+  if(!name){alert('Please enter a name.');return;}
+  const keyword=document.getElementById('pl-keyword').value==='__custom'?document.getElementById('pl-keyword-custom').value.trim().toUpperCase():document.getElementById('pl-keyword').value;
+  addPipelineLead({
+    name,
+    ig_handle:document.getElementById('pl-ig').value.trim(),
+    source_keyword:keyword,
+    dm_date:document.getElementById('pl-date').value,
+    status:document.getElementById('pl-status').value,
+    lead_quality:window._plQuality||'warm',
+    setter_notes:document.getElementById('pl-notes').value.trim(),
+    objections:document.getElementById('pl-objections').value.trim()
+  });
+  closeOv();renderAdmin();
+}
+
+function openEditLeadModal(id){
+  const l=pipelineLeads.find(x=>x.id===id);if(!l)return;
+  window._plQuality=l.lead_quality||'warm';
+  const allKeywords=[...new Set(pipelineLeads.map(x=>x.source_keyword).filter(Boolean))];
+  const defaultKeywords=Object.keys(SOURCE_MAP);
+  const keywords=[...new Set([...defaultKeywords,...allKeywords])];
+  const isCustom=!keywords.includes(l.source_keyword)&&l.source_keyword;
+  const showBooked=['booked','completed_call','closed_won','closed_lost'].includes(l.status);
+  showOv(`<div class="overlay-bg" onclick="if(event.target===this)closeOv()"><div class="modal" style="max-height:90vh;overflow-y:auto">
+    <div class="modal-title">Edit lead</div>
+    <div class="modal-sub">${esc(l.name)}${l.ig_handle?' — @'+esc(l.ig_handle.replace(/^@/,'')):''}</div>
+    <label class="lbl">Name</label>
+    <input class="inp" id="pl-name" value="${esc(l.name)}">
+    <label class="lbl">Instagram handle</label>
+    <input class="inp" id="pl-ig" value="${esc(l.ig_handle||'')}">
+    <label class="lbl">Source keyword</label>
+    <select class="inp" id="pl-keyword" onchange="document.getElementById('pl-keyword-custom').style.display=this.value==='__custom'?'block':'none'">
+      ${keywords.map(k=>`<option value="${k}"${l.source_keyword===k?' selected':''}>${k} (${SOURCE_MAP[k]||'other'})</option>`).join('')}
+      <option value="__custom"${isCustom?' selected':''}>Custom...</option>
+    </select>
+    <input class="inp" id="pl-keyword-custom" value="${isCustom?esc(l.source_keyword):''}" placeholder="Custom keyword" style="display:${isCustom?'block':'none'}">
+    <label class="lbl">DM date</label>
+    <input class="inp" id="pl-date" type="date" value="${l.dm_date||''}">
+    <label class="lbl">Status</label>
+    <select class="inp" id="pl-status" onchange="document.getElementById('pl-booked-row').style.display=['booked','completed_call','closed_won','closed_lost'].includes(this.value)?'block':'none'">
+      ${Object.entries(STATUS_LABELS).map(([k,v])=>`<option value="${k}"${l.status===k?' selected':''}>${v}</option>`).join('')}
+    </select>
+    <div id="pl-booked-row" style="display:${showBooked?'block':'none'}">
+      <label class="lbl">Booked date</label>
+      <input class="inp" id="pl-booked-date" type="date" value="${l.booked_date||''}">
+    </div>
+    <label class="lbl">Lead quality</label>
+    <div class="pl-quality-sel" id="pl-qual-sel" style="margin-bottom:1rem">
+      <button class="pl-quality-btn${l.lead_quality==='hot'?' sel-hot':''}" onclick="plSetQuality('hot',this)" type="button">Hot</button>
+      <button class="pl-quality-btn${l.lead_quality==='warm'?' sel-warm':''}" onclick="plSetQuality('warm',this)" type="button">Warm</button>
+      <button class="pl-quality-btn${l.lead_quality==='cold'?' sel-cold':''}" onclick="plSetQuality('cold',this)" type="button">Cold</button>
+    </div>
+    <label class="lbl">Setter notes</label>
+    <textarea class="inp" id="pl-notes" style="min-height:80px;resize:vertical">${esc(l.setter_notes||'')}</textarea>
+    <label class="lbl">Objections</label>
+    <textarea class="inp" id="pl-objections" style="min-height:60px;resize:vertical">${esc(l.objections||'')}</textarea>
+    <label class="lbl">Outcome notes</label>
+    <textarea class="inp" id="pl-outcome" style="min-height:60px;resize:vertical">${esc(l.outcome_notes||'')}</textarea>
+    <div class="modal-actions">
+      <button class="btn-save" onclick="saveEditLead('${id}')">Save</button>
+      <button class="btn-cancel" onclick="closeOv()">Cancel</button>
+      <button class="btn-outline-red" onclick="deletePipelineLead('${id}')" style="margin-left:auto">Delete</button>
+    </div>
+  </div></div>`);
+}
+function saveEditLead(id){
+  const keyword=document.getElementById('pl-keyword').value==='__custom'?document.getElementById('pl-keyword-custom').value.trim().toUpperCase():document.getElementById('pl-keyword').value;
+  updatePipelineLead(id,{
+    name:document.getElementById('pl-name').value.trim(),
+    ig_handle:document.getElementById('pl-ig').value.trim(),
+    source_keyword:keyword,
+    dm_date:document.getElementById('pl-date').value,
+    status:document.getElementById('pl-status').value,
+    booked_date:document.getElementById('pl-booked-date')?.value||'',
+    lead_quality:window._plQuality||'warm',
+    setter_notes:document.getElementById('pl-notes').value.trim(),
+    objections:document.getElementById('pl-objections').value.trim(),
+    outcome_notes:document.getElementById('pl-outcome').value.trim()
+  });
+  closeOv();renderAdmin();
+}
 
 // ── ACCOUNT MODAL ──
 function openAccountModal(){
