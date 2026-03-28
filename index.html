@@ -639,7 +639,7 @@ function subscribeToPipelineChanges(){
 
 // ── MANYCHAT BULK SYNC (alphabet crawl) ──
 async function mcBulkSync(){
-  if(!mcApiKey||!mcConnected){alert('Connect ManyChat first.');return;}
+  if(!mcApiKey){alert('Add your ManyChat API key first.');return;}
   if(mcSyncRunning){alert('Sync already running.');return;}
   mcSyncRunning=true;
   const statusEl=document.getElementById('mc-sync-status');
