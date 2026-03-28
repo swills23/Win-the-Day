@@ -502,7 +502,7 @@ function qualScoreBadge(lead){const s=getQualScore(lead);if(s===-1)return'<span 
 function hoursSince(dateStr){if(!dateStr)return null;return(Date.now()-new Date(dateStr).getTime())/(1000*60*60);}
 function timeAgoLabel(dateStr){const h=hoursSince(dateStr);if(h===null)return'';if(h<1)return'<1h ago';if(h<24)return Math.floor(h)+'h ago';return Math.floor(h/24)+'d ago';}
 function getLeadStage(lead){const s=lead.status;if(s==='new')return'New';if(s==='qualifying'||s==='in_conversation')return'Qualifying';if(s==='hot')return'Hot';if(s==='booked'||s==='completed_call'||s==='closed_won'||s==='no_show')return'Booked';if(s==='dead'||s==='closed_lost'||s==='ghosted'||s==='not_qualified')return'Dead';return'New';}
-let plQuickFilter='all',plStageFilter='all',plCountryFilter='all',plSortOrder='newest';
+let plQuickFilter='all',plStageFilter='all',plCountryFilter='all',plSortOrder='score';
 const LEAD_SOURCES=['story_reply','reel_comment','dm_first','referral','comment','ad','link_in_bio','live','other'];
 const LEAD_SOURCE_LABELS={story_reply:'Story Reply',reel_comment:'Reel/Comment',dm_first:'DM First',referral:'Referral',comment:'Post Comment',ad:'Ad',link_in_bio:'Link in Bio',live:'Live',other:'Other'};
 const OBJECTION_CATEGORIES=['price','timing','not_ready','spouse','already_tried','skeptical','no_response','other'];
@@ -1298,7 +1298,7 @@ function renderPipelineDashboard(){
     <button class="pipeline-filter-btn${plQuickFilter==='attention'?' active':''}" onclick="plQuickFilter='attention';renderAdmin()">Needs Attention</button>
     <select class="pipeline-sel" onchange="plStageFilter=this.value;renderAdmin()"><option value="all">All stages</option>${PIPELINE_STAGES.map(s=>`<option value="${s}"${plStageFilter===s?' selected':''}>${s}</option>`).join('')}</select>
     <select class="pipeline-sel" onchange="plCountryFilter=this.value;renderAdmin()"><option value="all">All countries</option><option value="green"${plCountryFilter==='green'?' selected':''}>Green markets</option><option value="yellow"${plCountryFilter==='yellow'?' selected':''}>Caution</option><option value="red"${plCountryFilter==='red'?' selected':''}>Disqualified</option></select>
-    <select class="pipeline-sel" onchange="plSortOrder=this.value;renderAdmin()"><option value="newest"${plSortOrder==='newest'?' selected':''}>Newest</option><option value="oldest"${plSortOrder==='oldest'?' selected':''}>Oldest</option></select>
+    <select class="pipeline-sel" onchange="plSortOrder=this.value;renderAdmin()"><option value="score"${plSortOrder==='score'?' selected':''}>Top ranked</option><option value="newest"${plSortOrder==='newest'?' selected':''}>Newest</option><option value="oldest"${plSortOrder==='oldest'?' selected':''}>Oldest</option></select>
     <button class="pipeline-filter-btn" style="background:var(--text);color:var(--bg);border-color:var(--text)" onclick="openAddLeadModal()">+ Add lead</button>
   </div>`;
 
@@ -1308,7 +1308,8 @@ function renderPipelineDashboard(){
   else if(plQuickFilter==='attention')kanbanLeads=kanbanLeads.filter(l=>{const stage=getLeadStage(l);if(stage!=='Qualifying')return false;const h=hoursSince(l.stage_entered_at||l.updated_at||l.created_at);return h!==null&&h>=24;});
   if(plStageFilter!=='all')kanbanLeads=kanbanLeads.filter(l=>getLeadStage(l)===plStageFilter);
   if(plCountryFilter!=='all')kanbanLeads=kanbanLeads.filter(l=>getCountryTier(l.country)===plCountryFilter);
-  kanbanLeads.sort((a,b)=>{const da=new Date(a.dm_date||a.created_at||0),db=new Date(b.dm_date||b.created_at||0);return plSortOrder==='newest'?db-da:da-db;});
+  if(plSortOrder==='score'){kanbanLeads.sort((a,b)=>calcLeadScore(b)-calcLeadScore(a));}
+  else{kanbanLeads.sort((a,b)=>{const da=new Date(a.dm_date||a.created_at||0),db=new Date(b.dm_date||b.created_at||0);return plSortOrder==='newest'?db-da:da-db;});}
 
   // Kanban columns
   h+=`<div class="pipeline-stages">`;
@@ -1331,9 +1332,15 @@ function renderPipelineDashboard(){
         let timeClass='';
         if(getLeadStage(l)==='Qualifying'){if(hrs>=48)timeClass='urgent-red';else if(hrs>=24)timeClass='urgent-orange';}
         const isAuto=l.mc_source==='webhook'||l.mc_source==='sync';
+        const score=calcLeadScore(l),grade=scoreGrade(score);
         h+=`<div class="lead-card" onclick="openLeadDetail('${l.id}')">
-          ${l.country?`<div class="lead-country"><span class="lead-country-flag">${cInfo.flag}</span><span class="lead-country-name">${esc(cInfo.name)}</span>${cDotClass?`<span class="lead-country-dot ${cDotClass}"></span>`:''}</div>`:''}
-          <div class="lead-name">${esc(l.name||'Unnamed')}${l.ig_handle?` <span class="lead-handle">@${esc(l.ig_handle.replace(/^@/,''))}</span>`:''}</div>
+          <div style="display:flex;align-items:center;gap:8px">
+            <span class="pl-score pl-score-${grade.toLowerCase()}" title="Score: ${score}">${grade}</span>
+            <div style="flex:1">
+              ${l.country?`<div class="lead-country"><span class="lead-country-flag">${cInfo.flag}</span><span class="lead-country-name">${esc(cInfo.name)}</span>${cDotClass?`<span class="lead-country-dot ${cDotClass}"></span>`:''}</div>`:''}
+              <div class="lead-name">${esc(l.name||'Unnamed')}${l.ig_handle?` <span class="lead-handle">@${esc(l.ig_handle.replace(/^@/,''))}</span>`:''}</div>
+            </div>
+          </div>
           <div class="lead-badges">
             ${qualScoreBadge(l)}
             ${isAuto?'<span class="lead-badge badge-auto">AUTO</span>':''}
