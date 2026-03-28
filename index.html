@@ -923,12 +923,23 @@ async function testMcConnection(){
   }catch(e){mcConnected=false;}
   return mcConnected;
 }
+const MC_CORS_PROXIES=[
+  'https://corsproxy.io/?url=',
+  'https://api.allorigins.win/raw?url=',
+  'https://corsproxy.org/?url='
+];
 async function mcFetch(path){
   if(!mcApiKey)return null;
-  const url=MC_CORS_PROXY+encodeURIComponent('https://api.manychat.com'+path);
-  const resp=await fetch(url,{headers:{'Authorization':'Bearer '+mcApiKey,'Accept':'application/json'}});
-  if(!resp.ok)return null;
-  return await resp.json();
+  const target='https://api.manychat.com'+path;
+  const headers={'Authorization':'Bearer '+mcApiKey,'Accept':'application/json'};
+  // Try each CORS proxy until one works
+  for(const proxy of MC_CORS_PROXIES){
+    try{
+      const resp=await fetch(proxy+encodeURIComponent(target),{headers});
+      if(resp.ok)return await resp.json();
+    }catch(e){/* try next proxy */}
+  }
+  return null;
 }
 async function mcSearchByName(name){
   if(!mcApiKey||!name)return[];
@@ -1020,9 +1031,9 @@ function renderMcSettings(){
       <button class="btn-ghost" style="white-space:nowrap" onclick="saveMcKey()">Save</button>
       ${mcApiKey?'<button class="btn-ghost" style="white-space:nowrap;color:var(--red)" onclick="clearMcKey()">Clear</button>':''}
     </div>
-    ${mcConnected?`<div style="margin-top:10px;display:flex;gap:8px;align-items:center;flex-wrap:wrap">
+    ${mcApiKey?`<div style="margin-top:10px;display:flex;gap:8px;align-items:center;flex-wrap:wrap">
       <button class="btn-primary" style="width:auto;padding:8px 16px;font-size:12px;margin:0" onclick="mcBulkSync()" ${mcSyncRunning?'disabled':''}>Sync all ManyChat subscribers</button>
-      <span id="mc-sync-status" style="font-size:11px"></span>
+      <span id="mc-sync-status" style="font-size:11px">${!mcConnected?'<span style="color:var(--orange)">API connection issue — sync may be limited. Webhook still works.</span>':''}</span>
     </div>
     <div style="margin-top:8px;padding:8px 10px;background:var(--bg);border-radius:var(--r);border:.5px solid var(--border);font-size:11px;color:var(--text3)">
       <strong style="color:var(--text2)">Auto-import webhook:</strong> Set up a ManyChat flow with External Request to auto-import future leads.<br>
