@@ -351,6 +351,36 @@ body{background:var(--bg);color:var(--text);font-family:var(--font);touch-action
 .pl-funnel-bar{height:26px;border-radius:4px;display:flex;align-items:center;padding:0 10px;font-size:11px;font-weight:500;color:#fff;min-width:36px;transition:width .3s ease;}
 .pl-funnel-label{font-size:11px;color:var(--text3);white-space:nowrap;min-width:90px;}
 .pl-funnel-pct{font-size:11px;color:var(--text2);min-width:40px;text-align:right;}
+
+/* ── Objection Tags ── */
+.pl-obj-tags{display:flex;gap:4px;flex-wrap:wrap;margin-bottom:8px;}
+.pl-obj-tag{font-size:10px;padding:2px 7px;border-radius:12px;background:rgba(200,137,26,.1);color:var(--orange);border:.5px solid rgba(200,137,26,.25);cursor:pointer;transition:all .15s;}
+.pl-obj-tag.sel{background:var(--orange);color:#fff;border-color:var(--orange);}
+
+/* ── Follow-up History ── */
+.pl-fu-list{margin-top:8px;}
+.pl-fu-item{display:flex;align-items:center;gap:8px;padding:6px 0;border-bottom:.5px solid var(--border);font-size:12px;}
+.pl-fu-item:last-child{border-bottom:none;}
+.pl-fu-date{color:var(--text3);min-width:70px;font-size:11px;}
+.pl-fu-msg{flex:1;color:var(--text2);white-space:nowrap;overflow:hidden;text-overflow:ellipsis;}
+.pl-fu-resp{font-size:10px;padding:1px 6px;border-radius:10px;white-space:nowrap;}
+.pl-fu-resp-yes{background:rgba(46,158,91,.12);color:var(--green);border:.5px solid rgba(46,158,91,.3);}
+.pl-fu-resp-no{background:var(--bg);color:var(--text3);border:.5px solid var(--border);}
+.pl-fu-add{display:flex;gap:6px;margin-top:6px;}
+.pl-fu-add input{flex:1;font-size:12px;padding:5px 8px;border-radius:var(--r);border:.5px solid var(--border);background:var(--bg);color:var(--text);font-family:var(--font);outline:none;}
+.pl-fu-add button{font-size:11px;padding:4px 10px;border-radius:var(--r);border:.5px solid var(--border);background:var(--bg);cursor:pointer;color:var(--text2);font-family:var(--font);}
+
+/* ── No Show badge ── */
+.pl-badge-no_show{background:rgba(226,75,74,.08);color:var(--red);border:.5px solid rgba(226,75,74,.2);}
+
+/* ── Setter pill ── */
+.pl-setter-pill{font-size:10px;padding:1px 7px;border-radius:10px;background:rgba(58,126,196,.08);color:var(--blue);border:.5px solid rgba(58,126,196,.2);}
+
+/* ── Touchpoint + TTB ── */
+.pl-tp{font-size:10px;color:var(--text3);white-space:nowrap;}
+.pl-ttb{font-size:10px;color:var(--text3);white-space:nowrap;}
+.pl-ttb-fast{color:var(--green);}
+.pl-ttb-slow{color:var(--red);}
 </style>
 </head>
 <body>
@@ -387,9 +417,14 @@ let adminView='pending',adminClientId=null,adminClientEmail='';
 
 // ── PIPELINE STATE ──
 const SOURCE_MAP={REWIRE:'video',SHIFT:'story'};
-const STATUS_LABELS={new:'New',in_conversation:'In Conversation',booked:'Booked',completed_call:'Completed Call',closed_won:'Closed Won',closed_lost:'Closed Lost',ghosted:'Ghosted',not_qualified:'Not Qualified'};
-let pipelineLeads=[],pipelineFilters={status:'all',source:'all',dateFrom:'',dateTo:''},pipelineSort={field:'dm_date',dir:'desc'};
-const STALE_DAYS=3; // leads with no update in 3+ days get flagged
+const STATUS_LABELS={new:'New',in_conversation:'In Conversation',booked:'Booked',no_show:'No Show',completed_call:'Completed Call',closed_won:'Closed Won',closed_lost:'Closed Lost',ghosted:'Ghosted',not_qualified:'Not Qualified'};
+const LEAD_SOURCES=['story_reply','reel_comment','dm_first','referral','comment','ad','link_in_bio','live','other'];
+const LEAD_SOURCE_LABELS={story_reply:'Story Reply',reel_comment:'Reel/Comment',dm_first:'DM First',referral:'Referral',comment:'Post Comment',ad:'Ad',link_in_bio:'Link in Bio',live:'Live',other:'Other'};
+const OBJECTION_CATEGORIES=['price','timing','not_ready','spouse','already_tried','skeptical','no_response','other'];
+const OBJECTION_LABELS={price:'Price/Money',timing:'Bad Timing',not_ready:'Not Ready',spouse:'Need to Ask Spouse',already_tried:'Already Tried Coaching',skeptical:'Skeptical',no_response:'No Response',other:'Other'};
+let pipelineLeads=[],pipelineFilters={status:'all',source:'all',leadSource:'all',setter:'all',dateFrom:'',dateTo:''},pipelineSort={field:'dm_date',dir:'desc'};
+let pipelineSetters=[];
+const STALE_DAYS=3;
 const SETTER_SCRIPTS={
   new:{title:'Opening DM',lines:['Hey {{name}}! Saw you checked out our content.','What made you reach out today?','What\'s the biggest thing you\'re working on right now?']},
   in_conversation:{title:'Qualifying',lines:['How long have you been dealing with this?','What have you already tried?','If you could change one thing in the next 90 days, what would it be?','Sounds like you\'re in the gap between knowing and doing — that\'s exactly what we work on.']},
@@ -484,7 +519,20 @@ async function savePipelineLeads(){
 }
 function addPipelineLead(d){
   const now=new Date().toISOString();
-  pipelineLeads.push({id:crypto.randomUUID(),name:d.name,ig_handle:d.ig_handle,source_keyword:d.source_keyword,source_type:SOURCE_MAP[d.source_keyword]||'other',dm_date:d.dm_date,first_reply_at:d.first_reply_at||'',status:d.status||'new',lead_quality:d.lead_quality||'warm',setter_notes:d.setter_notes||'',objections:d.objections||'',outcome_notes:'',booked_date:'',created_at:now,updated_at:now});
+  pipelineLeads.push({
+    id:crypto.randomUUID(),name:d.name,ig_handle:d.ig_handle,
+    source_keyword:d.source_keyword,source_type:SOURCE_MAP[d.source_keyword]||'other',
+    lead_source:d.lead_source||'',
+    dm_date:d.dm_date,first_reply_at:d.first_reply_at||'',
+    status:d.status||'new',lead_quality:d.lead_quality||'warm',
+    setter:d.setter||'',
+    setter_notes:d.setter_notes||'',
+    objections:d.objections||'',objection_categories:d.objection_categories||[],
+    outcome_notes:'',booked_date:'',
+    touchpoints:d.touchpoints||0,
+    followups:[], // {date, message, got_response}
+    created_at:now,updated_at:now
+  });
   savePipelineLeads();
 }
 function updatePipelineLead(id,d){
@@ -514,6 +562,8 @@ function getFilteredLeads(){
   let leads=[...pipelineLeads];
   if(pipelineFilters.status!=='all')leads=leads.filter(l=>l.status===pipelineFilters.status);
   if(pipelineFilters.source!=='all')leads=leads.filter(l=>l.source_keyword===pipelineFilters.source);
+  if(pipelineFilters.leadSource!=='all')leads=leads.filter(l=>l.lead_source===pipelineFilters.leadSource);
+  if(pipelineFilters.setter!=='all')leads=leads.filter(l=>l.setter===pipelineFilters.setter);
   if(pipelineFilters.dateFrom)leads=leads.filter(l=>l.dm_date>=pipelineFilters.dateFrom);
   if(pipelineFilters.dateTo)leads=leads.filter(l=>l.dm_date<=pipelineFilters.dateTo);
   leads.sort((a,b)=>{const va=a[pipelineSort.field]||'',vb=b[pipelineSort.field]||'';return pipelineSort.dir==='desc'?vb.localeCompare(va):va.localeCompare(vb);});
@@ -578,6 +628,17 @@ function calcLeadScore(l){
   // Status progression
   if(l.status==='booked')score+=20;
   else if(l.status==='in_conversation')score+=5;
+  // Touchpoints: more pre-DM engagement = warmer lead
+  const tp=l.touchpoints||0;
+  if(tp>=5)score+=15;else if(tp>=3)score+=8;else if(tp>=1)score+=3;
+  // Lead source: referrals convert highest
+  if(l.lead_source==='referral')score+=12;
+  else if(l.lead_source==='dm_first')score+=8;
+  else if(l.lead_source==='story_reply')score+=5;
+  // Follow-up responsiveness
+  const fups=l.followups||[];
+  if(fups.length&&fups.some(f=>f.got_response))score+=8;
+  else if(fups.length>=3&&!fups.some(f=>f.got_response))score-=10;
   // Stale penalty
   if(getStaleLeads().find(s=>s.id===l.id))score-=15;
   return Math.max(0,Math.min(100,score));
@@ -599,18 +660,100 @@ function copyScript(status,name){
   });
 }
 
+// ── SETTER MANAGEMENT ──
+function getSetters(){
+  const s=new Set(pipelineLeads.map(l=>l.setter).filter(Boolean));
+  return[...s].sort();
+}
+function getSetterStats(){
+  const setters=getSetters();
+  return setters.map(name=>{
+    const leads=pipelineLeads.filter(l=>l.setter===name);
+    const booked=leads.filter(l=>['booked','no_show','completed_call','closed_won','closed_lost'].includes(l.status)).length;
+    const closed=leads.filter(l=>l.status==='closed_won').length;
+    const noShows=leads.filter(l=>l.status==='no_show').length;
+    return{name,total:leads.length,booked,closed,noShows,convRate:leads.length?Math.round(booked/leads.length*100):0};
+  });
+}
+
+// ── TIME TO BOOK ──
+function calcTimeToBook(l){
+  if(!l.dm_date||!l.booked_date)return null;
+  const dm=new Date(l.dm_date+'T00:00:00').getTime(),bk=new Date(l.booked_date+'T00:00:00').getTime();
+  if(bk<=dm)return null;
+  return Math.round((bk-dm)/(24*60*60*1000));
+}
+function avgTimeToBook(){
+  const times=pipelineLeads.map(calcTimeToBook).filter(t=>t!==null);
+  if(!times.length)return null;
+  return Math.round(times.reduce((a,b)=>a+b,0)/times.length);
+}
+
+// ── SHOW RATE ──
+function getShowRate(){
+  const bookedOrBeyond=pipelineLeads.filter(l=>['no_show','completed_call','closed_won','closed_lost'].includes(l.status));
+  if(!bookedOrBeyond.length)return null;
+  const showed=bookedOrBeyond.filter(l=>l.status!=='no_show').length;
+  return Math.round(showed/bookedOrBeyond.length*100);
+}
+
+// ── FOLLOW-UP HELPERS ──
+function addFollowup(leadId,message){
+  const lead=pipelineLeads.find(l=>l.id===leadId);if(!lead)return;
+  if(!lead.followups)lead.followups=[];
+  lead.followups.push({date:new Date().toISOString(),message:message||'Follow-up sent',got_response:false});
+  lead.updated_at=new Date().toISOString();
+  savePipelineLeads();
+}
+function toggleFollowupResponse(leadId,idx){
+  const lead=pipelineLeads.find(l=>l.id===leadId);if(!lead||!lead.followups||!lead.followups[idx])return;
+  lead.followups[idx].got_response=!lead.followups[idx].got_response;
+  lead.updated_at=new Date().toISOString();
+  savePipelineLeads();
+}
+function getFollowupStats(){
+  let total=0,responded=0;
+  pipelineLeads.forEach(l=>{(l.followups||[]).forEach(f=>{total++;if(f.got_response)responded++;});});
+  return{total,responded,rate:total?Math.round(responded/total*100):0};
+}
+
+// ── OBJECTION ANALYTICS ──
+function getObjectionBreakdown(){
+  const counts={};
+  pipelineLeads.forEach(l=>{
+    (l.objection_categories||[]).forEach(c=>{counts[c]=(counts[c]||0)+1;});
+  });
+  return Object.entries(counts).sort((a,b)=>b[1]-a[1]);
+}
+
+// ── LEAD SOURCE ANALYTICS ──
+function getLeadSourceStats(){
+  const stats={};
+  pipelineLeads.forEach(l=>{
+    const src=l.lead_source||'unknown';
+    if(!stats[src])stats[src]={total:0,booked:0,closed:0};
+    stats[src].total++;
+    if(['booked','no_show','completed_call','closed_won','closed_lost'].includes(l.status))stats[src].booked++;
+    if(l.status==='closed_won')stats[src].closed++;
+  });
+  return Object.entries(stats).sort((a,b)=>b[1].total-a[1].total);
+}
+
 // ── FUNNEL VIZ ──
 function getFunnelData(){
   const total=pipelineLeads.length;
   if(!total)return[];
+  const bookedPlus=['booked','no_show','completed_call','closed_won','closed_lost'];
+  const showedPlus=['completed_call','closed_won','closed_lost'];
   const stages=[
     {key:'total',label:'Total leads',count:total},
-    {key:'in_conversation',label:'In Conversation',count:pipelineLeads.filter(l=>['in_conversation','booked','completed_call','closed_won','closed_lost'].includes(l.status)).length},
-    {key:'booked',label:'Booked',count:pipelineLeads.filter(l=>['booked','completed_call','closed_won','closed_lost'].includes(l.status)).length},
-    {key:'completed_call',label:'Completed Call',count:pipelineLeads.filter(l=>['completed_call','closed_won','closed_lost'].includes(l.status)).length},
+    {key:'in_conversation',label:'In Conversation',count:pipelineLeads.filter(l=>['in_conversation',...bookedPlus].includes(l.status)).length},
+    {key:'booked',label:'Booked',count:pipelineLeads.filter(l=>bookedPlus.includes(l.status)).length},
+    {key:'showed',label:'Showed Up',count:pipelineLeads.filter(l=>showedPlus.includes(l.status)).length},
+    {key:'no_show',label:'No Show',count:pipelineLeads.filter(l=>l.status==='no_show').length,isLoss:true},
     {key:'closed_won',label:'Closed Won',count:pipelineLeads.filter(l=>l.status==='closed_won').length},
   ];
-  const colors=['var(--blue)','var(--orange)','#8B5CF6','var(--green)','var(--green)'];
+  const colors=['var(--blue)','var(--orange)','#8B5CF6','var(--green)','var(--red)','var(--green)'];
   return stages.map((s,i)=>({...s,pct:Math.round(s.count/total*100),color:colors[i]}));
 }
 
@@ -628,15 +771,20 @@ function renderPipelineDashboard(){
     h+=`<div class="pl-alert"><span class="pl-alert-count">${stale.length}</span> lead${stale.length>1?'s':''} need${stale.length===1?'s':''} follow-up (${STALE_DAYS}+ days stale)<span class="pl-alert-link" onclick="setPipelineFilter('status','all');pipelineSort={field:'updated_at',dir:'asc'};renderAdmin();">Show stale</span></div>`;
   }
 
-  // Stats row — expanded with response time + avg score
+  // Stats row
   const activeLeads=pipelineLeads.filter(l=>['new','in_conversation','booked'].includes(l.status));
   const avgScore=activeLeads.length?Math.round(activeLeads.reduce((s,l)=>s+calcLeadScore(l),0)/activeLeads.length):0;
+  const showRate=getShowRate();
+  const avgTTB=avgTimeToBook();
+  const fuStats=getFollowupStats();
   h+=`<div class="pl-stats">
     <div class="pl-stat"><div class="pl-stat-val">${stats.total}</div><div class="pl-stat-lbl">Leads (month)</div></div>
     <div class="pl-stat"><div class="pl-stat-val">${stats.dmToBooked}%</div><div class="pl-stat-lbl">DM → Booked</div></div>
-    <div class="pl-stat"><div class="pl-stat-val">${stats.bookedToClosed}%</div><div class="pl-stat-lbl">Booked → Closed</div></div>
+    <div class="pl-stat"><div class="pl-stat-val">${showRate!==null?showRate+'%':'—'}</div><div class="pl-stat-lbl">Show rate</div></div>
+    <div class="pl-stat"><div class="pl-stat-val">${stats.bookedToClosed}%</div><div class="pl-stat-lbl">Showed → Closed</div></div>
     <div class="pl-stat"><div class="pl-stat-val">${avgRT!==null?fmtResponseTime(avgRT):'—'}</div><div class="pl-stat-lbl">Avg reply time</div></div>
-    <div class="pl-stat"><div class="pl-stat-val">${avgScore||'—'}</div><div class="pl-stat-lbl">Avg lead score</div></div>
+    <div class="pl-stat"><div class="pl-stat-val">${avgTTB!==null?avgTTB+'d':'—'}</div><div class="pl-stat-lbl">Avg time-to-book</div></div>
+    <div class="pl-stat"><div class="pl-stat-val">${fuStats.total?fuStats.rate+'%':'—'}</div><div class="pl-stat-lbl">Follow-up response</div></div>
   </div>`;
 
   // Conversion funnel
@@ -649,14 +797,32 @@ function renderPipelineDashboard(){
     });
     h+=`</div>`;
   }
-  // Source breakdown
+  // Lead source breakdown
+  const srcStats=getLeadSourceStats();
+  if(srcStats.length){
+    h+=`<div style="margin-bottom:1rem"><div class="mini-label" style="margin-bottom:6px">Lead sources</div><div class="pl-source-row">${srcStats.map(([src,s])=>`<span class="pl-source-pill"><strong>${s.total}</strong> ${LEAD_SOURCE_LABELS[src]||src} <span style="font-size:9px;color:var(--text3)">${s.total?Math.round(s.booked/s.total*100):0}% book</span></span>`).join('')}</div></div>`;
+  }
+  // Content keyword breakdown
   if(Object.keys(stats.bySource).length){
-    h+=`<div class="pl-source-row">${Object.entries(stats.bySource).map(([k,v])=>`<span class="pl-source-pill"><strong>${v}</strong> ${k} (${SOURCE_MAP[k]||'other'})</span>`).join('')}</div>`;
+    h+=`<div style="margin-bottom:1rem"><div class="mini-label" style="margin-bottom:6px">Content keywords</div><div class="pl-source-row">${Object.entries(stats.bySource).map(([k,v])=>`<span class="pl-source-pill"><strong>${v}</strong> ${k}</span>`).join('')}</div></div>`;
+  }
+  // Objection breakdown
+  const objBreakdown=getObjectionBreakdown();
+  if(objBreakdown.length){
+    h+=`<div style="margin-bottom:1rem"><div class="mini-label" style="margin-bottom:6px">Top objections</div><div class="pl-source-row">${objBreakdown.map(([cat,count])=>`<span class="pl-source-pill"><strong>${count}</strong> ${OBJECTION_LABELS[cat]||cat}</span>`).join('')}</div></div>`;
+  }
+  // Setter performance
+  const setterStats=getSetterStats();
+  if(setterStats.length){
+    h+=`<div style="margin-bottom:1rem"><div class="mini-label" style="margin-bottom:6px">Setter performance</div><div class="pl-source-row">${setterStats.map(s=>`<span class="pl-source-pill"><strong>${s.name}</strong> ${s.total} leads · ${s.convRate}% book${s.noShows?` · ${s.noShows} no-show`:''}</span>`).join('')}</div></div>`;
   }
   // Filters
+  const allSetters=getSetters();
   h+=`<div class="pl-filters">
     <select onchange="setPipelineFilter('status',this.value)"><option value="all">All statuses</option>${Object.entries(STATUS_LABELS).map(([k,v])=>`<option value="${k}"${pipelineFilters.status===k?' selected':''}>${v}</option>`).join('')}</select>
-    <select onchange="setPipelineFilter('source',this.value)"><option value="all">All sources</option>${allKeywords.map(k=>`<option value="${k}"${pipelineFilters.source===k?' selected':''}>${k}</option>`).join('')}</select>
+    <select onchange="setPipelineFilter('leadSource',this.value)"><option value="all">All lead sources</option>${LEAD_SOURCES.map(s=>`<option value="${s}"${pipelineFilters.leadSource===s?' selected':''}>${LEAD_SOURCE_LABELS[s]}</option>`).join('')}</select>
+    <select onchange="setPipelineFilter('source',this.value)"><option value="all">All keywords</option>${allKeywords.map(k=>`<option value="${k}"${pipelineFilters.source===k?' selected':''}>${k}</option>`).join('')}</select>
+    ${allSetters.length?`<select onchange="setPipelineFilter('setter',this.value)"><option value="all">All setters</option>${allSetters.map(s=>`<option value="${s}"${pipelineFilters.setter===s?' selected':''}>${s}</option>`).join('')}</select>`:''}
     <input type="date" value="${pipelineFilters.dateFrom}" onchange="setPipelineFilter('dateFrom',this.value)" title="From date">
     <input type="date" value="${pipelineFilters.dateTo}" onchange="setPipelineFilter('dateTo',this.value)" title="To date">
   </div>`;
@@ -670,6 +836,10 @@ function renderPipelineDashboard(){
     const isStale=stale.find(s=>s.id===l.id);
     const rt=getResponseTime(l),rtStr=fmtResponseTime(rt);
     const rtClass=rt!==null?(rt<=4?'pl-resp-fast':rt>=48?'pl-resp-slow':''):'';
+    const ttb=calcTimeToBook(l);
+    const ttbClass=ttb!==null?(ttb<=3?'pl-ttb-fast':ttb>=14?'pl-ttb-slow':''):'';
+    const fuCount=(l.followups||[]).length;
+    const fuResponded=(l.followups||[]).filter(f=>f.got_response).length;
     h+=`<div class="pl-lead" onclick="openEditLeadModal('${l.id}')">
       <div class="pl-lead-top">
         <span class="pl-score pl-score-${grade.toLowerCase()}" title="Score: ${score}">${grade}</span>
@@ -677,9 +847,14 @@ function renderPipelineDashboard(){
       </div>
       <div class="pl-lead-meta">
         <span class="pl-badge pl-badge-${l.status}">${STATUS_LABELS[l.status]||l.status}</span>
+        ${l.lead_source?`<span class="pl-source-pill" style="font-size:10px;padding:1px 7px">${LEAD_SOURCE_LABELS[l.lead_source]||l.lead_source}</span>`:''}
         ${l.source_keyword?`<span class="pl-source-pill" style="font-size:10px;padding:1px 7px">${esc(l.source_keyword)}</span>`:''}
+        ${l.setter?`<span class="pl-setter-pill">${esc(l.setter)}</span>`:''}
         ${l.lead_quality?`<span class="pl-quality pl-quality-${l.lead_quality}" title="${l.lead_quality}"></span>`:''}
         ${rtStr?`<span class="pl-resp-time ${rtClass}" title="Reply time">⚡${rtStr}</span>`:''}
+        ${ttb!==null?`<span class="pl-ttb ${ttbClass}" title="Time to book">${ttb}d to book</span>`:''}
+        ${l.touchpoints?`<span class="pl-tp" title="Content touchpoints before DM">${l.touchpoints} touches</span>`:''}
+        ${fuCount?`<span class="pl-tp" title="Follow-ups">${fuResponded}/${fuCount} FU</span>`:''}
         <span class="pl-lead-date">${dateStr}</span>
       </div>
       ${l.setter_notes?`<div class="pl-lead-notes">${esc(l.setter_notes)}</div>`:''}
@@ -695,6 +870,7 @@ function openAddLeadModal(){
   const allKeywords=[...new Set(pipelineLeads.map(l=>l.source_keyword).filter(Boolean))];
   const defaultKeywords=Object.keys(SOURCE_MAP);
   const keywords=[...new Set([...defaultKeywords,...allKeywords])];
+  const allSetters=getSetters();
   showOv(`<div class="overlay-bg" onclick="if(event.target===this)closeOv()"><div class="modal" style="max-height:90vh;overflow-y:auto">
     <div class="modal-title">Add lead</div>
     <div class="modal-sub">Track a new DM conversation.</div>
@@ -702,12 +878,29 @@ function openAddLeadModal(){
     <input class="inp" id="pl-name" placeholder="Lead name">
     <label class="lbl">Instagram handle</label>
     <input class="inp" id="pl-ig" placeholder="handle (without @)">
-    <label class="lbl">Source keyword</label>
+    <label class="lbl">Where did this lead come from?</label>
+    <select class="inp" id="pl-lead-source">
+      <option value="">Select source...</option>
+      ${LEAD_SOURCES.map(s=>`<option value="${s}">${LEAD_SOURCE_LABELS[s]}</option>`).join('')}
+    </select>
+    <label class="lbl">Content keyword (which post/video)</label>
     <select class="inp" id="pl-keyword" onchange="document.getElementById('pl-keyword-custom').style.display=this.value==='__custom'?'block':'none'">
+      <option value="">None</option>
       ${keywords.map(k=>`<option value="${k}">${k} (${SOURCE_MAP[k]||'other'})</option>`).join('')}
       <option value="__custom">Custom...</option>
     </select>
     <input class="inp" id="pl-keyword-custom" placeholder="Custom keyword" style="display:none">
+    <label class="lbl">Setter</label>
+    <div style="display:flex;gap:6px;margin-bottom:1rem">
+      <select class="inp" id="pl-setter" style="margin-bottom:0;flex:1" onchange="document.getElementById('pl-setter-new').style.display=this.value==='__new'?'block':'none'">
+        <option value="">Unassigned</option>
+        ${allSetters.map(s=>`<option value="${s}">${s}</option>`).join('')}
+        <option value="__new">+ New setter</option>
+      </select>
+      <input class="inp" id="pl-setter-new" placeholder="Setter name" style="display:none;margin-bottom:0;flex:1">
+    </div>
+    <label class="lbl">Content touchpoints before DM</label>
+    <input class="inp" id="pl-touchpoints" type="number" min="0" value="0" placeholder="How many posts/stories did they engage with first?">
     <label class="lbl">DM date</label>
     <input class="inp" id="pl-date" type="date" value="${todayKey()}">
     <label class="lbl">First reply (when setter responded)</label>
@@ -724,8 +917,12 @@ function openAddLeadModal(){
     </div>
     <label class="lbl">Setter notes</label>
     <textarea class="inp" id="pl-notes" style="min-height:80px;resize:vertical" placeholder="Conversation summary..."></textarea>
-    <label class="lbl">Objections</label>
-    <textarea class="inp" id="pl-objections" style="min-height:60px;resize:vertical" placeholder="Any objections raised..."></textarea>
+    <label class="lbl">Objection categories</label>
+    <div class="pl-obj-tags" id="pl-obj-cats" style="margin-bottom:8px">
+      ${OBJECTION_CATEGORIES.map(c=>`<span class="pl-obj-tag" onclick="plToggleObjCat(this,'${c}')" data-cat="${c}">${OBJECTION_LABELS[c]}</span>`).join('')}
+    </div>
+    <label class="lbl">Objection details</label>
+    <textarea class="inp" id="pl-objections" style="min-height:60px;resize:vertical" placeholder="Specifics of what they said..."></textarea>
     <div class="modal-actions">
       <button class="btn-save" onclick="saveNewLead()">Add lead</button>
       <button class="btn-cancel" onclick="closeOv()">Cancel</button>
@@ -738,56 +935,92 @@ function plSetQuality(q,btn){
   btns.forEach(b=>{b.className='pl-quality-btn';});
   btn.classList.add('sel-'+q);
 }
+function plToggleObjCat(el,cat){
+  el.classList.toggle('sel');
+  if(!window._plObjCats)window._plObjCats=[];
+  if(window._plObjCats.includes(cat))window._plObjCats=window._plObjCats.filter(c=>c!==cat);
+  else window._plObjCats.push(cat);
+}
 function saveNewLead(){
   const name=document.getElementById('pl-name').value.trim();
   if(!name){alert('Please enter a name.');return;}
-  const keyword=document.getElementById('pl-keyword').value==='__custom'?document.getElementById('pl-keyword-custom').value.trim().toUpperCase():document.getElementById('pl-keyword').value;
+  const kwEl=document.getElementById('pl-keyword');
+  const keyword=kwEl.value==='__custom'?document.getElementById('pl-keyword-custom').value.trim().toUpperCase():(kwEl.value||'');
   const replyVal=document.getElementById('pl-reply').value;
+  const setterEl=document.getElementById('pl-setter');
+  const setter=setterEl.value==='__new'?document.getElementById('pl-setter-new').value.trim():setterEl.value;
   addPipelineLead({
     name,
     ig_handle:document.getElementById('pl-ig').value.trim(),
+    lead_source:document.getElementById('pl-lead-source').value,
     source_keyword:keyword,
+    setter:setter,
+    touchpoints:parseInt(document.getElementById('pl-touchpoints').value)||0,
     dm_date:document.getElementById('pl-date').value,
     first_reply_at:replyVal?new Date(replyVal).toISOString():'',
     status:document.getElementById('pl-status').value,
     lead_quality:window._plQuality||'warm',
     setter_notes:document.getElementById('pl-notes').value.trim(),
-    objections:document.getElementById('pl-objections').value.trim()
+    objections:document.getElementById('pl-objections').value.trim(),
+    objection_categories:window._plObjCats||[]
   });
+  window._plObjCats=[];
   closeOv();renderAdmin();
 }
 
 function openEditLeadModal(id){
   const l=pipelineLeads.find(x=>x.id===id);if(!l)return;
   window._plQuality=l.lead_quality||'warm';
+  window._plObjCats=[...(l.objection_categories||[])];
+  window._plEditId=id;
   const allKeywords=[...new Set(pipelineLeads.map(x=>x.source_keyword).filter(Boolean))];
   const defaultKeywords=Object.keys(SOURCE_MAP);
   const keywords=[...new Set([...defaultKeywords,...allKeywords])];
-  const isCustom=!keywords.includes(l.source_keyword)&&l.source_keyword;
-  const showBooked=['booked','completed_call','closed_won','closed_lost'].includes(l.status);
+  const isCustom=l.source_keyword&&!keywords.includes(l.source_keyword);
+  const showBooked=['booked','no_show','completed_call','closed_won','closed_lost'].includes(l.status);
   const score=calcLeadScore(l),grade=scoreGrade(score);
   const rt=getResponseTime(l),rtStr=fmtResponseTime(rt);
+  const ttb=calcTimeToBook(l);
   const replyLocal=l.first_reply_at?new Date(l.first_reply_at).toISOString().slice(0,16):'';
   const script=getSetterScript(l.status,l.name);
+  const allSetters=getSetters();
+  const fups=l.followups||[];
   showOv(`<div class="overlay-bg" onclick="if(event.target===this)closeOv()"><div class="modal" style="max-height:90vh;overflow-y:auto">
     <div class="modal-title">Edit lead</div>
-    <div class="modal-sub" style="display:flex;align-items:center;gap:8px">${esc(l.name)}${l.ig_handle?' — @'+esc(l.ig_handle.replace(/^@/,'')):''} <span class="pl-score pl-score-${grade.toLowerCase()}" title="Score: ${score}">${grade} (${score})</span>${rtStr?` <span style="font-size:11px;color:var(--text3)">Reply: ${rtStr}</span>`:''}</div>
+    <div class="modal-sub" style="display:flex;align-items:center;gap:8px;flex-wrap:wrap">${esc(l.name)}${l.ig_handle?' — @'+esc(l.ig_handle.replace(/^@/,'')):''} <span class="pl-score pl-score-${grade.toLowerCase()}" title="Score: ${score}">${grade} (${score})</span>${rtStr?`<span style="font-size:11px;color:var(--text3)">Reply: ${rtStr}</span>`:''}${ttb!==null?`<span style="font-size:11px;color:var(--text3)">${ttb}d to book</span>`:''}</div>
     <label class="lbl">Name</label>
     <input class="inp" id="pl-name" value="${esc(l.name)}">
     <label class="lbl">Instagram handle</label>
     <input class="inp" id="pl-ig" value="${esc(l.ig_handle||'')}">
-    <label class="lbl">Source keyword</label>
+    <label class="lbl">Where did this lead come from?</label>
+    <select class="inp" id="pl-lead-source">
+      <option value="">Select source...</option>
+      ${LEAD_SOURCES.map(s=>`<option value="${s}"${l.lead_source===s?' selected':''}>${LEAD_SOURCE_LABELS[s]}</option>`).join('')}
+    </select>
+    <label class="lbl">Content keyword (which post/video)</label>
     <select class="inp" id="pl-keyword" onchange="document.getElementById('pl-keyword-custom').style.display=this.value==='__custom'?'block':'none'">
+      <option value="">None</option>
       ${keywords.map(k=>`<option value="${k}"${l.source_keyword===k?' selected':''}>${k} (${SOURCE_MAP[k]||'other'})</option>`).join('')}
       <option value="__custom"${isCustom?' selected':''}>Custom...</option>
     </select>
     <input class="inp" id="pl-keyword-custom" value="${isCustom?esc(l.source_keyword):''}" placeholder="Custom keyword" style="display:${isCustom?'block':'none'}">
+    <label class="lbl">Setter</label>
+    <div style="display:flex;gap:6px;margin-bottom:1rem">
+      <select class="inp" id="pl-setter" style="margin-bottom:0;flex:1" onchange="document.getElementById('pl-setter-new').style.display=this.value==='__new'?'block':'none'">
+        <option value="">Unassigned</option>
+        ${allSetters.map(s=>`<option value="${s}"${l.setter===s?' selected':''}>${s}</option>`).join('')}
+        <option value="__new">+ New setter</option>
+      </select>
+      <input class="inp" id="pl-setter-new" placeholder="Setter name" style="display:none;margin-bottom:0;flex:1">
+    </div>
+    <label class="lbl">Content touchpoints before DM</label>
+    <input class="inp" id="pl-touchpoints" type="number" min="0" value="${l.touchpoints||0}">
     <label class="lbl">DM date</label>
     <input class="inp" id="pl-date" type="date" value="${l.dm_date||''}">
     <label class="lbl">First reply (when setter responded)</label>
     <input class="inp" id="pl-reply" type="datetime-local" value="${replyLocal}">
     <label class="lbl">Status</label>
-    <select class="inp" id="pl-status" onchange="document.getElementById('pl-booked-row').style.display=['booked','completed_call','closed_won','closed_lost'].includes(this.value)?'block':'none'">
+    <select class="inp" id="pl-status" onchange="document.getElementById('pl-booked-row').style.display=['booked','no_show','completed_call','closed_won','closed_lost'].includes(this.value)?'block':'none'">
       ${Object.entries(STATUS_LABELS).map(([k,v])=>`<option value="${k}"${l.status===k?' selected':''}>${v}</option>`).join('')}
     </select>
     <div id="pl-booked-row" style="display:${showBooked?'block':'none'}">
@@ -802,10 +1035,26 @@ function openEditLeadModal(id){
     </div>
     <label class="lbl">Setter notes</label>
     <textarea class="inp" id="pl-notes" style="min-height:80px;resize:vertical">${esc(l.setter_notes||'')}</textarea>
-    <label class="lbl">Objections</label>
+    <label class="lbl">Objection categories</label>
+    <div class="pl-obj-tags" id="pl-obj-cats" style="margin-bottom:8px">
+      ${OBJECTION_CATEGORIES.map(c=>`<span class="pl-obj-tag${(l.objection_categories||[]).includes(c)?' sel':''}" onclick="plToggleObjCat(this,'${c}')" data-cat="${c}">${OBJECTION_LABELS[c]}</span>`).join('')}
+    </div>
+    <label class="lbl">Objection details</label>
     <textarea class="inp" id="pl-objections" style="min-height:60px;resize:vertical">${esc(l.objections||'')}</textarea>
     <label class="lbl">Outcome notes</label>
     <textarea class="inp" id="pl-outcome" style="min-height:60px;resize:vertical">${esc(l.outcome_notes||'')}</textarea>
+    <label class="lbl">Follow-up history (${fups.length} sent${fups.filter(f=>f.got_response).length?' · '+fups.filter(f=>f.got_response).length+' responded':''})</label>
+    <div class="pl-fu-list">
+      ${fups.length?fups.map((f,i)=>`<div class="pl-fu-item">
+        <span class="pl-fu-date">${new Date(f.date).toLocaleDateString('en-US',{month:'short',day:'numeric'})}</span>
+        <span class="pl-fu-msg">${esc(f.message)}</span>
+        <span class="pl-fu-resp ${f.got_response?'pl-fu-resp-yes':'pl-fu-resp-no'}" onclick="event.stopPropagation();toggleFollowupResponse('${id}',${i});openEditLeadModal('${id}')">${f.got_response?'Responded':'No reply'}</span>
+      </div>`).join(''):'<div style="font-size:12px;color:var(--text3);padding:4px 0">No follow-ups logged yet.</div>'}
+    </div>
+    <div class="pl-fu-add">
+      <input id="pl-fu-msg" placeholder="Follow-up message sent..." onkeydown="if(event.key==='Enter'){plAddFollowup('${id}');}">
+      <button onclick="plAddFollowup('${id}')">+ Log</button>
+    </div>
     ${script?`<div class="pl-script"><div class="pl-script-title">Suggested script — ${script.title} <span class="pl-script-copy" id="pl-copy-btn" onclick="event.stopPropagation();copyScript('${l.status}','${esc(l.name)}')">Copy</span></div>${script.lines.map(line=>`<div>${line}</div>`).join('')}</div>`:''}
     <div class="modal-actions">
       <button class="btn-save" onclick="saveEditLead('${id}')">Save</button>
@@ -814,22 +1063,36 @@ function openEditLeadModal(id){
     </div>
   </div></div>`);
 }
+function plAddFollowup(id){
+  const msg=document.getElementById('pl-fu-msg')?.value.trim();
+  if(!msg)return;
+  addFollowup(id,msg);
+  openEditLeadModal(id);
+}
 function saveEditLead(id){
-  const keyword=document.getElementById('pl-keyword').value==='__custom'?document.getElementById('pl-keyword-custom').value.trim().toUpperCase():document.getElementById('pl-keyword').value;
+  const kwEl=document.getElementById('pl-keyword');
+  const keyword=kwEl.value==='__custom'?document.getElementById('pl-keyword-custom').value.trim().toUpperCase():(kwEl.value||'');
   const replyVal=document.getElementById('pl-reply').value;
+  const setterEl=document.getElementById('pl-setter');
+  const setter=setterEl.value==='__new'?document.getElementById('pl-setter-new').value.trim():setterEl.value;
   updatePipelineLead(id,{
     name:document.getElementById('pl-name').value.trim(),
     ig_handle:document.getElementById('pl-ig').value.trim(),
+    lead_source:document.getElementById('pl-lead-source').value,
     source_keyword:keyword,
+    setter:setter,
+    touchpoints:parseInt(document.getElementById('pl-touchpoints').value)||0,
     dm_date:document.getElementById('pl-date').value,
     first_reply_at:replyVal?new Date(replyVal).toISOString():'',
     status:document.getElementById('pl-status').value,
     booked_date:document.getElementById('pl-booked-date')?.value||'',
     lead_quality:window._plQuality||'warm',
     setter_notes:document.getElementById('pl-notes').value.trim(),
+    objection_categories:window._plObjCats||[],
     objections:document.getElementById('pl-objections').value.trim(),
     outcome_notes:document.getElementById('pl-outcome').value.trim()
   });
+  window._plObjCats=[];
   closeOv();renderAdmin();
 }
 
