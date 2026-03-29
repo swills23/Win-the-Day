@@ -2108,22 +2108,26 @@ async function loadAll(uid){
   try{reminderSettings=r8?JSON.parse(r8.value):{enabled:false,time:'07:00'}}catch(e){reminderSettings={enabled:false,time:'07:00'};}
   try{identityReflections=r9?JSON.parse(r9.value):{}}catch(e){identityReflections={};}
   const today=todayKey();const todayData=allHistory[today]||{};
-  checked=todayData.checked||{};isRestDay=todayData.rest||false;mood=todayData.mood||0;winOfDay=todayData.win||'';
+  checked=todayData.checked||{};isRestDay=todayData.restDay||todayData.rest||false;mood=todayData.mood||0;winOfDay=todayData.winOfDay||todayData.win||'';
   // Repair any rest-day pct values that were calculated against full-day totals
+  // Force-repair all rest-day entries: recalculate pct from checked tasks
   let repaired=false;
-  Object.keys(allHistory).forEach(k=>{
-    const rec=allHistory[k];
-    if(!rec||!rec.restDay||!rec.checked)return;
-    const rTasks=restTasks();const rTot=restTotal();
-    if(rTot<=0)return;
-    const rEarned=rTasks.filter(t=>rec.checked[t.id]).reduce((s,t)=>s+t.points,0);
-    const correctPct=rEarned/rTot;
-    // If stored pct differs significantly from correct pct, repair it
-    if(Math.abs((rec.pct||0)-correctPct)>0.05){
-      rec.pct=correctPct;rec.earned=rEarned;rec.total=rTot;repaired=true;
-    }
-  });
-  if(repaired)storage.set('wtd-history',JSON.stringify(allHistory),uid);
+  const rTasks=restTasks();const rTot=restTotal();
+  if(rTot>0){
+    Object.keys(allHistory).forEach(k=>{
+      const rec=allHistory[k];
+      if(!rec||!rec.restDay||!rec.checked)return;
+      const rEarned=rTasks.filter(t=>rec.checked[t.id]).reduce((s,t)=>s+t.points,0);
+      const correctPct=rEarned/rTot;
+      if(rec.pct!==correctPct||rec.total!==rTot){
+        rec.pct=correctPct;rec.earned=rEarned;rec.total=rTot;repaired=true;
+      }
+    });
+  }
+  if(repaired){
+    console.log('Repaired rest-day pct values in history');
+    await storage.set('wtd-history',JSON.stringify(allHistory),uid);
+  }
 }
 async function saveDay(){
   const uid=adminClientId||undefined;
