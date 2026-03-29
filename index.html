@@ -2227,15 +2227,20 @@ async function cycleGoalPriority(type,id){
 function openGoalNote(type,id){
   const g=(goals[type]||[]).find(x=>x.id===id);if(!g)return;
   const pri=g.priority||'normal';
+  const btnStyle=(k)=>{
+    const colors={high:'var(--red)',normal:'var(--blue)',low:'var(--text3)'};
+    const active=k===pri;
+    return`padding:5px 14px;font-size:11px;cursor:pointer;border-radius:20px;border:none;transition:all .15s;font-family:var(--font);background:${active?colors[k]:'transparent'};color:${active?'#fff':colors[k]};outline:1px solid ${active?colors[k]:'var(--border)'}`;
+  };
   showOv(`<div class="overlay-bg" onclick="if(event.target===this)closeOv()"><div class="modal">
     <div class="modal-title">Goal note</div>
     <div class="modal-sub">${g.text}</div>
     <textarea class="reflect-input" id="goal-note-inp" placeholder="Add a note, breakdown, or context..." style="min-height:100px">${g.notes||''}</textarea>
     <div style="margin-top:8px"><span class="lbl">Priority</span>
     <div id="gp-btns" style="display:flex;gap:6px;margin-top:4px">
-      <button id="gp-high" onclick="selectGoalPri('high')" style="padding:5px 14px;font-size:11px;cursor:pointer;border-radius:20px;border:.5px solid rgba(248,113,113,.3);transition:all .15s;font-family:var(--font)">High</button>
-      <button id="gp-normal" onclick="selectGoalPri('normal')" style="padding:5px 14px;font-size:11px;cursor:pointer;border-radius:20px;border:.5px solid rgba(91,141,239,.3);transition:all .15s;font-family:var(--font)">Normal</button>
-      <button id="gp-low" onclick="selectGoalPri('low')" style="padding:5px 14px;font-size:11px;cursor:pointer;border-radius:20px;border:.5px solid var(--border);transition:all .15s;font-family:var(--font)">Low</button>
+      <button id="gp-high" onclick="selectGoalPri('high')" style="${btnStyle('high')}">High</button>
+      <button id="gp-normal" onclick="selectGoalPri('normal')" style="${btnStyle('normal')}">Normal</button>
+      <button id="gp-low" onclick="selectGoalPri('low')" style="${btnStyle('low')}">Low</button>
     </div></div>
     <div class="modal-actions">
       <button class="btn-save" onclick="saveGoalNote('${type}',${id})">Save</button>
@@ -2243,7 +2248,6 @@ function openGoalNote(type,id){
     </div>
   </div></div>`);
   window._goalPri=pri;
-  selectGoalPri(pri);
   setTimeout(()=>document.getElementById('goal-note-inp')?.focus(),50);
 }
 function selectGoalPri(p){
@@ -2252,8 +2256,8 @@ function selectGoalPri(p){
   ['high','normal','low'].forEach(k=>{
     const el=document.getElementById('gp-'+k);
     if(!el)return;
-    if(k===p){el.style.background=colors[k];el.style.color='#fff';}
-    else{el.style.background='transparent';el.style.color=colors[k];}
+    if(k===p){el.style.background=colors[k];el.style.color='#fff';el.style.outline='1px solid '+colors[k];}
+    else{el.style.background='transparent';el.style.color=colors[k];el.style.outline='1px solid var(--border)';}
   });
 }
 async function saveGoalNote(type,id){
