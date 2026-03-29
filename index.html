@@ -2109,6 +2109,21 @@ async function loadAll(uid){
   try{identityReflections=r9?JSON.parse(r9.value):{}}catch(e){identityReflections={};}
   const today=todayKey();const todayData=allHistory[today]||{};
   checked=todayData.checked||{};isRestDay=todayData.rest||false;mood=todayData.mood||0;winOfDay=todayData.win||'';
+  // Repair any rest-day pct values that were calculated against full-day totals
+  let repaired=false;
+  Object.keys(allHistory).forEach(k=>{
+    const rec=allHistory[k];
+    if(!rec||!rec.restDay||!rec.checked)return;
+    const rTasks=restTasks();const rTot=restTotal();
+    if(rTot<=0)return;
+    const rEarned=rTasks.filter(t=>rec.checked[t.id]).reduce((s,t)=>s+t.points,0);
+    const correctPct=rEarned/rTot;
+    // If stored pct differs significantly from correct pct, repair it
+    if(Math.abs((rec.pct||0)-correctPct)>0.05){
+      rec.pct=correctPct;rec.earned=rEarned;rec.total=rTot;repaired=true;
+    }
+  });
+  if(repaired)storage.set('wtd-history',JSON.stringify(allHistory),uid);
 }
 async function saveDay(){
   const uid=adminClientId||undefined;
@@ -2394,9 +2409,10 @@ function taskRow(task,pct,rest){
 function openEditDay(dateKey){
   const hist=allHistory[dateKey]||{};
   const savedChecked=hist.checked||{};
-  const tasks=allTasks();
+  const wasRest=hist.restDay||false;
+  const tasks=wasRest?restTasks():allTasks();
   let h=`<div class="overlay-bg" onclick="if(event.target===this)closeOv()"><div class="modal" style="max-height:90vh;overflow-y:auto">
-    <div class="modal-title">Edit ${dateKey}</div>
+    <div class="modal-title">Edit ${dateKey}${wasRest?' <span style="font-size:12px;color:var(--blue)">(Rest day)</span>':''}</div>
     <div class="modal-sub">Check off what you completed that day.</div>`;
   tasks.forEach(t=>{
     const done=!!savedChecked[t.id];
@@ -2416,16 +2432,17 @@ function toggleEditTask(row){
   row.classList.toggle('done');
   row.querySelector('.checkbox').classList.toggle('checked');
 }
-async function saveEditDay(dateKey){
+async function saveEditDay(dk){
   const rows=document.querySelectorAll('#ov .task-row');
-  const tasks=allTasks();
+  const existing=allHistory[dk]||{};
+  const wasRest=existing.restDay||false;
+  const tasks=wasRest?restTasks():allTasks();
   const newChecked={};
   rows.forEach((row,i)=>{if(row.classList.contains('done')&&tasks[i])newChecked[tasks[i].id]=true;});
-  const tot=total();
+  const tot=wasRest?restTotal():total();
   const earned=tasks.filter(t=>newChecked[t.id]).reduce((s,t)=>s+t.points,0);
   const pct=tot>0?earned/tot:0;
-  const existing=allHistory[dateKey]||{};
-  allHistory[dateKey]={...existing,checked:newChecked,pct};
+  allHistory[dk]={...existing,checked:newChecked,earned,total:tot,pct};
   await storage.set('wtd-history',JSON.stringify(allHistory));
   closeOv();
   render();
