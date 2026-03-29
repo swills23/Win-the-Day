@@ -521,6 +521,72 @@ button,.btn-primary,.btn-ghost,.btn-sm,.settings-btn,.tab,.nav-btn,.top-bar-btn,
   .pipeline-stages{flex-direction:column;}
   .pipeline-col{min-width:100%;max-width:100%;}
 }
+/* ── Onboarding Wizard ── */
+.onboard-wrap{max-width:480px;margin:0 auto;padding:1.5rem 1.25rem 3rem;min-height:100vh;}
+.onboard-progress{display:flex;gap:6px;margin-bottom:2rem;padding:0 2px;}
+.onboard-dot{flex:1;height:4px;border-radius:2px;background:var(--border);transition:background .3s;}
+.onboard-dot.done{background:var(--blue);}
+.onboard-dot.active{background:var(--blue);box-shadow:0 0 8px rgba(91,141,239,.3);}
+.onboard-card{background:var(--bg2);border-radius:var(--rl);border:.5px solid var(--border);padding:2rem 1.5rem;margin-bottom:1rem;position:relative;overflow:hidden;}
+.onboard-card::before{content:'';position:absolute;top:0;left:0;right:0;height:3px;background:linear-gradient(90deg,var(--blue),var(--green));opacity:.6;}
+.onboard-hero{text-align:center;padding:2rem 0 1rem;}
+.onboard-hero-icon{font-size:48px;margin-bottom:1rem;}
+.onboard-h1{font-size:24px;font-weight:700;letter-spacing:-.02em;margin-bottom:8px;color:var(--text);}
+.onboard-h2{font-size:18px;font-weight:600;letter-spacing:-.01em;margin-bottom:6px;color:var(--text);}
+.onboard-sub{font-size:14px;color:var(--text3);line-height:1.6;margin-bottom:1.5rem;}
+.onboard-time-row{display:flex;gap:1rem;margin-bottom:1.25rem;}
+.onboard-time-group{flex:1;}
+.onboard-time-label{font-size:11px;text-transform:uppercase;letter-spacing:.08em;color:var(--text3);margin-bottom:6px;display:block;}
+.onboard-time-input{width:100%;padding:12px 14px;border-radius:var(--r);border:.5px solid var(--border);background:var(--bg);color:var(--text);font-size:16px;font-family:var(--font);outline:none;text-align:center;}
+.onboard-time-input:focus{border-color:var(--blue);box-shadow:0 0 0 3px rgba(91,141,239,.12);}
+.onboard-cats{display:grid;grid-template-columns:1fr 1fr;gap:10px;margin-bottom:1.5rem;}
+.onboard-cat{background:var(--bg);border-radius:var(--rl);border:1.5px solid var(--border);padding:16px 14px;cursor:pointer;transition:all .2s;text-align:center;position:relative;}
+.onboard-cat:hover{border-color:var(--border2);}
+.onboard-cat.selected{border-color:var(--blue);background:rgba(91,141,239,.06);box-shadow:0 0 12px rgba(91,141,239,.1);}
+.onboard-cat.locked{opacity:.7;cursor:default;border-color:var(--blue);background:rgba(91,141,239,.04);}
+.onboard-cat-icon{font-size:28px;margin-bottom:6px;}
+.onboard-cat-name{font-size:13px;font-weight:600;color:var(--text);margin-bottom:2px;}
+.onboard-cat-desc{font-size:11px;color:var(--text3);line-height:1.4;}
+.onboard-cat-check{position:absolute;top:8px;right:10px;width:20px;height:20px;border-radius:50%;background:var(--blue);color:#fff;font-size:12px;display:flex;align-items:center;justify-content:center;opacity:0;transition:opacity .2s;font-weight:700;}
+.onboard-cat.selected .onboard-cat-check,.onboard-cat.locked .onboard-cat-check{opacity:1;}
+.onboard-sub-opts{display:flex;gap:8px;margin-top:10px;justify-content:center;flex-wrap:wrap;}
+.onboard-sub-opt{font-size:11px;padding:4px 12px;border-radius:20px;border:.5px solid var(--border);background:var(--bg);cursor:pointer;color:var(--text2);transition:all .2s;}
+.onboard-sub-opt.sel{background:var(--blue);color:#fff;border-color:var(--blue);}
+.onboard-intensity{display:flex;flex-direction:column;gap:10px;margin-bottom:1.5rem;}
+.onboard-int-card{background:var(--bg);border-radius:var(--rl);border:1.5px solid var(--border);padding:16px 18px;cursor:pointer;transition:all .2s;display:flex;align-items:center;gap:14px;}
+.onboard-int-card:hover{border-color:var(--border2);}
+.onboard-int-card.selected{border-color:var(--green);background:rgba(52,211,153,.05);box-shadow:0 0 12px rgba(52,211,153,.1);}
+.onboard-int-icon{font-size:28px;flex-shrink:0;}
+.onboard-int-name{font-size:15px;font-weight:600;color:var(--text);}
+.onboard-int-desc{font-size:12px;color:var(--text3);margin-top:2px;line-height:1.4;}
+.onboard-int-check{width:22px;height:22px;border-radius:50%;border:1.5px solid var(--border);margin-left:auto;flex-shrink:0;display:flex;align-items:center;justify-content:center;transition:all .2s;}
+.onboard-int-card.selected .onboard-int-check{background:var(--green);border-color:var(--green);color:#fff;}
+.onboard-review-block{margin-bottom:1rem;}
+.onboard-review-block-name{font-size:11px;font-weight:600;text-transform:uppercase;letter-spacing:.1em;color:var(--blue);margin-bottom:6px;display:flex;align-items:center;gap:6px;}
+.onboard-review-task{display:flex;justify-content:space-between;align-items:center;padding:8px 12px;background:var(--bg);border-radius:var(--r);margin-bottom:4px;border:.5px solid var(--border);}
+.onboard-review-task-name{font-size:13px;color:var(--text);}
+.onboard-review-task-meta{display:flex;gap:8px;align-items:center;}
+.onboard-review-pts{font-size:12px;color:var(--text3);}
+.onboard-review-tier{font-size:10px;font-weight:600;padding:1px 6px;border-radius:10px;}
+.onboard-review-tier.S{color:#C8891A;background:rgba(200,137,26,.12);}
+.onboard-review-tier.A{color:#3A7EC4;background:rgba(58,126,196,.12);}
+.onboard-review-tier.B{color:#888;background:rgba(136,136,136,.12);}
+.onboard-review-summary{display:flex;gap:10px;margin-bottom:1.25rem;}
+.onboard-review-stat{flex:1;text-align:center;background:var(--bg);border-radius:var(--r);padding:12px 8px;border:.5px solid var(--border);}
+.onboard-review-stat-val{font-size:22px;font-weight:700;color:var(--text);}
+.onboard-review-stat-val.blue{color:var(--blue);}
+.onboard-review-stat-val.green{color:var(--green);}
+.onboard-review-stat-val.orange{color:var(--orange);}
+.onboard-review-stat-lbl{font-size:10px;color:var(--text3);margin-top:2px;text-transform:uppercase;letter-spacing:.05em;}
+.onboard-btns{display:flex;gap:10px;margin-top:1.5rem;}
+.onboard-btns .btn-primary{flex:1;}
+.onboard-btns .btn-ghost{flex:0 0 auto;}
+.onboard-essential-label{font-size:10px;text-transform:uppercase;letter-spacing:.08em;color:var(--blue);font-weight:500;margin-bottom:6px;margin-top:4px;padding-left:2px;}
+@media(max-width:380px){
+  .onboard-cats{grid-template-columns:1fr 1fr;}
+  .onboard-cat{padding:12px 10px;}
+  .onboard-time-row{flex-direction:column;gap:10px;}
+}
 </style>
 </head>
 <body>
@@ -1941,6 +2007,270 @@ async function hbSave(uid,email){
   alert(`Habit stack saved for ${email}`);
 }
 
+// ── ONBOARDING WIZARD ──
+function renderOnboarding(){
+  const dots=Array.from({length:5},(_,i)=>`<div class="onboard-dot${i<onboardStep?' done':''}${i===onboardStep-1?' active':''}"></div>`).join('');
+  let body='';
+  if(onboardStep===1) body=onboardStep1();
+  else if(onboardStep===2) body=onboardStep2();
+  else if(onboardStep===3) body=onboardStep3();
+  else if(onboardStep===4) body=onboardStep4();
+  else if(onboardStep===5) body=onboardStep5();
+  document.getElementById('root').innerHTML=`<div class="onboard-wrap"><div class="onboard-progress">${dots}</div>${body}</div>`;
+}
+
+function onboardStep1(){
+  return `<div class="onboard-card">
+    <div class="onboard-hero">
+      <div class="onboard-hero-icon">&#9889;</div>
+      <div class="onboard-h1">Let's build your daily stack</div>
+      <div class="onboard-sub">Your coach will fine-tune this with you, but let's get a solid starting point. We'll build a personalized schedule in about 60 seconds.</div>
+    </div>
+    <div class="onboard-btns"><button class="btn-primary" onclick="onboardNext()">Get started</button></div>
+  </div>`;
+}
+
+function onboardStep2(){
+  return `<div class="onboard-card">
+    <div class="onboard-h2">Set your rhythm</div>
+    <div class="onboard-sub">When does your day start and end? This shapes everything else.</div>
+    <div class="onboard-time-row">
+      <div class="onboard-time-group">
+        <span class="onboard-time-label">Wake up</span>
+        <input type="time" class="onboard-time-input" id="ob-wake" value="${onboardData.wake}" onchange="onboardData.wake=this.value">
+      </div>
+      <div class="onboard-time-group">
+        <span class="onboard-time-label">Asleep by</span>
+        <input type="time" class="onboard-time-input" id="ob-sleep" value="${onboardData.sleep}" onchange="onboardData.sleep=this.value">
+      </div>
+    </div>
+    <div class="onboard-btns">
+      <button class="btn-ghost" onclick="onboardBack()">Back</button>
+      <button class="btn-primary" onclick="onboardNext()">Next</button>
+    </div>
+  </div>`;
+}
+
+function onboardStep3(){
+  const cats=[
+    {key:'morning',icon:'&#9728;&#65039;',name:'Morning Routine',desc:'Wake up, walk, breathwork, gratitude',locked:true},
+    {key:'deepwork',icon:'&#128640;',name:'Deep Work',desc:'Focused work blocks'},
+    {key:'training',icon:'&#128170;',name:'Physical Training',desc:'Gym, yoga, or movement'},
+    {key:'mindfulness',icon:'&#129504;',name:'Mindfulness',desc:'Meditation practice'},
+    {key:'learning',icon:'&#128218;',name:'Learning',desc:'Reading, audiobooks, courses'},
+    {key:'nutrition',icon:'&#127869;',name:'Nutrition',desc:'Track calories and meals'},
+    {key:'evening',icon:'&#127769;',name:'Evening Wind Down',desc:'Journal, plan tomorrow, wind down',locked:true},
+    {key:'identity',icon:'&#128142;',name:'Identity Work',desc:'Rewire at the root level'}
+  ];
+  let catHTML=cats.map(c=>{
+    const sel=onboardData.categories[c.key];
+    const cls=c.locked?'onboard-cat locked':(sel?'onboard-cat selected':'onboard-cat');
+    const onclick=c.locked?'':`onclick="onboardToggleCategory('${c.key}')"`;
+    let subOpts='';
+    if(c.key==='deepwork'&&sel){
+      subOpts=`<div class="onboard-sub-opts">${[1,2,3].map(n=>`<span class="onboard-sub-opt${onboardData.deepworkBlocks===n?' sel':''}" onclick="event.stopPropagation();onboardData.deepworkBlocks=${n};renderOnboarding()">${n} block${n>1?'s':''}</span>`).join('')}</div>`;
+    }
+    if(c.key==='training'&&sel){
+      subOpts=`<div class="onboard-sub-opts">${['gym','yoga','both'].map(t=>`<span class="onboard-sub-opt${onboardData.trainingType===t?' sel':''}" onclick="event.stopPropagation();onboardData.trainingType='${t}';renderOnboarding()">${t.charAt(0).toUpperCase()+t.slice(1)}</span>`).join('')}</div>`;
+    }
+    if(c.key==='mindfulness'&&sel){
+      subOpts=`<div class="onboard-sub-opts">${['morning','evening','both'].map(t=>`<span class="onboard-sub-opt${onboardData.mindfulnessTime===t?' sel':''}" onclick="event.stopPropagation();onboardData.mindfulnessTime='${t}';renderOnboarding()">${t.charAt(0).toUpperCase()+t.slice(1)}</span>`).join('')}</div>`;
+    }
+    return `<div class="${cls}" ${onclick}>
+      <div class="onboard-cat-check">&#10003;</div>
+      <div class="onboard-cat-icon">${c.icon}</div>
+      <div class="onboard-cat-name">${c.name}</div>
+      <div class="onboard-cat-desc">${c.desc}</div>
+      ${subOpts}
+    </div>`;
+  }).join('');
+  return `<div class="onboard-card">
+    <div class="onboard-h2">Pick your focus areas</div>
+    <div class="onboard-sub">Tap to select what matters to you. Morning and Evening are always included.</div>
+    <div class="onboard-cats">${catHTML}</div>
+    <div class="onboard-btns">
+      <button class="btn-ghost" onclick="onboardBack()">Back</button>
+      <button class="btn-primary" onclick="onboardNext()">Next</button>
+    </div>
+  </div>`;
+}
+
+function onboardStep4(){
+  const levels=[
+    {key:'starter',icon:'&#127793;',name:'Starter',desc:'I\'m just getting started. Fewer tasks, gentler thresholds.',pct:'60%'},
+    {key:'builder',icon:'&#128293;',name:'Builder',desc:'I have some momentum. Moderate stack, solid targets.',pct:'72%'},
+    {key:'allin',icon:'&#9889;',name:'All In',desc:'I\'m ready to go hard. Full stack, high bar.',pct:'80%'}
+  ];
+  let html=levels.map(l=>`<div class="onboard-int-card${onboardData.intensity===l.key?' selected':''}" onclick="onboardSetIntensity('${l.key}')">
+    <div class="onboard-int-icon">${l.icon}</div>
+    <div>
+      <div class="onboard-int-name">${l.name} <span style="font-size:12px;color:var(--text3);font-weight:400">${l.pct} win threshold</span></div>
+      <div class="onboard-int-desc">${l.desc}</div>
+    </div>
+    <div class="onboard-int-check">${onboardData.intensity===l.key?'&#10003;':''}</div>
+  </div>`).join('');
+  return `<div class="onboard-card">
+    <div class="onboard-h2">Set your intensity</div>
+    <div class="onboard-sub">This determines how many tasks you get and how high the bar is to "win" the day. You can always adjust later.</div>
+    <div class="onboard-intensity">${html}</div>
+    <div class="onboard-btns">
+      <button class="btn-ghost" onclick="onboardBack()">Back</button>
+      <button class="btn-primary" onclick="onboardNext()">Review my stack</button>
+    </div>
+  </div>`;
+}
+
+function onboardStep5(){
+  const gen=onboardGenerateTasks();
+  const timed=gen.timed;
+  const essential=gen.essential;
+  const blocks=[...new Set(timed.map(t=>t.block))];
+  const totalPts=timed.reduce((s,t)=>s+t.points,0)+essential.reduce((s,t)=>s+t.points,0);
+  const totalCount=timed.length+essential.length;
+  const winPct=onboardData.intensity==='starter'?60:onboardData.intensity==='allin'?80:72;
+  let blocksHTML=blocks.map(b=>{
+    const bTasks=timed.filter(t=>t.block===b);
+    return `<div class="onboard-review-block">
+      <div class="onboard-review-block-name">${b}</div>
+      ${bTasks.map(t=>`<div class="onboard-review-task">
+        <span class="onboard-review-task-name">${t.name}</span>
+        <div class="onboard-review-task-meta">
+          <span class="onboard-review-tier ${t.tier}">${t.tier}</span>
+          <span class="onboard-review-pts">${t.points}pts</span>
+        </div>
+      </div>`).join('')}
+    </div>`;
+  }).join('');
+  if(essential.length){
+    blocksHTML+=`<div class="onboard-review-block">
+      <div class="onboard-essential-label">Daily essentials (no time block)</div>
+      ${essential.map(t=>`<div class="onboard-review-task">
+        <span class="onboard-review-task-name">${t.name}</span>
+        <div class="onboard-review-task-meta">
+          <span class="onboard-review-tier ${t.tier}">${t.tier}</span>
+          <span class="onboard-review-pts">${t.points}pts</span>
+        </div>
+      </div>`).join('')}
+    </div>`;
+  }
+  return `<div class="onboard-card">
+    <div class="onboard-h2">Your daily stack</div>
+    <div class="onboard-sub">Here's what you'll be tracking each day. Your coach can fine-tune this anytime.</div>
+    <div class="onboard-review-summary">
+      <div class="onboard-review-stat"><div class="onboard-review-stat-val blue">${totalCount}</div><div class="onboard-review-stat-lbl">Tasks</div></div>
+      <div class="onboard-review-stat"><div class="onboard-review-stat-val orange">${totalPts}</div><div class="onboard-review-stat-lbl">Total pts</div></div>
+      <div class="onboard-review-stat"><div class="onboard-review-stat-val green">${winPct}%</div><div class="onboard-review-stat-lbl">Win threshold</div></div>
+    </div>
+    ${blocksHTML}
+    <div class="onboard-btns">
+      <button class="btn-ghost" onclick="onboardBack()">Back</button>
+      <button class="btn-primary" onclick="onboardSave()">Looks good — start tracking</button>
+    </div>
+  </div>`;
+}
+
+function onboardNext(){onboardStep=Math.min(5,onboardStep+1);renderOnboarding();}
+function onboardBack(){onboardStep=Math.max(1,onboardStep-1);renderOnboarding();}
+function onboardToggleCategory(key){onboardData.categories[key]=!onboardData.categories[key];renderOnboarding();}
+function onboardSetIntensity(key){onboardData.intensity=key;renderOnboarding();}
+
+function onboardPts(base){
+  if(onboardData.intensity==='starter') return Math.round(base*0.65);
+  if(onboardData.intensity==='allin') return Math.round(base*1.15);
+  return base;
+}
+
+function onboardGenerateTasks(){
+  const timed=[];
+  const essential=[];
+  let id=1;
+  const cats=onboardData.categories;
+  const p=onboardPts;
+  const wakeLabel=formatOnboardTime(onboardData.wake);
+  const sleepLabel=formatOnboardTime(onboardData.sleep);
+
+  // Morning Routine (always on)
+  timed.push({id:id++,block:"Morning",name:`Wake up at ${wakeLabel}`,points:p(8),tier:"A"});
+  timed.push({id:id++,block:"Morning",name:"Morning walk",points:p(7),tier:"B"});
+  timed.push({id:id++,block:"Morning",name:"Stretch + breathwork",points:p(8),tier:"B"});
+  timed.push({id:id++,block:"Morning",name:"Gratitude + why statement",sub:"Read your why. Let it land.",points:p(8),tier:"A"});
+
+  // Mindfulness - morning
+  if(cats.mindfulness && (onboardData.mindfulnessTime==='morning'||onboardData.mindfulnessTime==='both')){
+    timed.push({id:id++,block:"Morning",name:"Morning meditation",points:p(7),tier:"A"});
+  }
+
+  // Deep Work
+  if(cats.deepwork){
+    const n=onboardData.deepworkBlocks||2;
+    if(n>=1) timed.push({id:id++,block:"Deep Work",name:"Work block 1 — deep focus",points:p(17),tier:"S"});
+    if(n>=2) timed.push({id:id++,block:"Deep Work",name:"Work block 2",points:p(15),tier:"S"});
+    if(n>=3) timed.push({id:id++,block:"Deep Work",name:"Work block 3",points:p(13),tier:"S"});
+  }
+
+  // Midday (add walk if intensity allows)
+  if(onboardData.intensity!=='starter'){
+    timed.push({id:id++,block:"Midday",name:"Midday walk",points:p(5),tier:"B"});
+  }
+
+  // Physical Training
+  if(cats.training){
+    if(onboardData.trainingType==='gym'||onboardData.trainingType==='both'){
+      timed.push({id:id++,block:"Body",name:"Gym or movement",points:p(13),tier:"S"});
+    }
+    if(onboardData.trainingType==='yoga'||onboardData.trainingType==='both'){
+      timed.push({id:id++,block:"Body",name:"Yoga",points:p(6),tier:"B"});
+    }
+  }
+
+  // Learning
+  if(cats.learning){
+    timed.push({id:id++,block:"Wind Down",name:"Reading / audiobook / learning",points:p(7),tier:"A"});
+  }
+
+  // Evening Wind Down (always on)
+  if(cats.mindfulness && (onboardData.mindfulnessTime==='evening'||onboardData.mindfulnessTime==='both')){
+    timed.push({id:id++,block:"Wind Down",name:"Evening meditation",points:p(8),tier:"A"});
+  }
+  timed.push({id:id++,block:"Wind Down",name:"Journal / reflect",points:p(8),tier:"A"});
+  timed.push({id:id++,block:"Wind Down",name:"Write tomorrow's plan",points:p(15),tier:"S"});
+  timed.push({id:id++,block:"Wind Down",name:"Wind down routine",points:p(6),tier:"B"});
+  timed.push({id:id++,block:"Wind Down",name:`Sleep by ${sleepLabel}`,points:p(10),tier:"A"});
+
+  // Essentials
+  if(cats.identity){
+    essential.push({id:id++,name:"Identity work protocol",points:p(11),tier:"S"});
+  }
+  if(cats.nutrition){
+    essential.push({id:id++,name:"Track calories / meals",points:p(11),tier:"S"});
+  }
+
+  return {timed,essential};
+}
+
+function formatOnboardTime(t){
+  if(!t) return '';
+  const [h,m]=t.split(':').map(Number);
+  const ampm=h>=12?'PM':'AM';
+  const h12=h%12||12;
+  return m===0?`${h12}${ampm}`:`${h12}:${String(m).padStart(2,'0')}${ampm}`;
+}
+
+async function onboardSave(){
+  const gen=onboardGenerateTasks();
+  timedTasks=gen.timed;
+  essentialTasks=gen.essential;
+  hasCustomTasks=true;
+  await saveTasks();
+  onboardStep=1;
+  onboardData={wake:'06:00',sleep:'21:30',categories:{morning:true,deepwork:false,training:false,mindfulness:false,learning:false,nutrition:false,evening:true,identity:false},deepworkBlocks:2,trainingType:'gym',mindfulnessTime:'morning',intensity:'builder'};
+  const tasks=isRestDay?restTasks():allTasks();const tot=isRestDay?restTotal():total();
+  const earned=tasks.filter(t=>checked[t.id]).reduce((s,t)=>s+t.points,0);
+  prevWonState=earned/tot>=(isRestDay?restSettings.win/100:WIN);
+  renderTracker();
+  scheduleReminder();
+}
+
 // ── ROOT ROUTER ──
 async function renderRoot(){
 if(!currentUser){const{data:{session}}=await sb.auth.getSession();if(!session){renderAuth();return;}currentUser=session.user;}
@@ -1948,6 +2278,7 @@ if(!currentUser){const{data:{session}}=await sb.auth.getSession();if(!session){r
   if(!currentProfile){const isAdmin=currentUser.email.toLowerCase()===ADMIN_EMAIL.toLowerCase();await sb.from('wtd_profiles').upsert({id:currentUser.id,email:currentUser.email,approved:isAdmin,is_admin:isAdmin},{onConflict:'id'});currentProfile=await loadProfile(currentUser.id);}
   if(!currentProfile.approved){renderPending();return;}
   await loadAll();
+  if(!hasCustomTasks && !currentProfile.is_admin && !adminClientId){renderOnboarding();return;}
   const tasks=isRestDay?restTasks():allTasks();const tot=isRestDay?restTotal():total();
   const earned=tasks.filter(t=>checked[t.id]).reduce((s,t)=>s+t.points,0);
   prevWonState=earned/tot>=(isRestDay?restSettings.win/100:WIN);
@@ -1985,7 +2316,7 @@ function renderTracker(){
   document.getElementById('ov').style.display='none';
   document.getElementById('ov').innerHTML='';
 }
-function render(){renderTracker();}
+function render(){if(!hasCustomTasks && !currentProfile?.is_admin && !adminClientId){renderOnboarding();return;}renderTracker();}
 function openAdmin(){renderAdmin();}
 
 // ── APP STATE ──
@@ -2027,6 +2358,9 @@ let mood,winOfDay,actionItems;
 let showEditor,showImport,showRestEditor,importError;
 let isRestDay,autoSaveTimer,autoSaveStatus,nextId,prevWonState,showCelebration,celebrationTimeout;
 let taskNotes,goals,reminderSettings,identityReflections,addingGoal,reminderTimer;
+let hasCustomTasks=false;
+let onboardStep=1;
+let onboardData={wake:'06:00',sleep:'21:30',categories:{morning:true,deepwork:false,training:false,mindfulness:false,learning:false,nutrition:false,evening:true,identity:false},deepworkBlocks:2,trainingType:'gym',mindfulnessTime:'morning',intensity:'builder'};
 
 function resetAppState(){
   timedTasks=DEFAULT_TIMED.map(t=>({...t}));
@@ -2100,7 +2434,7 @@ async function loadAll(uid){
   try{allHistory=r0?JSON.parse(r0.value):{}}catch(e){allHistory={};}
   try{whyStatement=r1?.value||''}catch(e){whyStatement='';}
   try{identityStatement=r2?.value||''}catch(e){identityStatement='';}
-  try{const s=r3?JSON.parse(r3.value):null;if(s){timedTasks=fixTaskNames(s.timed)||DEFAULT_TIMED.map(t=>({...t}));essentialTasks=fixTaskNames(s.essential)||DEFAULT_ESSENTIAL.map(t=>({...t}));}else{timedTasks=DEFAULT_TIMED.map(t=>({...t}));essentialTasks=DEFAULT_ESSENTIAL.map(t=>({...t}));}}catch(e){timedTasks=DEFAULT_TIMED.map(t=>({...t}));essentialTasks=DEFAULT_ESSENTIAL.map(t=>({...t}));}
+  try{const s=r3?JSON.parse(r3.value):null;if(s){hasCustomTasks=true;timedTasks=fixTaskNames(s.timed)||DEFAULT_TIMED.map(t=>({...t}));essentialTasks=fixTaskNames(s.essential)||DEFAULT_ESSENTIAL.map(t=>({...t}));}else{hasCustomTasks=false;timedTasks=DEFAULT_TIMED.map(t=>({...t}));essentialTasks=DEFAULT_ESSENTIAL.map(t=>({...t}));}}catch(e){hasCustomTasks=false;timedTasks=DEFAULT_TIMED.map(t=>({...t}));essentialTasks=DEFAULT_ESSENTIAL.map(t=>({...t}));}
   try{const rest=r4?JSON.parse(r4.value):null;if(rest)restSettings={...DEFAULT_REST,...rest};}catch(e){restSettings={...DEFAULT_REST};}
   try{actionItems=r5?JSON.parse(r5.value):[];}catch(e){actionItems=[];}
   try{taskNotes=r6?JSON.parse(r6.value):{}}catch(e){taskNotes={};}
