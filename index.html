@@ -3031,6 +3031,7 @@ function renderToday(readOnly){
     h+=`<div class="settings-row">
       <button class="settings-btn" onclick="openEditor()">Edit habits</button>
       <button class="settings-btn" onclick="rebuildSchedule()">Rebuild schedule</button>
+      ${_savedScheduleBackup?`<button class="settings-btn" style="color:var(--orange);border-color:var(--orange)" onclick="undoRebuild()">Undo rebuild</button>`:''}
       <button class="settings-btn" onclick="openMailto()">Email summary</button>
       <button class="settings-btn" onclick="exportData()">Export</button>
       <button class="settings-btn" onclick="openImport()">Import</button>
@@ -3317,7 +3318,9 @@ function updateBlockHeaders(){
 }
 
 async function confirmReset(){if(confirm('Reset today?')){checked={};mood=0;winOfDay='';await saveDay();render();}}
-function rebuildSchedule(){if(!confirm('This will rebuild your habit schedule from scratch using the setup wizard. Your history and data will be kept. Continue?'))return;hasCustomTasks=false;onboardStep=1;renderOnboarding();}
+let _savedScheduleBackup=null;
+function rebuildSchedule(){if(!confirm('This will rebuild your habit schedule from scratch using the setup wizard. Your history and data will be kept. Continue?'))return;_savedScheduleBackup={timed:timedTasks.map(t=>({...t})),essential:essentialTasks.map(t=>({...t})),rest:{...restSettings}};hasCustomTasks=false;onboardStep=1;renderOnboarding();}
+async function undoRebuild(){if(!_savedScheduleBackup){alert('No previous schedule to restore.');return;}if(!confirm('Restore your previous schedule?'))return;timedTasks=_savedScheduleBackup.timed;essentialTasks=_savedScheduleBackup.essential;restSettings=_savedScheduleBackup.rest;hasCustomTasks=true;await saveTasks();await saveRest();_savedScheduleBackup=null;render();}
 function setTab(t){if(t==='today')dayOffset=0;activeTab=t;render();}
 function shiftDay(d){dayOffset+=d;if(dayOffset>0)dayOffset=0;render();}
 function shiftWeek(d){weekOffset+=d;render();}
