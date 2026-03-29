@@ -31,7 +31,7 @@ serve(async (req: Request) => {
       );
     }
 
-    const { messages, context } = await req.json();
+    const { messages, context, system } = await req.json();
 
     if (!messages || !Array.isArray(messages) || messages.length === 0) {
       return new Response(
@@ -40,10 +40,11 @@ serve(async (req: Request) => {
       );
     }
 
-    // Build the system prompt with user context
+    // Use custom system prompt if provided (e.g. check-in mode), otherwise default
+    const basePrompt = system || SYSTEM_PROMPT;
     const systemWithContext = context
-      ? `${SYSTEM_PROMPT}\n\nHere is the user's current data:\n${context}`
-      : SYSTEM_PROMPT;
+      ? `${basePrompt}\n\nHere is the user's current data:\n${context}`
+      : basePrompt;
 
     // Call Anthropic API
     const anthropicRes = await fetch("https://api.anthropic.com/v1/messages", {

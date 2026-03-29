@@ -784,6 +784,58 @@ async function approveUser(id){await sb.from('wtd_profiles').update({approved:tr
 async function removeUser(id){if(!confirm('Remove this user?'))return;await sb.from('wtd_profiles').delete().eq('id',id);renderAdmin();}
 function setAdminView(v){adminView=v;renderAdmin();}
 
+async function renderAdminCheckins(){
+  let h='';
+  try{
+    const{data,error}=await sb.from('wtd_checkins').select('*').order('created_at',{ascending:false}).limit(50);
+    if(error)throw error;
+    if(!data||!data.length){
+      return`<div class="no-users">No check-ins yet. Clients will appear here after their first AI check-in.</div>`;
+    }
+    data.forEach(c=>{
+      const msgs=Array.isArray(c.messages)?c.messages:[];
+      const date=new Date(c.created_at).toLocaleDateString('en-US',{month:'short',day:'numeric',hour:'numeric',minute:'2-digit'});
+      const msgPreview=msgs.filter(m=>m.role==='user').map(m=>m.content).join(' ').slice(0,120);
+      h+=`<div class="user-card" style="cursor:pointer" onclick="showCheckinDetail('${c.id}')">
+        <div class="user-top">
+          <div class="user-avatar">${(c.email||'?')[0].toUpperCase()}</div>
+          <div style="flex:1">
+            <div style="font-size:14px">${c.email||'Unknown'}</div>
+            <div style="font-size:11px;color:var(--text3)">${date}${c.mood_before?' · Mood before: '+c.mood_before:''}${c.mood_after?' · After: '+c.mood_after:''}</div>
+          </div>
+          <div style="font-size:11px;color:var(--text3)">${msgs.length} messages</div>
+        </div>
+        ${msgPreview?`<div style="font-size:12px;color:var(--text3);margin-top:4px;line-height:1.5;overflow:hidden;text-overflow:ellipsis;white-space:nowrap">${msgPreview}...</div>`:''}
+      </div>`;
+    });
+  }catch(e){
+    h=`<div class="no-users">Could not load check-ins. The table may not exist yet — run supabase-checkins-table.sql.</div>`;
+  }
+  return h;
+}
+
+function showCheckinDetail(id){
+  sb.from('wtd_checkins').select('*').eq('id',id).maybeSingle().then(({data})=>{
+    if(!data)return;
+    const msgs=Array.isArray(data.messages)?data.messages:[];
+    const date=new Date(data.created_at).toLocaleDateString('en-US',{weekday:'long',month:'short',day:'numeric',hour:'numeric',minute:'2-digit'});
+    let h=`<div class="overlay-bg" onclick="if(event.target===this)closeOv()"><div class="modal" style="max-height:90vh;overflow-y:auto">
+      <div class="modal-title">Check-in — ${data.email||'Unknown'}</div>
+      <div class="modal-sub">${date}${data.mood_before?' · Mood before: '+data.mood_before+'/5':''}${data.mood_after?' · Mood after: '+data.mood_after+'/5':''}</div>`;
+    if(data.context){
+      h+=`<div style="font-size:11px;color:var(--text3);background:var(--bg2);border-radius:var(--r);padding:8px 10px;margin-bottom:12px;border:.5px solid var(--border);white-space:pre-wrap;line-height:1.5">${data.context}</div>`;
+    }
+    msgs.forEach(m=>{
+      const isUser=m.role==='user';
+      h+=`<div style="margin-bottom:8px;display:flex;${isUser?'justify-content:flex-end':''}">
+        <div style="max-width:85%;padding:8px 12px;border-radius:12px;font-size:13px;line-height:1.5;${isUser?'background:var(--blue);color:#fff;border-bottom-right-radius:4px':'background:var(--bg2);border:.5px solid var(--border);border-bottom-left-radius:4px'}">${m.content}</div>
+      </div>`;
+    });
+    h+=`<div class="modal-actions"><button class="btn-cancel" onclick="closeOv()">Close</button></div></div></div>`;
+    showOv(h);
+  });
+}
+
 async function renderAdmin(){
   if(typeof removeCoachUI==='function')removeCoachUI();
   const profiles=await loadAllProfiles();
@@ -803,10 +855,14 @@ async function renderAdmin(){
   const list=adminView==='pending'?pending:approved;
   let html=`<div class="top-bar"><span class="top-bar-email">${currentUser.email}</span><button class="top-bar-btn" onclick="switchToMyTracker()">My Tracker</button><button class="top-bar-btn" onclick="signOut()">Sign out</button></div>
   <div class="admin"><div style="margin-bottom:1.25rem"><div style="font-size:18px;font-weight:500;">${APP_NAME} — Admin</div><div style="font-size:12px;color:var(--text3);margin-top:2px;">${profiles.length} total users</div></div>
-  <div class="admin-tabs"><div class="admin-tab${adminView==='pending'?' active':''}" onclick="setAdminView('pending')">Pending (${pending.length})</div><div class="admin-tab${adminView==='approved'?' active':''}" onclick="setAdminView('approved')">Clients (${approved.length})</div><div class="admin-tab${adminView==='pipeline'?' active':''}" onclick="setAdminView('pipeline')">Pipeline</div></div>`;
+  <div class="admin-tabs"><div class="admin-tab${adminView==='pending'?' active':''}" onclick="setAdminView('pending')">Pending (${pending.length})</div><div class="admin-tab${adminView==='approved'?' active':''}" onclick="setAdminView('approved')">Clients (${approved.length})</div><div class="admin-tab${adminView==='pipeline'?' active':''}" onclick="setAdminView('pipeline')">Pipeline</div><div class="admin-tab${adminView==='checkins'?' active':''}" onclick="setAdminView('checkins')">Check-ins</div></div>`;
   if(adminView==='pipeline'){
     await loadPipelineLeads();
     html+=renderPipelineDashboard();
+    html+=`</div>`;document.getElementById('root').innerHTML=html;return;
+  }
+  if(adminView==='checkins'){
+    html+=await renderAdminCheckins();
     html+=`</div>`;document.getElementById('root').innerHTML=html;return;
   }
   if(!list.length){html+=`<div class="no-users">No ${adminView==='pending'?'pending approvals':'clients'} yet.</div>`;}
@@ -3863,6 +3919,7 @@ function startCheckin(){
   checkinEnded=false;
   checkinMoodBefore=0;
   checkinMoodAfter=0;
+  _checkinId=null;
   checkinContext=buildCheckinContext();
   coachView='checkin';
   renderCoachUI();
@@ -3973,6 +4030,7 @@ function endCheckin(){
   renderCoachUI();
 }
 
+let _checkinId=null;
 async function saveCheckinToDb(){
   try{
     const payload={
@@ -3982,9 +4040,14 @@ async function saveCheckinToDb(){
       context:checkinContext,
       mood_before:checkinMoodBefore,
       mood_after:checkinMoodAfter,
-      created_at:new Date().toISOString()
     };
-    await sb.from('wtd_checkins').upsert([payload],{onConflict:'user_id,created_at'});
+    if(_checkinId){
+      await sb.from('wtd_checkins').update(payload).eq('id',_checkinId);
+    }else{
+      payload.created_at=new Date().toISOString();
+      const{data}=await sb.from('wtd_checkins').insert([payload]).select('id').maybeSingle();
+      if(data)_checkinId=data.id;
+    }
   }catch(e){
     console.warn('Checkin save failed (table may not exist):',e);
   }
