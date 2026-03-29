@@ -637,6 +637,40 @@ button,.btn-primary,.btn-ghost,.btn-sm,.settings-btn,.tab,.nav-btn,.top-bar-btn,
 .coach-prompts{display:flex;flex-direction:column;gap:8px;padding:8px 0;}
 .coach-prompt-btn{background:var(--bg);border:.5px solid var(--border);border-radius:12px;padding:10px 14px;font-size:13px;color:var(--text2);cursor:pointer;text-align:left;font-family:var(--font);transition:all .15s;line-height:1.4;}
 .coach-prompt-btn:hover{border-color:var(--blue);color:var(--blue);background:rgba(91,141,239,.04);}
+
+/* ── Check-in Chat ── */
+.checkin-end-btn{background:none;border:.5px solid var(--border);border-radius:20px;padding:6px 14px;font-size:11px;color:var(--text3);cursor:pointer;font-family:var(--font);margin-top:6px;align-self:center;transition:all .15s;}
+.checkin-end-btn:hover{color:var(--red);border-color:var(--red);}
+.checkin-mood-row{display:flex;gap:6px;align-items:center;justify-content:center;padding:8px 0;}
+.checkin-mood-btn{width:32px;height:32px;border-radius:50%;border:.5px solid var(--border);background:var(--bg);font-size:14px;cursor:pointer;display:flex;align-items:center;justify-content:center;transition:all .15s;}
+.checkin-mood-btn.sel{background:var(--blue);border-color:var(--blue);}
+.checkin-mood-btn:hover{border-color:var(--blue);}
+
+/* ── Report Cards ── */
+.report-section{margin-top:1.5rem;border-top:.5px solid var(--border);padding-top:1.25rem;}
+.report-title{font-size:14px;font-weight:600;color:var(--text);margin-bottom:12px;display:flex;align-items:center;gap:8px;}
+.report-grid{display:grid;grid-template-columns:repeat(2,1fr);gap:8px;margin-bottom:14px;}
+.report-card{background:var(--bg2);border-radius:var(--r);padding:12px;border:.5px solid var(--border);}
+.report-card-val{font-size:18px;font-weight:600;color:var(--text);font-variant-numeric:tabular-nums;}
+.report-card-lbl{font-size:10px;color:var(--text3);margin-top:2px;text-transform:uppercase;letter-spacing:.06em;}
+.report-card-sub{font-size:11px;color:var(--text3);margin-top:4px;}
+.report-card.full{grid-column:1/-1;}
+.report-card.highlight{border-left:3px solid var(--blue);}
+.report-card.warn{border-left:3px solid var(--orange);}
+.report-card.success{border-left:3px solid var(--green);}
+.report-compare{display:flex;align-items:center;gap:4px;font-size:11px;margin-top:3px;}
+.report-compare.up{color:var(--green);}
+.report-compare.down{color:var(--red);}
+.report-compare.flat{color:var(--text3);}
+.report-list{margin-bottom:14px;}
+.report-list-title{font-size:11px;text-transform:uppercase;letter-spacing:.08em;color:var(--text3);margin-bottom:6px;font-weight:500;}
+.report-list-item{font-size:13px;color:var(--text2);padding:5px 0;display:flex;align-items:center;justify-content:space-between;gap:8px;border-bottom:.5px solid var(--border);}
+.report-list-item:last-child{border-bottom:none;}
+.report-pct{font-size:12px;font-weight:500;min-width:36px;text-align:right;}
+.report-email-btn{display:inline-flex;align-items:center;gap:6px;padding:8px 16px;border-radius:var(--r);border:.5px solid var(--border);background:none;font-size:12px;cursor:pointer;color:var(--text3);font-family:var(--font);transition:all .15s;margin-top:8px;}
+.report-email-btn:hover{color:var(--blue);border-color:var(--blue);}
+.report-toggle-row{display:flex;align-items:center;justify-content:space-between;padding:10px 0;margin-top:8px;border-top:.5px solid var(--border);}
+.report-toggle-label{font-size:12px;color:var(--text2);}
 </style>
 </head>
 <body>
@@ -2587,6 +2621,8 @@ async function loadAll(uid){
     console.log('Repaired rest-day pct values in history');
     await storage.set('wtd-history',JSON.stringify(allHistory),uid);
   }
+  // Load weekly report preference
+  await loadWeeklyReportPref();
 }
 async function saveDay(){
   const uid=adminClientId||undefined;
@@ -3158,6 +3194,8 @@ function renderWeek(){
   h+=`</div><div style="margin-bottom:1.25rem">`;
   dates.map(d=>({d,rec:allHistory[dateKey(d)]})).filter(e=>e.rec).forEach(({d,rec})=>{const pct=rec.pct||0,col=statusColor(pct,rec.restDay);h+=`<div class="week-row"><span style="font-size:13px;color:var(--text2)">${d.toLocaleDateString("en-US",{weekday:"short",month:"short",day:"numeric"})}${rec.restDay?' <span style="font-size:10px;color:var(--blue)">R</span>':''}</span><div class="week-bar-track"><div class="week-bar-fill" style="width:${Math.round(pct*100)}%;background:${col}"></div></div><span style="font-size:13px;font-weight:500;color:${col};text-align:right">${Math.round(pct*100)}%</span></div>`;});
   h+=`</div><div style="border-top:.5px solid var(--border);padding-top:1.25rem"><div class="reflect-label" style="margin-bottom:1rem">Reflections this week</div>${reflectionCards(dates.map(d=>({d,rec:allHistory[dateKey(d)]})))}</div>`;
+  // Weekly Report
+  h+=generateWeeklyReport(dates,won,avg,activeDays,streak);
   return h;
 }
 
@@ -3180,7 +3218,297 @@ function renderMonth(){
   for(let i=0;i<startDay;i++)h+=`<div class="month-cell empty"></div>`;
   daysData.forEach(({day,key,rec,d})=>{const isToday=key===tk,isFuture=d>new Date()&&!isToday;const pct=rec?rec.pct:null,rest=rec&&rec.restDay,inStreak=isInStreak(key);let bg='var(--bg2)',color='var(--text3)';if(pct!==null&&!isFuture){const sc=statusColor(pct,rest);bg=sc+'22';color=sc;}h+=`<div class="month-cell${rec?' has-data':''}${isToday?' today-cell':''}" style="background:${bg};opacity:${isFuture?0.3:1}"><span style="color:${color}">${rest?'R':day}</span>${inStreak&&!isFuture?`<div class="streak-dot"></div>`:''}</div>`;});
   h+=`</div><div style="display:flex;gap:14px;justify-content:center;flex-wrap:wrap;margin-bottom:1.25rem;row-gap:5px"><div style="display:flex;align-items:center;gap:5px"><div style="width:9px;height:9px;border-radius:2px;background:#2E9E5B22;border:.5px solid #2E9E5B"></div><span style="font-size:11px;color:var(--text3)">Crushing it</span></div><div style="display:flex;align-items:center;gap:5px"><div style="width:9px;height:9px;border-radius:2px;background:#3A7EC422;border:.5px solid #3A7EC4"></div><span style="font-size:11px;color:var(--text3)">Day won</span></div><div style="display:flex;align-items:center;gap:5px"><div style="width:9px;height:9px;border-radius:2px;background:#C8891A22;border:.5px solid #C8891A"></div><span style="font-size:11px;color:var(--text3)">Building</span></div><div style="display:flex;align-items:center;gap:5px"><div style="width:4px;height:4px;border-radius:50%;background:#E8A020"></div><span style="font-size:11px;color:var(--text3)">Streak</span></div></div><div style="border-top:.5px solid var(--border);padding-top:1.25rem"><div class="reflect-label" style="margin-bottom:1rem">Reflections this month</div>${reflectionCards(daysData.map(({d,rec})=>({d,rec})))}</div>`;
+  // Monthly Report
+  h+=generateMonthlyReport(daysData,won,avg,activeDays,streak);
   return h;
+}
+
+// ── REPORT GENERATION ──
+
+function getTaskMissStats(datesList){
+  // datesList: array of {key, rec} or Date objects
+  const allT=allTasks();
+  const stats={};
+  allT.forEach(t=>{stats[t.id]={name:t.name,tier:t.tier,done:0,missed:0,total:0};});
+  datesList.forEach(item=>{
+    const key=item.key||dateKey(item);
+    const rec=item.rec||allHistory[key];
+    if(!rec)return;
+    allT.forEach(t=>{
+      stats[t.id].total++;
+      if(rec.checked&&rec.checked[t.id])stats[t.id].done++;
+      else stats[t.id].missed++;
+    });
+  });
+  return stats;
+}
+
+function generateWeeklyReport(dates,won,avg,activeDays,streak){
+  const daysWithData=dates.filter(d=>allHistory[dateKey(d)]);
+  if(daysWithData.length<2)return''; // Not enough data for a report
+
+  // Best and worst day
+  let bestDay=null,worstDay=null,bestPct=-1,worstPct=2;
+  daysWithData.forEach(d=>{
+    const rec=allHistory[dateKey(d)];
+    if(!rec)return;
+    const pct=rec.pct||0;
+    if(pct>bestPct){bestPct=pct;bestDay=d;}
+    if(pct<worstPct){worstPct=pct;worstDay=d;}
+  });
+
+  // Most skipped tasks (top 3)
+  const taskStats=getTaskMissStats(dates.map(d=>({key:dateKey(d),rec:allHistory[dateKey(d)]})));
+  const skipped=Object.values(taskStats).filter(s=>s.total>0&&s.missed>0).sort((a,b)=>b.missed-a.missed).slice(0,3);
+
+  // Tasks completed vs missed
+  let totalDone=0,totalMissed=0;
+  Object.values(taskStats).forEach(s=>{totalDone+=s.done;totalMissed+=s.missed;});
+
+  // Previous week comparison
+  const prevDates=getWeekDates(weekOffset-1);
+  const prevActiveDays=prevDates.filter(d=>{const r=allHistory[dateKey(d)];return r&&!r.restDay;});
+  const prevWon=prevDates.filter(d=>{const r=allHistory[dateKey(d)];if(!r)return false;return r.pct>=(r.restDay?restSettings.win/100:WIN);}).length;
+  const prevAvg=prevActiveDays.length?prevActiveDays.reduce((s,d)=>s+(allHistory[dateKey(d)]?.pct||0),0)/prevActiveDays.length:0;
+
+  const avgDiff=avg-prevAvg;
+  const wonDiff=won-prevWon;
+  const compareArrow=(diff,suffix='')=>{
+    if(diff>0)return`<div class="report-compare up">+${typeof diff==='number'&&suffix==='%'?Math.round(diff*100):diff}${suffix}</div>`;
+    if(diff<0)return`<div class="report-compare down">${typeof diff==='number'&&suffix==='%'?Math.round(diff*100):diff}${suffix}</div>`;
+    return`<div class="report-compare flat">no change</div>`;
+  };
+
+  // Reflections count
+  const reflections=daysWithData.filter(d=>{const r=allHistory[dateKey(d)];return r&&(r.reflection||r.winOfDay);}).length;
+
+  let h=`<div class="report-section">
+    <div class="report-title">Weekly Report</div>
+    <div class="report-grid">
+      <div class="report-card success">
+        <div class="report-card-val">${won}/7</div>
+        <div class="report-card-lbl">Win rate</div>
+        ${compareArrow(wonDiff,' days')}
+      </div>
+      <div class="report-card highlight">
+        <div class="report-card-val">${activeDays.length?Math.round(avg*100)+'%':'--'}</div>
+        <div class="report-card-lbl">Avg score</div>
+        ${compareArrow(avgDiff,'%')}
+      </div>
+      <div class="report-card">
+        <div class="report-card-val">${bestDay?bestDay.toLocaleDateString('en-US',{weekday:'short'}):'--'}</div>
+        <div class="report-card-lbl">Best day</div>
+        <div class="report-card-sub">${bestPct>=0?Math.round(bestPct*100)+'%':''}</div>
+      </div>
+      <div class="report-card">
+        <div class="report-card-val">${worstDay?worstDay.toLocaleDateString('en-US',{weekday:'short'}):'--'}</div>
+        <div class="report-card-lbl">Worst day</div>
+        <div class="report-card-sub">${worstPct<=1?Math.round(worstPct*100)+'%':''}</div>
+      </div>
+      <div class="report-card">
+        <div class="report-card-val">${streak}</div>
+        <div class="report-card-lbl">Current streak</div>
+      </div>
+      <div class="report-card">
+        <div class="report-card-val">${totalDone}/${totalDone+totalMissed}</div>
+        <div class="report-card-lbl">Tasks completed</div>
+      </div>
+    </div>`;
+
+  if(skipped.length){
+    h+=`<div class="report-list"><div class="report-list-title">Most skipped tasks</div>`;
+    skipped.forEach(s=>{
+      const rate=s.total>0?Math.round(s.missed/s.total*100):0;
+      h+=`<div class="report-list-item"><span>${s.name} <span style="font-size:10px;color:${s.tier==='S'?'var(--orange)':s.tier==='A'?'var(--blue)':'var(--text3)'}">${s.tier}</span></span><span class="report-pct" style="color:var(--red)">${rate}% missed</span></div>`;
+    });
+    h+=`</div>`;
+  }
+
+  h+=`<div class="report-card full" style="margin-bottom:8px;display:flex;align-items:center;justify-content:space-between">
+    <span style="font-size:12px;color:var(--text2)">${reflections} reflection${reflections!==1?'s':''} written</span>
+  </div>`;
+
+  h+=`<button class="report-email-btn" onclick="emailReport('weekly')">
+    <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><rect x="2" y="4" width="20" height="16" rx="2"/><path d="M22 7l-10 7L2 7"/></svg>
+    Email this report
+  </button>`;
+
+  h+=`</div>`;
+  return h;
+}
+
+function generateMonthlyReport(daysData,won,avg,activeDays,streak){
+  const daysWithData=daysData.filter(({rec})=>rec);
+  if(daysWithData.length<3)return''; // Not enough data
+
+  const daysTracked=daysWithData.length;
+  const totalDaysInMonth=daysData.length;
+  const consistencyPct=Math.round(daysTracked/totalDaysInMonth*100);
+
+  // Best and worst week (sliding 7-day windows within the month)
+  let bestWeekAvg=-1,worstWeekAvg=2,bestWeekLabel='',worstWeekLabel='';
+  for(let i=0;i<=daysData.length-7;i++){
+    const wk=daysData.slice(i,i+7);
+    const wkActive=wk.filter(({rec})=>rec&&!rec.restDay);
+    if(wkActive.length<2)continue;
+    const wkAvg=wkActive.reduce((s,{rec})=>s+(rec?.pct||0),0)/wkActive.length;
+    const label=`${wk[0].d.toLocaleDateString('en-US',{month:'short',day:'numeric'})}`;
+    if(wkAvg>bestWeekAvg){bestWeekAvg=wkAvg;bestWeekLabel=label;}
+    if(wkAvg<worstWeekAvg){worstWeekAvg=wkAvg;worstWeekLabel=label;}
+  }
+
+  // Most skipped and most improved tasks
+  const taskStats=getTaskMissStats(daysData);
+  const sortedByMiss=Object.values(taskStats).filter(s=>s.total>0).sort((a,b)=>(b.missed/b.total)-(a.missed/a.total));
+  const mostSkipped=sortedByMiss[0];
+
+  // Most improved: compare first half vs second half of month
+  const half=Math.floor(daysData.length/2);
+  const firstHalf=daysData.slice(0,half);
+  const secondHalf=daysData.slice(half);
+  const statsFirst=getTaskMissStats(firstHalf);
+  const statsSecond=getTaskMissStats(secondHalf);
+  let mostImproved=null,bestImprovement=-1;
+  Object.keys(statsFirst).forEach(id=>{
+    const f=statsFirst[id],s=statsSecond[id];
+    if(!f||!s||f.total<2||s.total<2)return;
+    const fRate=f.done/f.total;
+    const sRate=s.done/s.total;
+    const improvement=sRate-fRate;
+    if(improvement>bestImprovement){bestImprovement=improvement;mostImproved=s;}
+  });
+
+  // Streak history
+  const bestStr=calcBestStreak();
+
+  // Goal completion rate
+  let goalsDone=0,goalsTotal=0;
+  ['weekly','monthly'].forEach(type=>{
+    (goals[type]||[]).forEach(g=>{goalsTotal++;if(g.done)goalsDone++;});
+  });
+  const goalRate=goalsTotal>0?Math.round(goalsDone/goalsTotal*100):null;
+
+  let h=`<div class="report-section">
+    <div class="report-title">Monthly Report</div>
+    <div class="report-grid">
+      <div class="report-card success">
+        <div class="report-card-val">${won}/${daysTracked}</div>
+        <div class="report-card-lbl">Days won / tracked</div>
+      </div>
+      <div class="report-card highlight">
+        <div class="report-card-val">${activeDays.length?Math.round(avg*100)+'%':'--'}</div>
+        <div class="report-card-lbl">Avg daily score</div>
+      </div>
+      <div class="report-card">
+        <div class="report-card-val">${consistencyPct}%</div>
+        <div class="report-card-lbl">Consistency</div>
+        <div class="report-card-sub">${daysTracked}/${totalDaysInMonth} days tracked</div>
+      </div>
+      <div class="report-card">
+        <div class="report-card-val">${streak} / ${bestStr}</div>
+        <div class="report-card-lbl">Streak (current / best)</div>
+      </div>
+      <div class="report-card">
+        <div class="report-card-val">${bestWeekLabel||'--'}</div>
+        <div class="report-card-lbl">Best week</div>
+        <div class="report-card-sub">${bestWeekAvg>=0?Math.round(bestWeekAvg*100)+'% avg':''}</div>
+      </div>
+      <div class="report-card">
+        <div class="report-card-val">${worstWeekLabel||'--'}</div>
+        <div class="report-card-lbl">Worst week</div>
+        <div class="report-card-sub">${worstWeekAvg<=1?Math.round(worstWeekAvg*100)+'% avg':''}</div>
+      </div>`;
+
+  if(goalRate!==null){
+    h+=`<div class="report-card">
+      <div class="report-card-val">${goalRate}%</div>
+      <div class="report-card-lbl">Goal completion</div>
+      <div class="report-card-sub">${goalsDone}/${goalsTotal} goals</div>
+    </div>`;
+  }
+
+  h+=`</div>`;
+
+  // Most skipped task
+  if(mostSkipped&&mostSkipped.missed>0){
+    const rate=Math.round(mostSkipped.missed/mostSkipped.total*100);
+    h+=`<div class="report-list"><div class="report-list-title">Most skipped task</div>
+      <div class="report-list-item"><span>${mostSkipped.name} <span style="font-size:10px;color:${mostSkipped.tier==='S'?'var(--orange)':'var(--text3)'}">${mostSkipped.tier}</span></span><span class="report-pct" style="color:var(--red)">${rate}% missed</span></div>
+    </div>`;
+  }
+
+  // Most improved task
+  if(mostImproved&&bestImprovement>0.1){
+    h+=`<div class="report-list"><div class="report-list-title">Most improved task</div>
+      <div class="report-list-item"><span>${mostImproved.name}</span><span class="report-pct" style="color:var(--green)">+${Math.round(bestImprovement*100)}%</span></div>
+    </div>`;
+  }
+
+  h+=`<button class="report-email-btn" onclick="emailReport('monthly')">
+    <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><rect x="2" y="4" width="20" height="16" rx="2"/><path d="M22 7l-10 7L2 7"/></svg>
+    Email this report
+  </button>`;
+
+  // Weekly report toggle
+  h+=`<div class="report-toggle-row">
+    <span class="report-toggle-label">Send weekly report by email</span>
+    <label class="toggle"><input type="checkbox" ${weeklyReportEnabled?'checked':''} onchange="toggleWeeklyReport(this.checked)"><div class="toggle-track"></div><div class="toggle-thumb"></div></label>
+  </div>`;
+
+  h+=`</div>`;
+  return h;
+}
+
+// Build report data object for email
+function buildReportData(type){
+  if(type==='weekly'){
+    const dates=getWeekDates(weekOffset);
+    const activeDays=dates.filter(d=>{const r=allHistory[dateKey(d)];return r&&!r.restDay;});
+    const won=dates.filter(d=>{const r=allHistory[dateKey(d)];if(!r)return false;return r.pct>=(r.restDay?restSettings.win/100:WIN);}).length;
+    const avg=activeDays.length?activeDays.reduce((s,d)=>s+(allHistory[dateKey(d)]?.pct||0),0)/activeDays.length:0;
+    const streak=calcStreak();
+    const taskStats=getTaskMissStats(dates.map(d=>({key:dateKey(d),rec:allHistory[dateKey(d)]})));
+    const skipped=Object.values(taskStats).filter(s=>s.total>0&&s.missed>0).sort((a,b)=>b.missed-a.missed).slice(0,3);
+    const label=`${dates[0].toLocaleDateString("en-US",{month:"short",day:"numeric"})} - ${dates[6].toLocaleDateString("en-US",{month:"short",day:"numeric",year:"numeric"})}`;
+    return{type:'weekly',label,won,total:7,avg:Math.round(avg*100),streak,skipped:skipped.map(s=>({name:s.name,tier:s.tier,missRate:Math.round(s.missed/s.total*100)})),email:currentUser?.email};
+  } else {
+    const{first,last,year,month}=getMonthDates(monthOffset);
+    const daysData=Array.from({length:last.getDate()},(_,i)=>{const d=new Date(year,month,i+1);return{day:i+1,key:dateKey(d),rec:allHistory[dateKey(d)],d};});
+    const daysWithData=daysData.filter(({rec})=>rec);
+    const activeDays=daysData.filter(({rec})=>rec&&!rec.restDay);
+    const won=daysData.filter(({rec})=>{if(!rec)return false;return rec.pct>=(rec.restDay?restSettings.win/100:WIN);}).length;
+    const avg=activeDays.length?activeDays.reduce((s,{rec})=>s+(rec?.pct||0),0)/activeDays.length:0;
+    const streak=calcStreak();
+    const bestStr=calcBestStreak();
+    const label=`${MONTHS[month]} ${year}`;
+    return{type:'monthly',label,won,tracked:daysWithData.length,total:last.getDate(),avg:Math.round(avg*100),streak,bestStreak:bestStr,consistency:Math.round(daysWithData.length/last.getDate()*100),email:currentUser?.email};
+  }
+}
+
+async function emailReport(type){
+  const data=buildReportData(type);
+  const btn=event?.target?.closest('.report-email-btn');
+  if(btn){btn.textContent='Sending...';btn.disabled=true;}
+  try{
+    const{error}=await sb.functions.invoke('send-report',{body:{type,data}});
+    if(error)throw error;
+    if(btn){btn.textContent='Sent!';setTimeout(()=>{btn.innerHTML='<svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><rect x="2" y="4" width="20" height="16" rx="2"/><path d="M22 7l-10 7L2 7"/></svg> Email this report';btn.disabled=false;},2000);}
+  }catch(e){
+    console.warn('Email report failed:',e);
+    if(btn){btn.textContent='Not available yet';btn.disabled=false;setTimeout(()=>{btn.innerHTML='<svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><rect x="2" y="4" width="20" height="16" rx="2"/><path d="M22 7l-10 7L2 7"/></svg> Email this report';},2000);}
+  }
+}
+
+let weeklyReportEnabled=false;
+async function loadWeeklyReportPref(){
+  try{
+    const r=await storage.get('wtd-weekly-report');
+    weeklyReportEnabled=r?.value==='true';
+  }catch(e){weeklyReportEnabled=false;}
+}
+async function toggleWeeklyReport(val){
+  weeklyReportEnabled=val;
+  await storage.set('wtd-weekly-report',val?'true':'false');
 }
 
 function reflectionCards(entries){
@@ -3350,7 +3678,13 @@ function isViewingToday(){return dayOffset===0;}
 // ── HELP BOT ──
 let coachOpen=false;
 let coachMessages=[];
-let coachView='menu'; // 'menu' | 'faq' | 'suggest' | 'bug' | 'chat'
+let coachView='menu'; // 'menu' | 'faq' | 'suggest' | 'bug' | 'chat' | 'checkin'
+let checkinMessages=[];
+let checkinSending=false;
+let checkinEnded=false;
+let checkinMoodBefore=0;
+let checkinMoodAfter=0;
+let checkinContext='';
 
 const FAQ_LIST=[
   {q:'How do I win the day?',a:'Complete enough tasks to reach your win threshold (shown on the score card). The percentage needed depends on your intensity level — Starter is 60%, Builder is 72%, All In is 80%.'},
@@ -3393,13 +3727,17 @@ function renderCoachUI(){
   else if(coachView==='faq') body=renderFAQView();
   else if(coachView==='suggest') body=renderSuggestView();
   else if(coachView==='bug') body=renderBugView();
+  else if(coachView==='checkin') body=renderCheckinView();
+
+  const headerTitle=coachView==='checkin'?'Check-in':'Help';
+  const headerDotColor=coachView==='checkin'?'var(--green)':'var(--blue)';
 
   panel.innerHTML=`
     <div class="coach-header">
-      <div class="coach-header-title"><div class="coach-header-dot"></div>Help</div>
+      <div class="coach-header-title"><div class="coach-header-dot" style="background:${headerDotColor}"></div>${headerTitle}</div>
       <button class="coach-close" onclick="toggleCoach()">&times;</button>
     </div>
-    <div class="coach-messages" id="coach-messages">${body}</div>`;
+    <div class="coach-messages" id="coach-messages">${body}</div>${coachView==='checkin'&&!checkinEnded?renderCheckinInputBar():''}`;
   document.body.appendChild(panel);
 }
 
@@ -3407,6 +3745,7 @@ function renderHelpMenu(){
   return`<div style="padding:6px 0">
     <div class="coach-msg ai">How can I help?</div>
     <div class="coach-prompts">
+      <button class="coach-prompt-btn" onclick="startCheckin()">Check in with me</button>
       <button class="coach-prompt-btn" onclick="coachView='paste';renderCoachUI()">Build schedule from my routine</button>
       <button class="coach-prompt-btn" onclick="coachView='faq';renderCoachUI()">Frequently asked questions</button>
       <button class="coach-prompt-btn" onclick="coachView='suggest';renderCoachUI()">Submit a suggestion</button>
@@ -3476,6 +3815,178 @@ async function submitFeedback(type){
     // Table might not exist yet — fall back to console
     console.warn('Feedback save failed (table may not exist):',e);
     if(statusEl)statusEl.innerHTML='<span style="color:var(--green)">Received — thank you!</span>';
+  }
+}
+
+// ── AI CHECK-IN ──
+function buildCheckinContext(){
+  const tasks=isRestDay?restTasks():allTasks();
+  const tot=isRestDay?restTotal():total();
+  const earned=tasks.filter(t=>checked[t.id]).reduce((s,t)=>s+t.points,0);
+  const pct=tot>0?earned/tot:0;
+  const w=isRestDay?restSettings.win/100:WIN;
+  const status=pct>=w?'winning the day':'building';
+  const doneTasks=tasks.filter(t=>checked[t.id]);
+  const missedS=tasks.filter(t=>!checked[t.id]&&t.tier==='S');
+  const streak=calcStreak();
+
+  // Recurring blind spots: tasks missed >50% in last 14 days
+  const blindSpots=[];
+  const allT=allTasks();
+  allT.forEach(t=>{
+    let missed=0,tracked=0;
+    for(let i=0;i<14;i++){
+      const d=new Date();d.setDate(d.getDate()-i);
+      const k=dateKey(d),rec=allHistory[k];
+      if(!rec)continue;
+      tracked++;
+      if(!rec.checked||!rec.checked[t.id])missed++;
+    }
+    if(tracked>=3&&missed/tracked>0.5)blindSpots.push({name:t.name,missRate:Math.round(missed/tracked*100)});
+  });
+  blindSpots.sort((a,b)=>b.missRate-a.missRate);
+
+  let ctx=`Today's score: ${Math.round(pct*100)}% (${status}). `;
+  ctx+=`Tasks done: ${doneTasks.length}/${tasks.length}. `;
+  if(missedS.length)ctx+=`Missed S-tier tasks: ${missedS.map(t=>t.name).join(', ')}. `;
+  ctx+=`Current streak: ${streak} days. `;
+  if(isRestDay)ctx+=`Today is a rest day. `;
+  if(blindSpots.length)ctx+=`Recurring blind spots (last 14 days): ${blindSpots.slice(0,5).map(b=>`${b.name} (missed ${b.missRate}%)`).join(', ')}. `;
+  if(whyStatement)ctx+=`User's why statement: "${whyStatement}". `;
+  if(identityStatement)ctx+=`User's identity statement: "${identityStatement}". `;
+  return ctx;
+}
+
+function startCheckin(){
+  checkinMessages=[];
+  checkinSending=false;
+  checkinEnded=false;
+  checkinMoodBefore=0;
+  checkinMoodAfter=0;
+  checkinContext=buildCheckinContext();
+  coachView='checkin';
+  renderCoachUI();
+  // Auto-send initial context message
+  sendCheckinMessage(null,true);
+}
+
+function renderCheckinView(){
+  let h='<div style="padding:6px 0;display:flex;flex-direction:column;gap:10px">';
+  if(checkinMessages.length===0&&!checkinSending){
+    h+=`<div class="coach-msg ai" style="opacity:.6">Starting check-in...</div>`;
+  }
+  checkinMessages.forEach(m=>{
+    if(m.role==='assistant'){
+      h+=`<div class="coach-msg ai">${m.content}</div>`;
+    } else if(m.role==='user'){
+      h+=`<div class="coach-msg user">${m.content}</div>`;
+    }
+  });
+  if(checkinSending){
+    h+=`<div class="coach-typing"><div class="coach-typing-dot"></div><div class="coach-typing-dot"></div><div class="coach-typing-dot"></div></div>`;
+  }
+  if(checkinEnded){
+    h+=`<div style="text-align:center;padding:12px 0">
+      <div style="font-size:11px;color:var(--text3);margin-bottom:8px">How are you feeling now?</div>
+      <div class="checkin-mood-row">${[1,2,3,4,5].map(n=>`<button class="checkin-mood-btn${checkinMoodAfter===n?' sel':''}" onclick="checkinMoodAfter=${n};saveCheckinToDb();renderCoachUI()">${n}</button>`).join('')}</div>
+      <button class="coach-prompt-btn" onclick="coachView='menu';renderCoachUI()" style="margin-top:8px;font-size:12px">Done</button>
+    </div>`;
+  }
+  if(!checkinEnded&&checkinMessages.length>0&&!checkinSending){
+    h+=`<button class="checkin-end-btn" onclick="endCheckin()">End check-in</button>`;
+  }
+  h+='</div>';
+  // Scroll to bottom after render
+  setTimeout(()=>{const el=document.getElementById('coach-messages');if(el)el.scrollTop=el.scrollHeight;},50);
+  return h;
+}
+
+function renderCheckinInputBar(){
+  return`<div class="coach-input-bar">
+    <input class="coach-input" id="checkin-input" placeholder="Type your response..." onkeydown="if(event.key==='Enter'&&!event.shiftKey){event.preventDefault();sendCheckinUserMessage();}">
+    <button class="coach-send" onclick="sendCheckinUserMessage()" ${checkinSending?'disabled':''}>
+      <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><line x1="22" y1="2" x2="11" y2="13"/><polygon points="22 2 15 22 11 13 2 9 22 2"/></svg>
+    </button>
+  </div>`;
+}
+
+function sendCheckinUserMessage(){
+  const inp=document.getElementById('checkin-input');
+  const text=inp?.value.trim();
+  if(!text||checkinSending||checkinEnded)return;
+  inp.value='';
+  sendCheckinMessage(text,false);
+}
+
+async function sendCheckinMessage(userText,isInit){
+  if(checkinSending)return;
+  if(userText)checkinMessages.push({role:'user',content:userText});
+  checkinSending=true;
+  renderCoachUI();
+
+  const systemPrompt="You are a check-in assistant inside Win the Day. Your job is to ask short questions that help the user reflect on their day — what went well, what got in the way, how they're feeling. You are NOT a coach. Do not give advice. Just ask good questions, acknowledge their answers, and help them think. Keep responses to 1-2 sentences. Be warm and direct. After 3-4 exchanges, wrap up with 'Thanks for checking in. Your coach has access to this conversation.'";
+
+  const messages=[];
+  if(isInit){
+    messages.push({role:'user',content:`[CONTEXT FOR AI — do not repeat this to the user] ${checkinContext}\n\nThe user just opened a check-in. Start by greeting them warmly and asking a reflective question about their day.`});
+  } else {
+    // Build full conversation for context
+    if(checkinContext){
+      messages.push({role:'user',content:`[CONTEXT — do not repeat] ${checkinContext}`});
+      messages.push({role:'assistant',content:checkinMessages.find(m=>m.role==='assistant')?.content||'Hey, how are you doing today?'});
+    }
+    checkinMessages.forEach(m=>{
+      if(m===checkinMessages[0]&&m.role==='assistant'&&checkinContext)return; // skip first if already added
+      messages.push({role:m.role,content:m.content});
+    });
+  }
+
+  try{
+    const{data,error}=await sb.functions.invoke('ai-coach',{
+      body:{messages,system:systemPrompt}
+    });
+    checkinSending=false;
+    if(error)throw error;
+    const reply=data?.reply||data?.content||data?.message||'';
+    if(!reply)throw new Error('Empty response');
+    checkinMessages.push({role:'assistant',content:reply});
+
+    // Auto-detect wrap-up
+    if(reply.toLowerCase().includes('thanks for checking in')){
+      checkinEnded=true;
+      saveCheckinToDb();
+    }
+    // Save after each message
+    saveCheckinToDb();
+  }catch(e){
+    checkinSending=false;
+    console.warn('Checkin AI call failed:',e);
+    checkinMessages.push({role:'assistant',content:"AI check-ins aren't set up yet. Your coach will enable this soon."});
+    checkinEnded=true;
+  }
+  renderCoachUI();
+}
+
+function endCheckin(){
+  checkinEnded=true;
+  saveCheckinToDb();
+  renderCoachUI();
+}
+
+async function saveCheckinToDb(){
+  try{
+    const payload={
+      user_id:currentUser.id,
+      email:currentUser.email,
+      messages:checkinMessages,
+      context:checkinContext,
+      mood_before:checkinMoodBefore,
+      mood_after:checkinMoodAfter,
+      created_at:new Date().toISOString()
+    };
+    await sb.from('wtd_checkins').upsert([payload],{onConflict:'user_id,created_at'});
+  }catch(e){
+    console.warn('Checkin save failed (table may not exist):',e);
   }
 }
 
