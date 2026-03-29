@@ -325,6 +325,19 @@ button,.btn-primary,.btn-ghost,.btn-sm,.settings-btn,.tab,.nav-btn,.top-bar-btn,
 .user-stat-lbl{font-size:10px;color:var(--text3);margin-top:1px;}
 .user-actions{display:flex;gap:7px;align-items:center;flex-wrap:wrap;}
 .inactive-flag{font-size:11px;color:var(--red);background:rgba(226,75,74,.08);border:.5px solid rgba(226,75,74,.25);border-radius:20px;padding:2px 8px;}
+.analytics-section{margin-bottom:1.5rem;}
+.analytics-title{font-size:14px;font-weight:600;color:var(--text);margin-bottom:10px;display:flex;align-items:center;gap:6px;}
+.analytics-grid{display:grid;grid-template-columns:repeat(2,1fr);gap:8px;margin-bottom:12px;}
+.analytics-card{background:var(--bg2);border-radius:var(--r);padding:12px;border:.5px solid var(--border);}
+.analytics-card.full{grid-column:1/-1;}
+.analytics-card-val{font-size:20px;font-weight:600;color:var(--text);font-variant-numeric:tabular-nums;}
+.analytics-card-lbl{font-size:10px;color:var(--text3);margin-top:2px;text-transform:uppercase;letter-spacing:.06em;}
+.analytics-card-sub{font-size:11px;color:var(--text3);margin-top:3px;}
+.analytics-row{display:flex;align-items:center;justify-content:space-between;padding:8px 0;border-bottom:.5px solid var(--border);font-size:13px;}
+.analytics-row:last-child{border-bottom:none;}
+.analytics-bar{height:6px;border-radius:3px;background:var(--bg2);overflow:hidden;margin-top:4px;}
+.analytics-bar-fill{height:100%;border-radius:3px;transition:width .3s;}
+.client-alert{background:rgba(226,75,74,.06);border:.5px solid rgba(226,75,74,.2);border-radius:var(--r);padding:10px 12px;margin-bottom:8px;font-size:13px;color:var(--text2);display:flex;align-items:center;gap:8px;}
 .no-users{text-align:center;padding:2.5rem 1rem;font-size:13px;color:var(--text3);}
 .assign-area{width:100%;font-size:13px;padding:8px 10px;border-radius:var(--r);border:.5px solid var(--border);background:var(--bg);color:var(--text);resize:none;outline:none;font-family:var(--font);min-height:80px;margin-bottom:8px;}
 
@@ -749,6 +762,78 @@ const storage={
   async set(key,value,uid){const id=uid||(currentUser&&currentUser.id);if(!id)return null;await sb.from('wtd_store').upsert({key:`${id}:${key}`,value,updated_at:new Date().toISOString()},{onConflict:'key'});return{key,value};}
 };
 
+// ── DATA VAULT ──
+// Structured logging to queryable tables for coaching analytics.
+// These run alongside existing JSON storage — vault is the analytics layer.
+const vault={
+  async logDay(dateStr,data){
+    const uid=adminClientId||(currentUser&&currentUser.id);if(!uid)return;
+    const tasks=data.restDay?restTasks():allTasks();
+    const tasksDone=tasks.filter(t=>data.checked?.[t.id]).length;
+    try{
+      await sb.from('wtd_daily_logs').upsert({
+        user_id:uid,date:dateStr,score:data.pct||0,earned:data.earned||0,total:data.total||0,
+        tasks_done:tasksDone,tasks_total:tasks.length,mood:data.mood||0,
+        streak:calcStreak(),rest_day:!!data.restDay,
+        reflection:data.reflection||'',win_of_day:data.winOfDay||data.win||'',
+        updated_at:new Date().toISOString()
+      },{onConflict:'user_id,date'});
+    }catch(e){console.warn('vault.logDay error:',e);}
+  },
+  async logTasks(dateStr,checkedMap,isRest){
+    const uid=adminClientId||(currentUser&&currentUser.id);if(!uid)return;
+    const tasks=isRest?restTasks():allTasks();
+    const rows=tasks.map(t=>({
+      user_id:uid,date:dateStr,task_id:t.id,task_name:t.name,
+      tier:t.tier||'B',block:t.block||'Essential',points:t.points||1,
+      completed:!!(checkedMap&&checkedMap[t.id])
+    }));
+    if(!rows.length)return;
+    try{
+      await sb.from('wtd_task_logs').upsert(rows,{onConflict:'user_id,date,task_id'});
+    }catch(e){console.warn('vault.logTasks error:',e);}
+  },
+  async logIdentity(dateStr){
+    const uid=adminClientId||(currentUser&&currentUser.id);if(!uid)return;
+    const ir=identityReflections[dateStr];
+    try{
+      await sb.from('wtd_identity_logs').upsert({
+        user_id:uid,date:dateStr,identity_statement:identityStatement||'',
+        why_statement:whyStatement||'',rating:ir?.rating||0,note:ir?.note||''
+      },{onConflict:'user_id,date'});
+    }catch(e){console.warn('vault.logIdentity error:',e);}
+  },
+  async logGoals(){
+    const uid=adminClientId||(currentUser&&currentUser.id);if(!uid)return;
+    const rows=[];
+    ['weekly','monthly','yearly'].forEach(type=>{
+      (goals[type]||[]).forEach(g=>{
+        rows.push({
+          user_id:uid,goal_type:type,goal_text:g.text||g,
+          priority:g.priority||'medium',completed:!!g.done,
+          completed_at:g.done?new Date().toISOString():null,
+          updated_at:new Date().toISOString()
+        });
+      });
+    });
+    if(!rows.length)return;
+    try{
+      // Delete old goals and re-insert current state
+      await sb.from('wtd_goal_logs').delete().eq('user_id',uid);
+      await sb.from('wtd_goal_logs').insert(rows);
+    }catch(e){console.warn('vault.logGoals error:',e);}
+  },
+  async saveReportPrefs(weekly,monthly){
+    const uid=currentUser&&currentUser.id;if(!uid)return;
+    try{
+      await sb.from('wtd_report_prefs').upsert({
+        user_id:uid,weekly_email:!!weekly,monthly_email:!!monthly,
+        email:currentUser.email||'',updated_at:new Date().toISOString()
+      },{onConflict:'user_id'});
+    }catch(e){console.warn('vault.saveReportPrefs error:',e);}
+  }
+};
+
 // ── AUTH ──
 async function signUp(){
   const email=document.getElementById('a-email').value.trim(),pw=document.getElementById('a-pw').value;
@@ -855,7 +940,7 @@ async function renderAdmin(){
   const list=adminView==='pending'?pending:approved;
   let html=`<div class="top-bar"><span class="top-bar-email">${currentUser.email}</span><button class="top-bar-btn" onclick="switchToMyTracker()">My Tracker</button><button class="top-bar-btn" onclick="signOut()">Sign out</button></div>
   <div class="admin"><div style="margin-bottom:1.25rem"><div style="font-size:18px;font-weight:500;">${APP_NAME} — Admin</div><div style="font-size:12px;color:var(--text3);margin-top:2px;">${profiles.length} total users</div></div>
-  <div class="admin-tabs"><div class="admin-tab${adminView==='pending'?' active':''}" onclick="setAdminView('pending')">Pending (${pending.length})</div><div class="admin-tab${adminView==='approved'?' active':''}" onclick="setAdminView('approved')">Clients (${approved.length})</div><div class="admin-tab${adminView==='pipeline'?' active':''}" onclick="setAdminView('pipeline')">Pipeline</div><div class="admin-tab${adminView==='checkins'?' active':''}" onclick="setAdminView('checkins')">Check-ins</div></div>`;
+  <div class="admin-tabs"><div class="admin-tab${adminView==='pending'?' active':''}" onclick="setAdminView('pending')">Pending (${pending.length})</div><div class="admin-tab${adminView==='approved'?' active':''}" onclick="setAdminView('approved')">Clients (${approved.length})</div><div class="admin-tab${adminView==='pipeline'?' active':''}" onclick="setAdminView('pipeline')">Pipeline</div><div class="admin-tab${adminView==='checkins'?' active':''}" onclick="setAdminView('checkins')">Check-ins</div><div class="admin-tab${adminView==='analytics'?' active':''}" onclick="setAdminView('analytics')">Analytics</div></div>`;
   if(adminView==='pipeline'){
     await loadPipelineLeads();
     html+=renderPipelineDashboard();
@@ -863,6 +948,10 @@ async function renderAdmin(){
   }
   if(adminView==='checkins'){
     html+=await renderAdminCheckins();
+    html+=`</div>`;document.getElementById('root').innerHTML=html;return;
+  }
+  if(adminView==='analytics'){
+    html+=await renderAdminAnalytics(approved);
     html+=`</div>`;document.getElementById('root').innerHTML=html;return;
   }
   if(!list.length){html+=`<div class="no-users">No ${adminView==='pending'?'pending approvals':'clients'} yet.</div>`;}
@@ -875,6 +964,176 @@ async function viewClient(uid,email){adminClientId=uid;adminClientEmail=email;aw
 function switchToMyTracker(){adminClientId=null;adminClientEmail='';loadAll().then(()=>{render();});}
 function openAssignActions(uid,email){showOv(`<div class="overlay-bg" onclick="if(event.target===this)closeOv()"><div class="modal"><div class="modal-title">Assign action items</div><div class="modal-sub">For ${email} — one item per line.</div><textarea class="assign-area" id="assign-inp" placeholder="Read chapter 3&#10;Write your 90-day vision"></textarea><div class="modal-actions"><button class="btn-save" onclick="doAssignActions('${uid}')">Save</button><button class="btn-cancel" onclick="closeOv()">Cancel</button></div></div></div>`);}
 async function doAssignActions(uid){const text=document.getElementById('assign-inp').value.trim();const items=text.split('\n').map(s=>s.trim()).filter(Boolean).map(s=>({text:s,done:false}));await storage.set('wtd-actions',JSON.stringify(items),uid);closeOv();alert('Action items saved!');}
+
+// ── ADMIN ANALYTICS DASHBOARD ──
+async function renderAdminAnalytics(clients){
+  if(!clients||!clients.length)return`<div style="padding:2rem;text-align:center;color:var(--text3)">No client data yet.</div>`;
+
+  // Load all client histories
+  const clientData=[];
+  for(const p of clients){
+    try{
+      const r=await storage.get('wtd-history',p.id);
+      const t=await storage.get('wtd-tasks',p.id);
+      if(r){
+        const hist=JSON.parse(r.value);
+        const tasks=t?JSON.parse(t.value):null;
+        clientData.push({id:p.id,email:p.email,hist,tasks});
+      }
+    }catch(e){}
+  }
+
+  if(!clientData.length)return`<div style="padding:2rem;text-align:center;color:var(--text3)">No client data yet.</div>`;
+
+  // Calculate cross-client metrics
+  const now=new Date();
+  const last7=[];const last30=[];
+  for(let i=0;i<30;i++){
+    const d=new Date(now);d.setDate(d.getDate()-i);
+    const k=dateKey(d);
+    if(i<7)last7.push(k);
+    last30.push(k);
+  }
+
+  // Alerts: clients who need attention
+  let alerts=[];
+  let totalWins7=0,totalDays7=0,totalWins30=0,totalDays30=0;
+  let allTaskStats={};
+  let moodData=[];
+  let clientSummaries=[];
+
+  clientData.forEach(c=>{
+    const keys7=last7.filter(k=>c.hist[k]);
+    const keys30=last30.filter(k=>c.hist[k]);
+    const wins7=keys7.filter(k=>c.hist[k].pct>=WIN).length;
+    const wins30=keys30.filter(k=>c.hist[k].pct>=WIN).length;
+    const avg7=keys7.length?keys7.reduce((s,k)=>s+(c.hist[k].pct||0),0)/keys7.length:0;
+    const avg30=keys30.length?keys30.reduce((s,k)=>s+(c.hist[k].pct||0),0)/keys30.length:0;
+    totalWins7+=wins7;totalDays7+=keys7.length;
+    totalWins30+=wins30;totalDays30+=keys30.length;
+
+    // Find last active date
+    const allKeys=Object.keys(c.hist).sort();
+    const lastActive=allKeys.length?allKeys[allKeys.length-1]:null;
+    const daysSince=lastActive?Math.floor((now-new Date(lastActive))/86400000):null;
+
+    // Mood tracking
+    keys30.forEach(k=>{if(c.hist[k].mood)moodData.push({mood:c.hist[k].mood,pct:c.hist[k].pct});});
+
+    // Task-level stats across all clients
+    keys30.forEach(k=>{
+      const rec=c.hist[k];
+      if(!rec.checked)return;
+      const taskList=c.tasks?(rec.restDay?[]:[...(c.tasks.timed||[]),...(c.tasks.essential||[])]):[];
+      taskList.forEach(t=>{
+        const key=t.name;
+        if(!allTaskStats[key])allTaskStats[key]={name:t.name,tier:t.tier||'B',done:0,total:0};
+        allTaskStats[key].total++;
+        if(rec.checked[t.id])allTaskStats[key].done++;
+      });
+    });
+
+    clientSummaries.push({email:c.email,wins7,days7:keys7.length,avg7,wins30,days30:keys30.length,avg30,daysSince,id:c.id});
+
+    // Alerts
+    if(daysSince!==null&&daysSince>=3)alerts.push({email:c.email,type:'inactive',msg:`Inactive for ${daysSince} days`});
+    else if(keys7.length>=3&&avg7<0.5)alerts.push({email:c.email,type:'struggling',msg:`Avg ${Math.round(avg7*100)}% this week`});
+    else if(keys7.length>=2&&wins7===0)alerts.push({email:c.email,type:'no-wins',msg:`No wins this week (${keys7.length} days tracked)`});
+  });
+
+  // Sort task stats
+  const tasksByCompletion=Object.values(allTaskStats).filter(t=>t.total>=3).sort((a,b)=>(a.done/a.total)-(b.done/b.total));
+  const mostSkipped=tasksByCompletion.slice(0,5);
+  const mostCompleted=tasksByCompletion.slice(-5).reverse();
+
+  // Mood vs performance correlation
+  const highMood=moodData.filter(m=>m.mood>=4);
+  const lowMood=moodData.filter(m=>m.mood<=2);
+  const highMoodAvg=highMood.length?highMood.reduce((s,m)=>s+m.pct,0)/highMood.length:0;
+  const lowMoodAvg=lowMood.length?lowMood.reduce((s,m)=>s+m.pct,0)/lowMood.length:0;
+
+  // Build HTML
+  let h=`<div class="analytics-section">`;
+
+  // Alerts
+  if(alerts.length){
+    h+=`<div class="analytics-title">Needs Attention</div>`;
+    alerts.forEach(a=>{
+      h+=`<div class="client-alert"><span style="font-weight:500">${a.email.split('@')[0]}</span> <span style="color:var(--text3)">—</span> ${a.msg}</div>`;
+    });
+  }
+
+  // Overview cards
+  h+=`<div class="analytics-title" style="margin-top:${alerts.length?'1.25rem':'0'}">Overview — Last 7 Days</div>`;
+  const overallWinRate7=totalDays7?Math.round(totalWins7/totalDays7*100):0;
+  h+=`<div class="analytics-grid">
+    <div class="analytics-card"><div class="analytics-card-val">${clientData.length}</div><div class="analytics-card-lbl">Active Clients</div></div>
+    <div class="analytics-card"><div class="analytics-card-val" style="color:${overallWinRate7>=60?'var(--green)':overallWinRate7>=40?'var(--orange)':'var(--red)'}">${overallWinRate7}%</div><div class="analytics-card-lbl">Win Rate</div><div class="analytics-card-sub">${totalWins7} wins / ${totalDays7} tracked days</div></div>
+  </div>`;
+
+  // Client breakdown
+  h+=`<div class="analytics-title">Client Performance — 7 Day</div>`;
+  clientSummaries.sort((a,b)=>b.avg7-a.avg7);
+  clientSummaries.forEach(c=>{
+    const pct7=Math.round(c.avg7*100);
+    const color=pct7>=72?'var(--green)':pct7>=50?'var(--orange)':'var(--red)';
+    h+=`<div class="analytics-row">
+      <div style="flex:1">
+        <div style="font-weight:500">${c.email.split('@')[0]}</div>
+        <div class="analytics-bar" style="width:120px"><div class="analytics-bar-fill" style="width:${pct7}%;background:${color}"></div></div>
+      </div>
+      <div style="text-align:right">
+        <div style="font-weight:500;color:${color}">${pct7}%</div>
+        <div style="font-size:10px;color:var(--text3)">${c.wins7}/${c.days7} won</div>
+      </div>
+    </div>`;
+  });
+
+  // Most skipped tasks (cross-client)
+  if(mostSkipped.length){
+    h+=`<div class="analytics-title" style="margin-top:1.25rem">Most Skipped Tasks (All Clients)</div>`;
+    mostSkipped.forEach(t=>{
+      const rate=Math.round((1-t.done/t.total)*100);
+      const color=rate>=60?'var(--red)':rate>=40?'var(--orange)':'var(--text3)';
+      h+=`<div class="analytics-row">
+        <div>${t.name} <span style="font-size:10px;color:${t.tier==='S'?'var(--orange)':t.tier==='A'?'var(--blue)':'var(--text3)'}">${t.tier}</span></div>
+        <div style="font-weight:500;color:${color}">${rate}% missed</div>
+      </div>`;
+    });
+  }
+
+  // Most completed tasks
+  if(mostCompleted.length){
+    h+=`<div class="analytics-title" style="margin-top:1.25rem">Strongest Habits (All Clients)</div>`;
+    mostCompleted.forEach(t=>{
+      const rate=Math.round(t.done/t.total*100);
+      h+=`<div class="analytics-row">
+        <div>${t.name} <span style="font-size:10px;color:${t.tier==='S'?'var(--orange)':t.tier==='A'?'var(--blue)':'var(--text3)'}">${t.tier}</span></div>
+        <div style="font-weight:500;color:var(--green)">${rate}% done</div>
+      </div>`;
+    });
+  }
+
+  // Mood vs Performance
+  if(moodData.length>=5){
+    h+=`<div class="analytics-title" style="margin-top:1.25rem">Mood vs Performance</div>`;
+    h+=`<div class="analytics-grid">
+      <div class="analytics-card${highMoodAvg>lowMoodAvg?' highlight':''}"><div class="analytics-card-val" style="color:var(--green)">${Math.round(highMoodAvg*100)}%</div><div class="analytics-card-lbl">Avg score when mood 4-5</div><div class="analytics-card-sub">${highMood.length} days</div></div>
+      <div class="analytics-card${lowMoodAvg>highMoodAvg?' warn':''}"><div class="analytics-card-val" style="color:var(--red)">${Math.round(lowMoodAvg*100)}%</div><div class="analytics-card-lbl">Avg score when mood 1-2</div><div class="analytics-card-sub">${lowMood.length} days</div></div>
+    </div>`;
+  }
+
+  // 30-day trend
+  h+=`<div class="analytics-title" style="margin-top:1.25rem">30-Day Trend</div>`;
+  const overallWinRate30=totalDays30?Math.round(totalWins30/totalDays30*100):0;
+  h+=`<div class="analytics-grid">
+    <div class="analytics-card"><div class="analytics-card-val">${overallWinRate30}%</div><div class="analytics-card-lbl">Win Rate (30d)</div><div class="analytics-card-sub">${totalWins30} wins / ${totalDays30} days</div></div>
+    <div class="analytics-card"><div class="analytics-card-val">${moodData.length?Math.round(moodData.reduce((s,m)=>s+m.mood,0)/moodData.length*10)/10:'—'}</div><div class="analytics-card-lbl">Avg Mood (30d)</div><div class="analytics-card-sub">${moodData.length} ratings</div></div>
+  </div>`;
+
+  h+=`</div>`;
+  return h;
+}
 
 // ── PIPELINE (Supabase table: pipeline_leads) ──
 let pipelineChannel=null;
@@ -2677,8 +2936,8 @@ async function loadAll(uid){
     console.log('Repaired rest-day pct values in history');
     await storage.set('wtd-history',JSON.stringify(allHistory),uid);
   }
-  // Load weekly report preference
-  await loadWeeklyReportPref();
+  // Load report preferences
+  await loadReportPrefs();
 }
 async function saveDay(){
   const uid=adminClientId||undefined;
@@ -2698,11 +2957,14 @@ async function saveDay(){
   prevWonState=isNowWon;
   allHistory[key]={...allHistory[key],checked:{...checked},earned,total:tot,pct,restDay:isRestDay,mood,winOfDay};
   await storage.set('wtd-history',JSON.stringify(allHistory),uid);
+  // Log to data vault (non-blocking)
+  vault.logDay(key,allHistory[key]);
+  vault.logTasks(key,checked,isRestDay);
 }
 async function saveTasks(){await storage.set('wtd-tasks',JSON.stringify({timed:timedTasks,essential:essentialTasks}),adminClientId||undefined);}
 async function saveRest(){await storage.set('wtd-rest',JSON.stringify(restSettings),adminClientId||undefined);}
 async function saveNotes(){await storage.set('wtd-notes',JSON.stringify(taskNotes),adminClientId||undefined);}
-async function saveGoals(){await storage.set('wtd-goals',JSON.stringify(goals),adminClientId||undefined);}
+async function saveGoals(){await storage.set('wtd-goals',JSON.stringify(goals),adminClientId||undefined);vault.logGoals();}
 async function saveReminder(){await storage.set('wtd-reminder',JSON.stringify(reminderSettings),adminClientId||undefined);}
 async function saveIR(){await storage.set('wtd-ir',JSON.stringify(identityReflections),adminClientId||undefined);}
 
@@ -2712,6 +2974,7 @@ async function saveStatements(){
   identityStatement=document.getElementById('id-inp')?.value.trim()||identityStatement;
   await storage.set('wtd-why',whyStatement,uid);
   await storage.set('wtd-identity',identityStatement,uid);
+  vault.logIdentity(viewingDateKey());
   editingStatements=false;render();
 }
 async function setMood(n){
@@ -2739,6 +3002,7 @@ function onReflectionInput(){
     const key=viewingDateKey();if(!allHistory[key])allHistory[key]={};
     allHistory[key]={...allHistory[key],reflection:val,reflectionTime:new Date().toISOString()};
     await storage.set('wtd-history',JSON.stringify(allHistory),adminClientId||undefined);
+    vault.logDay(key,allHistory[key]);
     autoSaveStatus='saved';updateAS();setTimeout(()=>{autoSaveStatus='';updateAS();},2000);
   },1200);
 }
@@ -3162,7 +3426,7 @@ async function saveIRNote(){
   if(!identityReflections[key])identityReflections[key]={rating:0,note:'',time:''};
   identityReflections[key].note=document.getElementById('ir-note')?.value.trim()||'';
   clearTimeout(autoSaveTimer);
-  autoSaveTimer=setTimeout(async()=>{await saveIR();},1200);
+  autoSaveTimer=setTimeout(async()=>{await saveIR();vault.logIdentity(key);},1200);
 }
 
 // ── GOALS TAB ──
@@ -3505,10 +3769,14 @@ function generateMonthlyReport(daysData,won,avg,activeDays,streak){
     Email this report
   </button>`;
 
-  // Weekly report toggle
+  // Email report toggles
   h+=`<div class="report-toggle-row">
-    <span class="report-toggle-label">Send weekly report by email</span>
-    <label class="toggle"><input type="checkbox" ${weeklyReportEnabled?'checked':''} onchange="toggleWeeklyReport(this.checked)"><div class="toggle-track"></div><div class="toggle-thumb"></div></label>
+    <span class="report-toggle-label">Email me weekly reports</span>
+    <label class="toggle"><input type="checkbox" ${weeklyReportEnabled?'checked':''} onchange="toggleReportPref('weekly',this.checked)"><div class="toggle-track"></div><div class="toggle-thumb"></div></label>
+  </div>`;
+  h+=`<div class="report-toggle-row" style="border-top:none;padding-top:0">
+    <span class="report-toggle-label">Email me monthly reports</span>
+    <label class="toggle"><input type="checkbox" ${monthlyReportEnabled?'checked':''} onchange="toggleReportPref('monthly',this.checked)"><div class="toggle-track"></div><div class="toggle-thumb"></div></label>
   </div>`;
 
   h+=`</div>`;
@@ -3556,15 +3824,22 @@ async function emailReport(type){
 }
 
 let weeklyReportEnabled=false;
-async function loadWeeklyReportPref(){
+let monthlyReportEnabled=false;
+async function loadReportPrefs(){
   try{
+    // Try vault table first
+    const uid=currentUser&&currentUser.id;if(!uid)return;
+    const{data}=await sb.from('wtd_report_prefs').select('weekly_email,monthly_email').eq('user_id',uid).maybeSingle();
+    if(data){weeklyReportEnabled=!!data.weekly_email;monthlyReportEnabled=!!data.monthly_email;return;}
+    // Fallback to old storage key
     const r=await storage.get('wtd-weekly-report');
     weeklyReportEnabled=r?.value==='true';
-  }catch(e){weeklyReportEnabled=false;}
+  }catch(e){weeklyReportEnabled=false;monthlyReportEnabled=false;}
 }
-async function toggleWeeklyReport(val){
-  weeklyReportEnabled=val;
-  await storage.set('wtd-weekly-report',val?'true':'false');
+async function toggleReportPref(type,val){
+  if(type==='weekly')weeklyReportEnabled=val;
+  if(type==='monthly')monthlyReportEnabled=val;
+  vault.saveReportPrefs(weeklyReportEnabled,monthlyReportEnabled);
 }
 
 function reflectionCards(entries){
