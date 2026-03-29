@@ -582,6 +582,23 @@ button,.btn-primary,.btn-ghost,.btn-sm,.settings-btn,.tab,.nav-btn,.top-bar-btn,
 .onboard-btns .btn-primary{flex:1;}
 .onboard-btns .btn-ghost{flex:0 0 auto;}
 .onboard-essential-label{font-size:10px;text-transform:uppercase;letter-spacing:.08em;color:var(--blue);font-weight:500;margin-bottom:6px;margin-top:4px;padding-left:2px;}
+.onboard-bullets{list-style:none;padding:0;margin:1rem auto 0;max-width:240px;text-align:left;}
+.onboard-bullets li{font-size:13px;color:var(--text2);padding:4px 0;display:flex;align-items:center;gap:8px;}
+.onboard-bullets li::before{content:'\2713';color:var(--green);font-weight:700;font-size:14px;}
+.onboard-custom-section{margin-top:1rem;padding-top:1rem;border-top:.5px solid var(--border);}
+.onboard-custom-label{font-size:13px;color:var(--text2);margin-bottom:10px;}
+.onboard-custom-row{display:flex;gap:8px;align-items:center;}
+.onboard-custom-input{flex:1;padding:8px 12px;border-radius:var(--r);border:.5px solid var(--border);background:var(--bg);color:var(--text);font-size:13px;font-family:var(--font);outline:none;}
+.onboard-custom-input:focus{border-color:var(--blue);}
+.onboard-custom-select{padding:8px 10px;border-radius:var(--r);border:.5px solid var(--border);background:var(--bg);color:var(--text);font-size:12px;font-family:var(--font);outline:none;}
+.onboard-custom-add{padding:8px 14px;border-radius:var(--r);border:none;background:var(--blue);color:#fff;font-size:12px;font-weight:600;cursor:pointer;white-space:nowrap;}
+.onboard-custom-add:hover{opacity:.9;}
+.onboard-custom-list{margin-top:10px;display:flex;flex-direction:column;gap:4px;}
+.onboard-custom-item{display:flex;justify-content:space-between;align-items:center;padding:6px 12px;background:var(--bg);border-radius:var(--r);border:.5px solid var(--border);font-size:13px;color:var(--text);}
+.onboard-custom-remove{cursor:pointer;color:var(--text3);font-size:14px;padding:0 4px;}
+.onboard-custom-remove:hover{color:var(--red,#ef4444);}
+.onboard-rest-note{font-size:12px;color:var(--text3);line-height:1.5;padding:10px 14px;background:rgba(91,141,239,.04);border-radius:var(--r);border:.5px solid rgba(91,141,239,.12);margin-bottom:10px;}
+.onboard-motivational{font-size:13px;color:var(--text2);line-height:1.5;text-align:center;padding:8px 0;font-style:italic;}
 @media(max-width:380px){
   .onboard-cats{grid-template-columns:1fr 1fr;}
   .onboard-cat{padding:12px 10px;}
@@ -2023,8 +2040,13 @@ function onboardStep1(){
   return `<div class="onboard-card">
     <div class="onboard-hero">
       <div class="onboard-hero-icon">&#9889;</div>
-      <div class="onboard-h1">Let's build your daily stack</div>
-      <div class="onboard-sub">Your coach will fine-tune this with you, but let's get a solid starting point. We'll build a personalized schedule in about 60 seconds.</div>
+      <div class="onboard-h1">Build your daily system</div>
+      <div class="onboard-sub">Most people fail at consistency because they don't have a clear system. We're going to build yours right now — it takes about 60 seconds, and your coach will dial it in with you.</div>
+      <ul class="onboard-bullets">
+        <li>Pick what matters to you</li>
+        <li>Set your pace</li>
+        <li>Start tracking today</li>
+      </ul>
     </div>
     <div class="onboard-btns"><button class="btn-primary" onclick="onboardNext()">Get started</button></div>
   </div>`;
@@ -2053,14 +2075,14 @@ function onboardStep2(){
 
 function onboardStep3(){
   const cats=[
-    {key:'morning',icon:'&#9728;&#65039;',name:'Morning Routine',desc:'Wake up, walk, breathwork, gratitude',locked:true},
-    {key:'deepwork',icon:'&#128640;',name:'Deep Work',desc:'Focused work blocks'},
-    {key:'training',icon:'&#128170;',name:'Physical Training',desc:'Gym, yoga, or movement'},
-    {key:'mindfulness',icon:'&#129504;',name:'Mindfulness',desc:'Meditation practice'},
-    {key:'learning',icon:'&#128218;',name:'Learning',desc:'Reading, audiobooks, courses'},
-    {key:'nutrition',icon:'&#127869;',name:'Nutrition',desc:'Track calories and meals'},
-    {key:'evening',icon:'&#127769;',name:'Evening Wind Down',desc:'Journal, plan tomorrow, wind down',locked:true},
-    {key:'identity',icon:'&#128142;',name:'Identity Work',desc:'Rewire at the root level'}
+    {key:'morning',icon:'&#9728;&#65039;',name:'Morning Routine',desc:'Start your day with intention instead of reaction',locked:true},
+    {key:'deepwork',icon:'&#128640;',name:'Focused Work',desc:'Dedicated blocks for your most important work'},
+    {key:'training',icon:'&#128170;',name:'Physical Training',desc:'Move your body — pick what fits your life'},
+    {key:'mindfulness',icon:'&#129504;',name:'Mindfulness',desc:'Quiet the noise. Even 10 minutes changes everything'},
+    {key:'learning',icon:'&#128218;',name:'Learning',desc:'Feed your mind — reading, podcasts, courses'},
+    {key:'nutrition',icon:'&#127869;',name:'Nutrition',desc:'Track what you eat. Awareness drives change'},
+    {key:'evening',icon:'&#127769;',name:'Evening Wind Down',desc:'Close the day with purpose. Sleep better, start better',locked:true},
+    {key:'identity',icon:'&#128142;',name:'Personal Growth',desc:'The deeper work your coach guides you through'}
   ];
   let catHTML=cats.map(c=>{
     const sel=onboardData.categories[c.key];
@@ -2084,10 +2106,29 @@ function onboardStep3(){
       ${subOpts}
     </div>`;
   }).join('');
+  let customListHTML='';
+  if(onboardData.customTasks&&onboardData.customTasks.length){
+    customListHTML=onboardData.customTasks.map((ct,i)=>`<div class="onboard-custom-item"><span>${ct.name} <span style="color:var(--text3);font-size:12px">(${ct.block})</span></span><span class="onboard-custom-remove" onclick="onboardRemoveCustom(${i})">&#10005;</span></div>`).join('');
+  }
   return `<div class="onboard-card">
     <div class="onboard-h2">Pick your focus areas</div>
     <div class="onboard-sub">Tap to select what matters to you. Morning and Evening are always included.</div>
     <div class="onboard-cats">${catHTML}</div>
+    <div class="onboard-custom-section">
+      <div class="onboard-custom-label">Have something else you want to track?</div>
+      <div class="onboard-custom-row">
+        <input type="text" class="onboard-custom-input" id="ob-custom-name" placeholder="Task name">
+        <select class="onboard-custom-select" id="ob-custom-block">
+          <option value="Morning">Morning</option>
+          <option value="Focused Work">Focused Work</option>
+          <option value="Midday">Midday</option>
+          <option value="Body">Body</option>
+          <option value="Wind Down">Wind Down</option>
+        </select>
+        <button class="onboard-custom-add" onclick="onboardAddCustom()">+ Add</button>
+      </div>
+      ${customListHTML?'<div class="onboard-custom-list">'+customListHTML+'</div>':''}
+    </div>
     <div class="onboard-btns">
       <button class="btn-ghost" onclick="onboardBack()">Back</button>
       <button class="btn-primary" onclick="onboardNext()">Next</button>
@@ -2097,9 +2138,9 @@ function onboardStep3(){
 
 function onboardStep4(){
   const levels=[
-    {key:'starter',icon:'&#127793;',name:'Starter',desc:'I\'m just getting started. Fewer tasks, gentler thresholds.',pct:'60%'},
-    {key:'builder',icon:'&#128293;',name:'Builder',desc:'I have some momentum. Moderate stack, solid targets.',pct:'72%'},
-    {key:'allin',icon:'&#9889;',name:'All In',desc:'I\'m ready to go hard. Full stack, high bar.',pct:'80%'}
+    {key:'starter',icon:'&#127793;',name:'Starter',desc:'Keep it simple. Build the habit of showing up before adding volume. Best for your first 2 weeks.',pct:'60%'},
+    {key:'builder',icon:'&#128293;',name:'Builder',desc:'A solid daily practice. Enough structure to create momentum without feeling overwhelmed.',pct:'72%'},
+    {key:'allin',icon:'&#9889;',name:'All In',desc:'The full program. High bar, high reward. For when you\'re ready to lock in.',pct:'80%'}
   ];
   let html=levels.map(l=>`<div class="onboard-int-card${onboardData.intensity===l.key?' selected':''}" onclick="onboardSetIntensity('${l.key}')">
     <div class="onboard-int-icon">${l.icon}</div>
@@ -2153,15 +2194,18 @@ function onboardStep5(){
       </div>`).join('')}
     </div>`;
   }
+  const restPts=Math.round(totalPts*0.5);
   return `<div class="onboard-card">
-    <div class="onboard-h2">Your daily stack</div>
+    <div class="onboard-h2">Your daily system</div>
     <div class="onboard-sub">Here's what you'll be tracking each day. Your coach can fine-tune this anytime.</div>
     <div class="onboard-review-summary">
-      <div class="onboard-review-stat"><div class="onboard-review-stat-val blue">${totalCount}</div><div class="onboard-review-stat-lbl">Tasks</div></div>
+      <div class="onboard-review-stat"><div class="onboard-review-stat-val blue">${totalCount}</div><div class="onboard-review-stat-lbl">Daily tasks</div></div>
       <div class="onboard-review-stat"><div class="onboard-review-stat-val orange">${totalPts}</div><div class="onboard-review-stat-lbl">Total pts</div></div>
       <div class="onboard-review-stat"><div class="onboard-review-stat-val green">${winPct}%</div><div class="onboard-review-stat-lbl">Win threshold</div></div>
     </div>
     ${blocksHTML}
+    <div class="onboard-rest-note">On rest days, your target drops to 50% with a lighter task set — morning routine, journal, and wind down only. No gym or deep work blocks.</div>
+    <div class="onboard-motivational">You can edit any of this anytime from the settings. The most important thing is to start.</div>
     <div class="onboard-btns">
       <button class="btn-ghost" onclick="onboardBack()">Back</button>
       <button class="btn-primary" onclick="onboardSave()">Looks good — start tracking</button>
@@ -2173,6 +2217,20 @@ function onboardNext(){onboardStep=Math.min(5,onboardStep+1);renderOnboarding();
 function onboardBack(){onboardStep=Math.max(1,onboardStep-1);renderOnboarding();}
 function onboardToggleCategory(key){onboardData.categories[key]=!onboardData.categories[key];renderOnboarding();}
 function onboardSetIntensity(key){onboardData.intensity=key;renderOnboarding();}
+function onboardAddCustom(){
+  const nameEl=document.getElementById('ob-custom-name');
+  const blockEl=document.getElementById('ob-custom-block');
+  const name=nameEl?nameEl.value.trim():'';
+  const block=blockEl?blockEl.value:'Morning';
+  if(!name)return;
+  if(!onboardData.customTasks)onboardData.customTasks=[];
+  onboardData.customTasks.push({name,block});
+  renderOnboarding();
+}
+function onboardRemoveCustom(idx){
+  if(onboardData.customTasks)onboardData.customTasks.splice(idx,1);
+  renderOnboarding();
+}
 
 function onboardPts(base){
   if(onboardData.intensity==='starter') return Math.round(base*0.65);
@@ -2192,8 +2250,8 @@ function onboardGenerateTasks(){
   // Morning Routine (always on)
   timed.push({id:id++,block:"Morning",name:`Wake up at ${wakeLabel}`,points:p(8),tier:"A"});
   timed.push({id:id++,block:"Morning",name:"Morning walk",points:p(7),tier:"B"});
-  timed.push({id:id++,block:"Morning",name:"Stretch + breathwork",points:p(8),tier:"B"});
-  timed.push({id:id++,block:"Morning",name:"Gratitude + why statement",sub:"Read your why. Let it land.",points:p(8),tier:"A"});
+  timed.push({id:id++,block:"Morning",name:"Morning stretch",points:p(8),tier:"B"});
+  timed.push({id:id++,block:"Morning",name:"Morning intentions",sub:"Set your focus for the day",points:p(8),tier:"A"});
 
   // Mindfulness - morning
   if(cats.mindfulness && (onboardData.mindfulnessTime==='morning'||onboardData.mindfulnessTime==='both')){
@@ -2203,9 +2261,9 @@ function onboardGenerateTasks(){
   // Deep Work
   if(cats.deepwork){
     const n=onboardData.deepworkBlocks||2;
-    if(n>=1) timed.push({id:id++,block:"Deep Work",name:"Work block 1 — deep focus",points:p(17),tier:"S"});
-    if(n>=2) timed.push({id:id++,block:"Deep Work",name:"Work block 2",points:p(15),tier:"S"});
-    if(n>=3) timed.push({id:id++,block:"Deep Work",name:"Work block 3",points:p(13),tier:"S"});
+    if(n>=1) timed.push({id:id++,block:"Focused Work",name:"Focus block 1",points:p(17),tier:"S"});
+    if(n>=2) timed.push({id:id++,block:"Focused Work",name:"Focus block 2",points:p(15),tier:"S"});
+    if(n>=3) timed.push({id:id++,block:"Focused Work",name:"Focus block 3",points:p(13),tier:"S"});
   }
 
   // Midday (add walk if intensity allows)
@@ -2232,17 +2290,24 @@ function onboardGenerateTasks(){
   if(cats.mindfulness && (onboardData.mindfulnessTime==='evening'||onboardData.mindfulnessTime==='both')){
     timed.push({id:id++,block:"Wind Down",name:"Evening meditation",points:p(8),tier:"A"});
   }
-  timed.push({id:id++,block:"Wind Down",name:"Journal / reflect",points:p(8),tier:"A"});
-  timed.push({id:id++,block:"Wind Down",name:"Write tomorrow's plan",points:p(15),tier:"S"});
-  timed.push({id:id++,block:"Wind Down",name:"Wind down routine",points:p(6),tier:"B"});
+  timed.push({id:id++,block:"Wind Down",name:"Evening journal",points:p(8),tier:"A"});
+  timed.push({id:id++,block:"Wind Down",name:"Plan tomorrow",points:p(15),tier:"S"});
+  timed.push({id:id++,block:"Wind Down",name:"Screen off + wind down",points:p(6),tier:"B"});
   timed.push({id:id++,block:"Wind Down",name:`Sleep by ${sleepLabel}`,points:p(10),tier:"A"});
 
   // Essentials
   if(cats.identity){
-    essential.push({id:id++,name:"Identity work protocol",points:p(11),tier:"S"});
+    essential.push({id:id++,name:"Personal growth work",sub:"Journaling, reflection, or coaching exercises",points:p(11),tier:"S"});
   }
   if(cats.nutrition){
-    essential.push({id:id++,name:"Track calories / meals",points:p(11),tier:"S"});
+    essential.push({id:id++,name:"Nutrition check-in",points:p(11),tier:"S"});
+  }
+
+  // Custom tasks
+  if(onboardData.customTasks&&onboardData.customTasks.length){
+    onboardData.customTasks.forEach(ct=>{
+      timed.push({id:id++,block:ct.block,name:ct.name,points:p(6),tier:"B"});
+    });
   }
 
   return {timed,essential};
@@ -2262,8 +2327,16 @@ async function onboardSave(){
   essentialTasks=gen.essential;
   hasCustomTasks=true;
   await saveTasks();
+  // Build sensible rest day defaults: morning tasks, meditation if selected, learning, journal, sleep. Exclude deep work and gym.
+  const excludeBlocks=['Focused Work','Body'];
+  const excludeNames=['Midday walk'];
+  const restIds=gen.timed.filter(t=>!excludeBlocks.includes(t.block)&&!excludeNames.includes(t.name)).map(t=>t.id);
+  // Include essential tasks except nutrition on rest days
+  gen.essential.forEach(t=>{if(t.name!=='Nutrition check-in')restIds.push(t.id);});
+  restSettings={win:50,crush:75,taskIds:restIds};
+  await saveRest();
   onboardStep=1;
-  onboardData={wake:'06:00',sleep:'21:30',categories:{morning:true,deepwork:false,training:false,mindfulness:false,learning:false,nutrition:false,evening:true,identity:false},deepworkBlocks:2,trainingType:'gym',mindfulnessTime:'morning',intensity:'builder'};
+  onboardData={wake:'06:00',sleep:'21:30',categories:{morning:true,deepwork:true,training:true,mindfulness:false,learning:false,nutrition:false,evening:true,identity:false},deepworkBlocks:2,trainingType:'gym',mindfulnessTime:'morning',intensity:'starter',customTasks:[]};
   const tasks=isRestDay?restTasks():allTasks();const tot=isRestDay?restTotal():total();
   const earned=tasks.filter(t=>checked[t.id]).reduce((s,t)=>s+t.points,0);
   prevWonState=earned/tot>=(isRestDay?restSettings.win/100:WIN);
@@ -2360,7 +2433,7 @@ let isRestDay,autoSaveTimer,autoSaveStatus,nextId,prevWonState,showCelebration,c
 let taskNotes,goals,reminderSettings,identityReflections,addingGoal,reminderTimer;
 let hasCustomTasks=false;
 let onboardStep=1;
-let onboardData={wake:'06:00',sleep:'21:30',categories:{morning:true,deepwork:false,training:false,mindfulness:false,learning:false,nutrition:false,evening:true,identity:false},deepworkBlocks:2,trainingType:'gym',mindfulnessTime:'morning',intensity:'builder'};
+let onboardData={wake:'06:00',sleep:'21:30',categories:{morning:true,deepwork:true,training:true,mindfulness:false,learning:false,nutrition:false,evening:true,identity:false},deepworkBlocks:2,trainingType:'gym',mindfulnessTime:'morning',intensity:'starter',customTasks:[]};
 
 function resetAppState(){
   timedTasks=DEFAULT_TIMED.map(t=>({...t}));
