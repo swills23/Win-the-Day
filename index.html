@@ -187,27 +187,58 @@ button,.btn-primary,.btn-ghost,.btn-sm,.settings-btn,.tab,.nav-btn,.top-bar-btn,
 .ir-note-inp:focus{border-color:rgba(58,126,196,.5);}
 
 /* ── Goals Tab ── */
-.goals-section{margin-bottom:1.5rem;}
-.goals-header{display:flex;justify-content:space-between;align-items:center;margin-bottom:8px;}
-.goals-title{font-size:13px;font-weight:600;color:var(--text);display:flex;align-items:center;gap:6px;letter-spacing:-0.01em;}
-.goals-badge{font-size:10px;padding:2px 7px;border-radius:20px;background:var(--bg2);border:.5px solid var(--border);color:var(--text3);}
-.add-goal-btn{font-size:12px;color:var(--blue);background:none;border:none;cursor:pointer;font-family:var(--font);padding:2px 0;}
-.goal-item{display:flex;align-items:flex-start;gap:10px;padding:9px 13px;background:var(--bg2);border-radius:var(--r);border:.5px solid var(--border);margin-bottom:6px;cursor:pointer;transition:background .15s;}
-.goal-item:hover{background:var(--bg);}
-.goal-item.done{background:rgba(46,158,91,.04);}
-.goal-cb{width:17px;height:17px;border-radius:50%;flex-shrink:0;border:1.5px solid var(--border2);display:flex;align-items:center;justify-content:center;transition:all .2s;margin-top:1px;}
-.goal-cb.checked{background:var(--green);border-color:var(--green);}
-.goal-text{flex:1;font-size:14px;color:var(--text);line-height:1.4;transition:all .2s;}
-.goal-text.done{color:var(--green);opacity:.7;}
+.goals-section{margin-bottom:1.75rem;}
+.goals-header{display:flex;justify-content:space-between;align-items:center;margin-bottom:10px;}
+.goals-title{font-size:14px;font-weight:600;color:var(--text);display:flex;align-items:center;gap:8px;letter-spacing:-0.01em;}
+.goals-badge{font-size:10px;padding:2px 8px;border-radius:20px;font-weight:600;border:.5px solid transparent;}
+.goals-badge-blue{background:rgba(91,141,239,.12);color:var(--blue);border-color:rgba(91,141,239,.25);}
+.goals-badge-green{background:rgba(52,211,153,.12);color:var(--green);border-color:rgba(52,211,153,.25);}
+.goals-badge-amber{background:rgba(245,158,11,.12);color:var(--orange);border-color:rgba(245,158,11,.25);}
+.add-goal-btn{font-size:12px;color:var(--blue);background:rgba(91,141,239,.08);border:.5px solid rgba(91,141,239,.2);border-radius:20px;cursor:pointer;font-family:var(--font);padding:4px 12px;transition:all .15s;}
+.add-goal-btn:hover{background:rgba(91,141,239,.15);}
+.goals-stats{display:flex;gap:8px;margin-bottom:12px;}
+.goals-stat{flex:1;text-align:center;padding:10px 6px;background:var(--bg2);border-radius:var(--r);border:.5px solid var(--border);}
+.goals-stat-val{font-size:18px;font-weight:600;font-variant-numeric:tabular-nums;}
+.goals-stat-lbl{font-size:10px;color:var(--text3);margin-top:2px;}
+.goal-item{display:flex;align-items:flex-start;gap:10px;padding:11px 14px;background:var(--bg2);border-radius:var(--rl);border:.5px solid var(--border);margin-bottom:8px;cursor:pointer;transition:all .2s;position:relative;}
+.goal-item:hover{border-color:var(--border2);box-shadow:0 2px 8px rgba(0,0,0,.06);}
+.goal-item.done{background:rgba(52,211,153,.05);border-color:rgba(52,211,153,.2);}
+.goal-item.priority-high{border-left:3px solid var(--red);}
+.goal-item.priority-normal{border-left:3px solid var(--blue);}
+.goal-item.priority-low{border-left:3px solid var(--border2);}
+.goal-cb{width:20px;height:20px;border-radius:50%;flex-shrink:0;border:2px solid var(--border2);display:flex;align-items:center;justify-content:center;transition:all .2s;margin-top:1px;}
+.goal-cb.checked{background:var(--green);border-color:var(--green);box-shadow:0 1px 4px rgba(52,211,153,.3);}
+.goal-content{flex:1;min-width:0;}
+.goal-text{font-size:14px;color:var(--text);line-height:1.4;transition:all .2s;}
+.goal-text.done{color:var(--green);opacity:.7;text-decoration:line-through;text-decoration-color:rgba(52,211,153,.3);}
+.goal-meta{display:flex;gap:6px;align-items:center;margin-top:4px;flex-wrap:wrap;}
+.goal-date{font-size:10px;color:var(--text3);}
+.goal-priority-tag{font-size:9px;padding:1px 6px;border-radius:10px;font-weight:500;cursor:pointer;}
+.goal-priority-high{background:rgba(248,113,113,.12);color:var(--red);border:.5px solid rgba(248,113,113,.25);}
+.goal-priority-normal{background:rgba(91,141,239,.1);color:var(--blue);border:.5px solid rgba(91,141,239,.2);}
+.goal-priority-low{background:var(--bg);color:var(--text3);border:.5px solid var(--border);}
+.goal-note{font-size:11px;color:var(--text3);margin-top:3px;font-style:italic;line-height:1.4;}
+.goal-actions{display:flex;gap:4px;align-items:center;flex-shrink:0;opacity:.3;transition:opacity .15s;}
+.goal-item:hover .goal-actions{opacity:1;}
+.goal-act-btn{background:none;border:none;cursor:pointer;color:var(--text3);font-size:13px;padding:2px 4px;line-height:1;transition:color .15s;}
+.goal-act-btn:hover{color:var(--text);}
+.goal-act-btn.del:hover{color:var(--red);}
 .goal-del{background:none;border:none;cursor:pointer;color:var(--text3);font-size:15px;padding:0;line-height:1;flex-shrink:0;}
 .goal-del:hover{color:var(--red);}
-.goal-add-row{display:flex;gap:7px;margin-top:7px;}
-.goal-inp{flex:1;font-size:13px;padding:7px 10px;border-radius:var(--r);border:.5px solid var(--border);background:var(--bg);color:var(--text);outline:none;font-family:var(--font);}
-.goal-inp:focus{border-color:var(--border2);}
-.goal-save-btn{padding:7px 14px;border-radius:var(--r);background:var(--text);color:var(--bg);border:none;font-size:13px;cursor:pointer;font-family:var(--font);}
-.goals-progress{height:5px;background:var(--border);border-radius:3px;margin-bottom:12px;overflow:hidden;}
-.goals-progress-fill{height:100%;background:var(--green);border-radius:3px;transition:width .4s ease;}
-.goals-reset-note{font-size:11px;color:var(--text3);margin-top:6px;padding-left:2px;}
+.goal-add-row{display:flex;gap:7px;margin-top:8px;}
+.goal-inp{flex:1;font-size:13px;padding:8px 12px;border-radius:var(--r);border:.5px solid var(--border);background:var(--bg);color:var(--text);outline:none;font-family:var(--font);}
+.goal-inp:focus{border-color:var(--blue);box-shadow:0 0 0 2px rgba(91,141,239,.12);}
+.goal-save-btn{padding:8px 16px;border-radius:var(--r);background:var(--blue);color:#fff;border:none;font-size:13px;cursor:pointer;font-family:var(--font);transition:all .15s;}
+.goal-save-btn:hover{box-shadow:0 2px 8px rgba(91,141,239,.3);}
+.goals-progress{height:6px;background:var(--border);border-radius:3px;margin-bottom:12px;overflow:hidden;}
+.goals-progress-fill{height:100%;border-radius:3px;transition:width .4s ease;}
+.goals-progress-fill.blue{background:linear-gradient(90deg,var(--blue),#818cf8);}
+.goals-progress-fill.green{background:linear-gradient(90deg,var(--green),#6ee7b7);}
+.goals-progress-fill.amber{background:linear-gradient(90deg,var(--orange),#fbbf24);}
+.goals-reset-note{font-size:11px;color:var(--text3);margin-top:8px;padding-left:2px;}
+.goals-empty{text-align:center;padding:1.5rem 1rem;border:1.5px dashed var(--border);border-radius:var(--rl);margin-bottom:8px;}
+.goals-empty-icon{font-size:28px;margin-bottom:6px;}
+.goals-empty-text{font-size:13px;color:var(--text3);}
 
 /* ── Reminder Banner ── */
 .reminder-banner{border-radius:var(--rl);padding:11px 15px;margin-bottom:12px;border:.5px solid var(--border);background:var(--bg2);display:flex;align-items:center;justify-content:space-between;gap:12px;}
@@ -2072,7 +2103,7 @@ async function loadAll(uid){
   try{const rest=r4?JSON.parse(r4.value):null;if(rest)restSettings={...DEFAULT_REST,...rest};}catch(e){restSettings={...DEFAULT_REST};}
   try{actionItems=r5?JSON.parse(r5.value):[];}catch(e){actionItems=[];}
   try{taskNotes=r6?JSON.parse(r6.value):{}}catch(e){taskNotes={};}
-  try{goals=r7?JSON.parse(r7.value):[]}catch(e){goals=[];}
+  try{const _g=r7?JSON.parse(r7.value):null;goals=(_g&&typeof _g==='object'&&!Array.isArray(_g))?_g:{weekly:[],monthly:[],yearly:[]};if(!goals.weekly)goals.weekly=[];if(!goals.monthly)goals.monthly=[];if(!goals.yearly)goals.yearly=[];}catch(e){goals={weekly:[],monthly:[],yearly:[]};}
   try{reminderSettings=r8?JSON.parse(r8.value):{enabled:false,time:'07:00'}}catch(e){reminderSettings={enabled:false,time:'07:00'};}
   try{identityReflections=r9?JSON.parse(r9.value):{}}catch(e){identityReflections={};}
   const today=todayKey();const todayData=allHistory[today]||{};
@@ -2174,7 +2205,8 @@ function startAddGoal(type){addingGoal=type;render();setTimeout(()=>document.get
 async function addGoal(type){
   const val=document.getElementById(`goal-inp-${type}`)?.value.trim();
   if(!val){addingGoal=null;render();return;}
-  goals[type].push({id:Date.now(),text:val,done:false,created:todayKey()});
+  if(!goals[type])goals[type]=[];
+  goals[type].push({id:Date.now(),text:val,done:false,created:todayKey(),notes:'',priority:'normal'});
   addingGoal=null;await saveGoals();render();
 }
 async function toggleGoal(type,id){
@@ -2182,8 +2214,41 @@ async function toggleGoal(type,id){
   await saveGoals();render();
 }
 async function deleteGoal(type,id){
+  if(!confirm('Delete this goal?'))return;
   goals[type]=goals[type].filter(x=>x.id!==id);
   await saveGoals();render();
+}
+async function cycleGoalPriority(type,id){
+  const g=(goals[type]||[]).find(x=>x.id===id);if(!g)return;
+  const cycle={high:'normal',normal:'low',low:'high'};
+  g.priority=cycle[g.priority||'normal']||'normal';
+  await saveGoals();render();
+}
+function openGoalNote(type,id){
+  const g=(goals[type]||[]).find(x=>x.id===id);if(!g)return;
+  showOv(`<div class="overlay-bg" onclick="if(event.target===this)closeOv()"><div class="modal">
+    <div class="modal-title">Goal note</div>
+    <div class="modal-sub">${g.text}</div>
+    <textarea class="reflect-input" id="goal-note-inp" placeholder="Add a note, breakdown, or context..." style="min-height:100px">${g.notes||''}</textarea>
+    <div style="margin-top:8px"><span class="lbl">Priority</span>
+    <div style="display:flex;gap:6px;margin-top:4px">
+      <button class="goal-priority-tag goal-priority-high${g.priority==='high'?' sel':''}" style="padding:4px 12px;font-size:11px;cursor:pointer${g.priority==='high'?';background:var(--red);color:#fff':''}" onclick="document.querySelectorAll('.gp-btn').forEach(b=>b.style.background='');this.style.background='var(--red)';this.style.color='#fff';window._goalPri='high'" class="gp-btn">High</button>
+      <button class="goal-priority-tag goal-priority-normal" style="padding:4px 12px;font-size:11px;cursor:pointer${g.priority==='normal'||!g.priority?';background:var(--blue);color:#fff':''}" onclick="document.querySelectorAll('.gp-btn').forEach(b=>b.style.background='');this.style.background='var(--blue)';this.style.color='#fff';window._goalPri='normal'" class="gp-btn">Normal</button>
+      <button class="goal-priority-tag goal-priority-low" style="padding:4px 12px;font-size:11px;cursor:pointer${g.priority==='low'?';background:var(--text3);color:#fff':''}" onclick="document.querySelectorAll('.gp-btn').forEach(b=>b.style.background='');this.style.background='var(--text3)';this.style.color='#fff';window._goalPri='low'" class="gp-btn">Low</button>
+    </div></div>
+    <div class="modal-actions">
+      <button class="btn-save" onclick="saveGoalNote('${type}',${id})">Save</button>
+      <button class="btn-cancel" onclick="closeOv()">Cancel</button>
+    </div>
+  </div></div>`);
+  window._goalPri=g.priority||'normal';
+  setTimeout(()=>document.getElementById('goal-note-inp')?.focus(),50);
+}
+async function saveGoalNote(type,id){
+  const g=(goals[type]||[]).find(x=>x.id===id);if(!g)return;
+  g.notes=document.getElementById('goal-note-inp')?.value.trim()||'';
+  g.priority=window._goalPri||g.priority||'normal';
+  await saveGoals();closeOv();render();
 }
 
 // ── REMINDERS ──
@@ -2513,28 +2578,63 @@ async function saveIRNote(){
 function renderGoals(){
   const now=new Date();
   const sections=[
-    {type:'weekly',label:'Weekly Goals',emoji:'📅',note:`Resets each Monday — week of ${now.toLocaleDateString("en-US",{month:"short",day:"numeric"})}`},
-    {type:'monthly',label:'Monthly Goals',emoji:'📆',note:MONTHS[now.getMonth()]+' '+now.getFullYear()},
-    {type:'yearly',label:'Yearly Goals',emoji:'🎯',note:now.getFullYear()+' goals'},
+    {type:'weekly',label:'Weekly Goals',emoji:'📅',color:'blue',note:`Resets each Monday — week of ${now.toLocaleDateString("en-US",{month:"short",day:"numeric"})}`},
+    {type:'monthly',label:'Monthly Goals',emoji:'📆',color:'amber',note:MONTHS[now.getMonth()]+' '+now.getFullYear()},
+    {type:'yearly',label:'Yearly Goals',emoji:'🎯',color:'green',note:now.getFullYear()+' goals'},
   ];
-  let h='';
-  sections.forEach(({type,label,emoji,note})=>{
+
+  // Overall stats
+  const allGoals=[...(goals.weekly||[]),...(goals.monthly||[]),...(goals.yearly||[])];
+  const totalG=allGoals.length,doneG=allGoals.filter(g=>g.done).length;
+  const highP=allGoals.filter(g=>g.priority==='high'&&!g.done).length;
+  let h=`<div class="goals-stats">
+    <div class="goals-stat"><div class="goals-stat-val" style="color:var(--blue)">${totalG}</div><div class="goals-stat-lbl">Total goals</div></div>
+    <div class="goals-stat"><div class="goals-stat-val" style="color:var(--green)">${doneG}</div><div class="goals-stat-lbl">Completed</div></div>
+    <div class="goals-stat"><div class="goals-stat-val" style="color:${highP?'var(--red)':'var(--text3)'}">${highP||'—'}</div><div class="goals-stat-lbl">High priority</div></div>
+    <div class="goals-stat"><div class="goals-stat-val" style="color:var(--orange)">${totalG?Math.round(doneG/totalG*100)+'%':'—'}</div><div class="goals-stat-lbl">Completion</div></div>
+  </div>`;
+
+  sections.forEach(({type,label,emoji,color,note})=>{
     const list=goals[type]||[];
     const done=list.filter(g=>g.done).length;
     const pct=list.length?done/list.length:0;
+    // Sort: undone first (high priority first), then done
+    const sorted=[...list].sort((a,b)=>{
+      if(a.done!==b.done)return a.done?1:-1;
+      const po={high:0,normal:1,low:2};
+      return(po[a.priority]||1)-(po[b.priority]||1);
+    });
+
     h+=`<div class="goals-section">
       <div class="goals-header">
-        <div class="goals-title">${emoji} ${label} <span class="goals-badge">${done}/${list.length}</span></div>
+        <div class="goals-title">${emoji} ${label} <span class="goals-badge goals-badge-${color}">${done}/${list.length}</span></div>
         <button class="add-goal-btn" onclick="startAddGoal('${type}')">+ Add</button>
       </div>
-      ${list.length>0?`<div class="goals-progress"><div class="goals-progress-fill" style="width:${Math.round(pct*100)}%"></div></div>`:''}
-      ${list.map(g=>`<div class="goal-item${g.done?' done':''}" onclick="toggleGoal('${type}',${g.id})">
-        <div class="goal-cb${g.done?' checked':''}">${g.done?'<svg width="9" height="7" viewBox="0 0 9 7" fill="none"><path d="M1 3.5L3 5.5L8 1" stroke="white" stroke-width="1.5" stroke-linecap="round"/></svg>':''}</div>
-        <span class="goal-text${g.done?' done':''}">${g.text}</span>
-        <button class="goal-del" onclick="event.stopPropagation();deleteGoal('${type}',${g.id})">×</button>
-      </div>`).join('')}
-      ${list.length===0?`<div style="font-size:13px;color:var(--text3);padding:8px 0;font-style:italic">No ${type} goals yet.</div>`:''}
-      ${addingGoal===type?`<div class="goal-add-row"><input class="goal-inp" id="goal-inp-${type}" placeholder="Add a goal..." onkeydown="if(event.key==='Enter')addGoal('${type}')"><button class="goal-save-btn" onclick="addGoal('${type}')">Add</button></div>`:''}
+      ${list.length>0?`<div class="goals-progress"><div class="goals-progress-fill ${color}" style="width:${Math.round(pct*100)}%"></div></div>`:''}
+      ${sorted.map(g=>{
+        const pri=g.priority||'normal';
+        const priLabel=pri==='high'?'High':pri==='low'?'Low':'';
+        const priClass=`goal-priority-${pri}`;
+        const dateStr=g.created?new Date(g.created+'T12:00:00').toLocaleDateString('en-US',{month:'short',day:'numeric'}):'';
+        return`<div class="goal-item${g.done?' done':''} priority-${pri}" onclick="toggleGoal('${type}',${g.id})">
+          <div class="goal-cb${g.done?' checked':''}">${g.done?'<svg width="10" height="8" viewBox="0 0 10 8" fill="none"><path d="M1 4L3.5 6.5L9 1" stroke="white" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round"/></svg>':''}</div>
+          <div class="goal-content">
+            <div class="goal-text${g.done?' done':''}">${g.text}</div>
+            <div class="goal-meta">
+              ${dateStr?`<span class="goal-date">${dateStr}</span>`:''}
+              ${priLabel?`<span class="goal-priority-tag ${priClass}" onclick="event.stopPropagation();cycleGoalPriority('${type}',${g.id})">${priLabel}</span>`:''}
+              ${g.notes?`<span class="goal-date" style="color:var(--blue)">has note</span>`:''}
+            </div>
+            ${g.notes?`<div class="goal-note">${g.notes}</div>`:''}
+          </div>
+          <div class="goal-actions">
+            <button class="goal-act-btn" onclick="event.stopPropagation();openGoalNote('${type}',${g.id})" title="Add note">📝</button>
+            <button class="goal-act-btn del" onclick="event.stopPropagation();deleteGoal('${type}',${g.id})" title="Delete">×</button>
+          </div>
+        </div>`;
+      }).join('')}
+      ${list.length===0?`<div class="goals-empty"><div class="goals-empty-icon">${emoji}</div><div class="goals-empty-text">No ${type} goals yet. Set one to get started.</div></div>`:''}
+      ${addingGoal===type?`<div class="goal-add-row"><input class="goal-inp" id="goal-inp-${type}" placeholder="What do you want to achieve?" onkeydown="if(event.key==='Enter')addGoal('${type}')"><button class="goal-save-btn" onclick="addGoal('${type}')">Add</button></div>`:''}
       <div class="goals-reset-note">${note}</div>
     </div>`;
   });
