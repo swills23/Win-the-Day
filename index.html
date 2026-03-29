@@ -3376,10 +3376,8 @@ function renderCoachUI() {
   if (existingFab) existingFab.remove();
   if (existingPanel) existingPanel.remove();
 
-  // Only show when tracker is active (not admin, not auth, not pending, not onboarding)
-  const tracker = document.getElementById('app');
-  if (!tracker || !currentUser || !currentProfile?.approved) return;
-  // Don't show if viewing as admin client
+  // Only show when user is logged in and on the tracker
+  if (!currentUser || !currentProfile?.approved) return;
   if (adminClientId) return;
 
   // FAB button
