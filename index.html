@@ -747,6 +747,7 @@ async function removeUser(id){if(!confirm('Remove this user?'))return;await sb.f
 function setAdminView(v){adminView=v;renderAdmin();}
 
 async function renderAdmin(){
+  if(typeof removeCoachUI==='function')removeCoachUI();
   const profiles=await loadAllProfiles();
   const pending=profiles.filter(p=>!p.approved);
   const approved=profiles.filter(p=>p.approved&&p.id!==currentUser.id);
@@ -2389,6 +2390,7 @@ if(!currentUser){const{data:{session}}=await sb.auth.getSession();if(!session){r
 }
 
 function renderAuth(){
+  if(typeof removeCoachUI==='function')removeCoachUI();
   const isLogin=authView==='login';
   document.getElementById('root').innerHTML=`<div class="screen"><h1>${APP_NAME}</h1><p>${isLogin?'Sign in to your account.':'Create your account. Your coach will approve you shortly.'}</p><div id="a-err" class="err"></div><label class="lbl">Email</label><input class="inp" id="a-email" type="email" placeholder="you@example.com" autocomplete="email"><label class="lbl">Password</label><input class="inp" id="a-pw" type="password" placeholder="••••••••" onkeydown="if(event.key==='Enter')${isLogin?'signIn()':'signUp()'}"><button class="btn-primary" id="a-btn" onclick="${isLogin?'signIn()':'signUp()'}"> ${isLogin?'Sign in':'Create account'}</button>${isLogin?`<a class="lnk" onclick="showForgotPassword()">Forgot password?</a>`:''}<a class="lnk" onclick="toggleAuthView()" style="margin-top:6px">${isLogin?"Don't have an account? Sign up":'Already have an account? Sign in'}</a></div>`;
   setTimeout(()=>document.getElementById('a-email')?.focus(),50);
@@ -2417,6 +2419,8 @@ function renderTracker(){
   document.getElementById('root').innerHTML=topBar+`<div class="tracker" id="app">${tabs}${content}</div>`;
   document.getElementById('ov').style.display='none';
   document.getElementById('ov').innerHTML='';
+  // Show AI coach FAB (if not viewing client)
+  if(!isViewingClient) setTimeout(renderCoachUI, 10);
 }
 function render(){if(!hasCustomTasks && !currentProfile?.is_admin && !adminClientId){renderOnboarding();return;}renderTracker();}
 function openAdmin(){renderAdmin();}
@@ -3494,34 +3498,8 @@ async function sendCoachMessage(text) {
   renderCoachUI();
 }
 
-// Hook into render cycle — show/hide FAB when tracker renders
-const _origRenderTracker = renderTracker;
-renderTracker = function() {
-  _origRenderTracker.apply(this, arguments);
-  // Show coach FAB after tracker renders
-  setTimeout(renderCoachUI, 0);
-};
-
-// Hide coach FAB when leaving tracker
-const _origRenderAuth = renderAuth;
-renderAuth = function() {
-  _origRenderAuth.apply(this, arguments);
-  const fab = document.getElementById('coach-fab');
-  const panel = document.getElementById('coach-panel');
-  if (fab) fab.remove();
-  if (panel) panel.remove();
-  coachOpen = false;
-};
-
-const _origRenderAdmin = renderAdmin;
-renderAdmin = async function() {
-  const fab = document.getElementById('coach-fab');
-  const panel = document.getElementById('coach-panel');
-  if (fab) fab.remove();
-  if (panel) panel.remove();
-  coachOpen = false;
-  return _origRenderAdmin.apply(this, arguments);
-};
+// Clean up coach FAB when leaving tracker
+function removeCoachUI(){const f=document.getElementById('coach-fab');const p=document.getElementById('coach-panel');if(f)f.remove();if(p)p.remove();coachOpen=false;}
 
 // ── BOOT ──
 // Single-fire boot gate — prevents onAuthStateChange + getSession() race condition
