@@ -142,9 +142,9 @@ body{background:var(--bg);color:var(--text);font-family:var(--font);touch-action
 .task-note-text{display:block;font-size:11px;color:var(--blue);margin-top:3px;font-style:italic;}
 .tier-badge{font-size:10px;font-weight:500;width:16px;text-align:center;margin-top:2px;}
 .task-pts{font-size:12px;color:var(--text3);min-width:28px;text-align:right;margin-top:2px;}
-.task-note-btn{font-size:10px;color:var(--text3);background:none;border:none;cursor:pointer;flex-shrink:0;margin-top:2px;padding:2px 4px;opacity:.4;transition:opacity .15s;}
-.task-note-btn:hover{opacity:1;color:var(--blue);}
-.task-row:hover .task-note-btn{opacity:.7;}
+.task-note-btn{font-size:9px;color:var(--text3);background:none;border:.5px solid var(--border);border-radius:4px;cursor:pointer;flex-shrink:0;margin-top:2px;padding:2px 6px;opacity:0;transition:all .15s;text-transform:uppercase;letter-spacing:.04em;font-family:var(--font);}
+.task-note-btn:hover{opacity:1;color:var(--blue);border-color:var(--blue);}
+.task-row:hover .task-note-btn{opacity:.6;}
 .action-block{background:rgba(58,126,196,.04);border-radius:var(--rl);overflow:hidden;border:.5px solid rgba(58,126,196,.3);margin-bottom:12px;}
 .action-header-row{padding:8px 14px;font-size:10px;text-transform:uppercase;letter-spacing:.08em;color:var(--blue);font-weight:500;}
 .action-row{display:flex;align-items:center;gap:11px;padding:8px 13px;border-top:.5px solid rgba(58,126,196,.15);cursor:pointer;}
@@ -220,8 +220,9 @@ button,.btn-primary,.btn-ghost,.btn-sm,.settings-btn,.tab,.nav-btn,.top-bar-btn,
 .goal-note{font-size:11px;color:var(--text3);margin-top:3px;font-style:italic;line-height:1.4;}
 .goal-actions{display:flex;gap:4px;align-items:center;flex-shrink:0;opacity:.3;transition:opacity .15s;}
 .goal-item:hover .goal-actions{opacity:1;}
-.goal-act-btn{background:none;border:none;cursor:pointer;color:var(--text3);font-size:13px;padding:2px 4px;line-height:1;transition:color .15s;}
-.goal-act-btn:hover{color:var(--text);}
+.goal-act-btn{background:none;border:.5px solid var(--border);border-radius:4px;cursor:pointer;color:var(--text3);font-size:9px;padding:2px 6px;line-height:1.4;transition:all .15s;text-transform:uppercase;letter-spacing:.04em;font-family:var(--font);}
+.goal-act-btn:hover{color:var(--blue);border-color:var(--blue);}
+.goal-act-btn.del{border:none;font-size:14px;padding:0 2px;}
 .goal-act-btn.del:hover{color:var(--red);}
 .goal-del{background:none;border:none;cursor:pointer;color:var(--text3);font-size:15px;padding:0;line-height:1;flex-shrink:0;}
 .goal-del:hover{color:var(--red);}
@@ -2381,9 +2382,9 @@ function taskRow(task,pct,rest){
     </div>
     <span class="task-name${isDone?' done':''}" style="pointer-events:none">
       ${task.name}${task.sub?`<span class="task-sub">${task.sub}</span>`:''}
-      ${todayNote?`<span class="task-note-text">📝 ${todayNote}</span>`:''}
+      ${todayNote?`<span class="task-note-text">${todayNote}</span>`:''}
     </span>
-    <button class="task-note-btn" onclick="event.stopPropagation();openNoteModal(${task.id},'${task.name.replace(/'/g,"\\'")}')">📝</button>
+    <button class="task-note-btn" onclick="event.stopPropagation();openNoteModal(${task.id},'${task.name.replace(/'/g,"\\'")}')">note</button>
     <span class="tier-badge" style="color:${tc};pointer-events:none">${task.tier}</span>
     <span class="task-pts" style="pointer-events:none">+${task.points}</span>
   </div>`;
@@ -2567,11 +2568,11 @@ function renderToday(readOnly){
 
   if(!readOnly){
     h+=`<div class="settings-row">
-      <button class="settings-btn" onclick="openEditor()">✏️ Edit habits</button>
-      <button class="settings-btn" onclick="openMailto()">📧 Email summary</button>
-      <button class="settings-btn" onclick="exportData()">⬇️ Export</button>
-      <button class="settings-btn" onclick="openImport()">⬆️ Import</button>
-      <button class="settings-btn danger" onclick="confirmReset()">↺ Reset day</button>
+      <button class="settings-btn" onclick="openEditor()">Edit habits</button>
+      <button class="settings-btn" onclick="openMailto()">Email summary</button>
+      <button class="settings-btn" onclick="exportData()">Export</button>
+      <button class="settings-btn" onclick="openImport()">Import</button>
+      <button class="settings-btn danger" onclick="confirmReset()">Reset day</button>
     </div>`;
   }
 
@@ -2644,7 +2645,7 @@ function renderGoals(){
             ${g.notes?`<div class="goal-note">${g.notes}</div>`:''}
           </div>
           <div class="goal-actions">
-            <button class="goal-act-btn" onclick="event.stopPropagation();openGoalNote('${type}',${g.id})" title="Add note">📝</button>
+            <button class="goal-act-btn" onclick="event.stopPropagation();openGoalNote('${type}',${g.id})" title="Add note">edit</button>
             <button class="goal-act-btn del" onclick="event.stopPropagation();deleteGoal('${type}',${g.id})" title="Delete">×</button>
           </div>
         </div>`;
