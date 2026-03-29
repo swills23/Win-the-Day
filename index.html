@@ -565,6 +565,10 @@ button,.btn-primary,.btn-ghost,.btn-sm,.settings-btn,.tab,.nav-btn,.top-bar-btn,
 .onboard-review-block-name{font-size:11px;font-weight:600;text-transform:uppercase;letter-spacing:.1em;color:var(--blue);margin-bottom:6px;display:flex;align-items:center;gap:6px;}
 .onboard-review-task{display:flex;justify-content:space-between;align-items:center;padding:8px 12px;background:var(--bg);border-radius:var(--r);margin-bottom:4px;border:.5px solid var(--border);}
 .onboard-review-task-name{font-size:13px;color:var(--text);}
+.onboard-edit-name{font-size:13px;color:var(--text);background:none;border:none;border-bottom:1px dashed var(--border);padding:2px 0;outline:none;font-family:var(--font);flex:1;min-width:0;}
+.onboard-edit-name:focus{border-bottom-color:var(--blue);}
+.onboard-del-btn{background:none;border:none;color:var(--text3);font-size:16px;cursor:pointer;padding:0 2px;line-height:1;transition:color .15s;}
+.onboard-del-btn:hover{color:var(--red);}
 .onboard-review-task-meta{display:flex;gap:8px;align-items:center;}
 .onboard-review-pts{font-size:12px;color:var(--text3);}
 .onboard-review-tier{font-size:10px;font-weight:600;padding:1px 6px;border-radius:10px;}
@@ -2056,13 +2060,13 @@ async function hbSave(uid,email){
 
 // ── ONBOARDING WIZARD ──
 function renderOnboarding(){
-  const dots=Array.from({length:5},(_,i)=>`<div class="onboard-dot${i<onboardStep?' done':''}${i===onboardStep-1?' active':''}"></div>`).join('');
+  const totalSteps=4;
+  const dots=Array.from({length:totalSteps},(_,i)=>`<div class="onboard-dot${i<onboardStep?' done':''}${i===onboardStep-1?' active':''}"></div>`).join('');
   let body='';
   if(onboardStep===1) body=onboardStep1();
   else if(onboardStep===2) body=onboardStep2();
   else if(onboardStep===3) body=onboardStep3();
-  else if(onboardStep===4) body=onboardStep4();
-  else if(onboardStep===5) body=onboardStep5();
+  else if(onboardStep===4) body=onboardStep5(); // skip old step4 (intensity)
   document.getElementById('root').innerHTML=`<div class="onboard-wrap"><div class="onboard-progress">${dots}</div>${body}</div>`;
 }
 
@@ -2150,7 +2154,7 @@ function onboardStep3(){
         <input type="text" class="onboard-custom-input" id="ob-custom-name" placeholder="Task name">
         <select class="onboard-custom-select" id="ob-custom-block">
           <option value="Morning">Morning</option>
-          <option value="Focused Work">Focused Work</option>
+          <option value="Work">Work</option>
           <option value="Midday">Midday</option>
           <option value="Body">Body</option>
           <option value="Wind Down">Wind Down</option>
@@ -2192,59 +2196,74 @@ function onboardStep4(){
 }
 
 function onboardStep5(){
-  const gen=onboardGenerateTasks();
+  // Use cached generated tasks (allows edits to persist)
+  if(!onboardData._generated) onboardData._generated=onboardGenerateTasks();
+  const gen=onboardData._generated;
   const timed=gen.timed;
   const essential=gen.essential;
   const blocks=[...new Set(timed.map(t=>t.block))];
   const totalPts=timed.reduce((s,t)=>s+t.points,0)+essential.reduce((s,t)=>s+t.points,0);
   const totalCount=timed.length+essential.length;
-  const winPct=onboardData.intensity==='starter'?60:onboardData.intensity==='allin'?80:72;
+  const winPct=onboardData._winPct||72;
+  const crushPct=onboardData._crushPct||88;
+
   let blocksHTML=blocks.map(b=>{
     const bTasks=timed.filter(t=>t.block===b);
     return `<div class="onboard-review-block">
       <div class="onboard-review-block-name">${b}</div>
-      ${bTasks.map(t=>`<div class="onboard-review-task">
-        <span class="onboard-review-task-name">${t.name}</span>
-        <div class="onboard-review-task-meta">
-          <span class="onboard-review-tier ${t.tier}">${t.tier}</span>
-          <span class="onboard-review-pts">${t.points}pts</span>
-        </div>
-      </div>`).join('')}
+      ${bTasks.map((t,i)=>{
+        const tidx=timed.indexOf(t);
+        return`<div class="onboard-review-task">
+          <input class="onboard-edit-name" value="${t.name.replace(/"/g,'&quot;')}" onchange="onboardEditTaskName('timed',${tidx},this.value)">
+          <div class="onboard-review-task-meta">
+            <span class="onboard-review-tier ${t.tier}">${t.tier}</span>
+            <span class="onboard-review-pts">${t.points}pts</span>
+            <button class="onboard-del-btn" onclick="onboardDeleteTask('timed',${tidx})">×</button>
+          </div>
+        </div>`;
+      }).join('')}
     </div>`;
   }).join('');
   if(essential.length){
     blocksHTML+=`<div class="onboard-review-block">
-      <div class="onboard-essential-label">Daily essentials (no time block)</div>
-      ${essential.map(t=>`<div class="onboard-review-task">
-        <span class="onboard-review-task-name">${t.name}</span>
+      <div class="onboard-essential-label">Daily essentials</div>
+      ${essential.map((t,i)=>`<div class="onboard-review-task">
+        <input class="onboard-edit-name" value="${t.name.replace(/"/g,'&quot;')}" onchange="onboardEditTaskName('essential',${i},this.value)">
         <div class="onboard-review-task-meta">
           <span class="onboard-review-tier ${t.tier}">${t.tier}</span>
           <span class="onboard-review-pts">${t.points}pts</span>
+          <button class="onboard-del-btn" onclick="onboardDeleteTask('essential',${i})">×</button>
         </div>
       </div>`).join('')}
     </div>`;
   }
-  const restPts=Math.round(totalPts*0.5);
   return `<div class="onboard-card">
-    <div class="onboard-h2">Your daily system</div>
-    <div class="onboard-sub">Here's what you'll be tracking each day. Your coach can fine-tune this anytime.</div>
+    <div class="onboard-h2">Review &amp; edit your system</div>
+    <div class="onboard-sub">Rename or remove any task. Set your thresholds. Your coach can adjust this later too.</div>
     <div class="onboard-review-summary">
-      <div class="onboard-review-stat"><div class="onboard-review-stat-val blue">${totalCount}</div><div class="onboard-review-stat-lbl">Daily tasks</div></div>
+      <div class="onboard-review-stat"><div class="onboard-review-stat-val blue">${totalCount}</div><div class="onboard-review-stat-lbl">Tasks</div></div>
       <div class="onboard-review-stat"><div class="onboard-review-stat-val orange">${totalPts}</div><div class="onboard-review-stat-lbl">Total pts</div></div>
-      <div class="onboard-review-stat"><div class="onboard-review-stat-val green">${winPct}%</div><div class="onboard-review-stat-lbl">Win threshold</div></div>
+      <div class="onboard-review-stat"><div class="onboard-review-stat-val green">${winPct}%</div><div class="onboard-review-stat-lbl">Win the day</div></div>
+      <div class="onboard-review-stat"><div class="onboard-review-stat-val" style="color:var(--green)">${crushPct}%</div><div class="onboard-review-stat-lbl">Crushing it</div></div>
+    </div>
+    <div style="margin-bottom:1rem;padding:0 2px">
+      <div class="thresh-row"><label style="min-width:80px">Win at</label><input type="range" min="50" max="85" step="1" value="${winPct}" oninput="onboardData._winPct=parseInt(this.value);renderOnboarding()"><span class="thresh-val">${winPct}%</span></div>
+      <div class="thresh-row"><label style="min-width:80px">Crushing it</label><input type="range" min="70" max="95" step="1" value="${crushPct}" oninput="onboardData._crushPct=parseInt(this.value);renderOnboarding()"><span class="thresh-val">${crushPct}%</span></div>
     </div>
     ${blocksHTML}
-    <div class="onboard-rest-note">On rest days, your target drops to 50% with a lighter task set — morning routine, journal, and wind down only. No gym or deep work blocks.</div>
-    <div class="onboard-motivational">You can edit any of this anytime from the settings. The most important thing is to start.</div>
+    <div class="onboard-rest-note">On rest days, your target drops to 50% with a lighter task set. Heavy blocks like gym and work are excluded.</div>
+    <div class="onboard-motivational">You can edit any of this anytime from settings. The most important thing is to start.</div>
     <div class="onboard-btns">
       <button class="btn-ghost" onclick="onboardBack()">Back</button>
-      <button class="btn-primary" onclick="onboardSave()">Looks good — start tracking</button>
+      <button class="btn-primary" onclick="onboardSave()">Start tracking</button>
     </div>
   </div>`;
 }
+function onboardEditTaskName(type,idx,val){if(!onboardData._generated)return;onboardData._generated[type][idx].name=val;}
+function onboardDeleteTask(type,idx){if(!onboardData._generated)return;onboardData._generated[type].splice(idx,1);renderOnboarding();}
 
-function onboardNext(){onboardStep=Math.min(5,onboardStep+1);renderOnboarding();}
-function onboardBack(){onboardStep=Math.max(1,onboardStep-1);renderOnboarding();}
+function onboardNext(){onboardStep=Math.min(4,onboardStep+1);if(onboardStep===4){onboardData._generated=onboardGenerateTasks();onboardData._winPct=72;onboardData._crushPct=88;}renderOnboarding();}
+function onboardBack(){if(onboardStep===4)onboardData._generated=null;onboardStep=Math.max(1,onboardStep-1);renderOnboarding();}
 function onboardToggleCategory(key){onboardData.categories[key]=!onboardData.categories[key];renderOnboarding();}
 function onboardSetIntensity(key){onboardData.intensity=key;renderOnboarding();}
 function onboardAddCustom(){
@@ -2262,11 +2281,7 @@ function onboardRemoveCustom(idx){
   renderOnboarding();
 }
 
-function onboardPts(base){
-  if(onboardData.intensity==='starter') return Math.round(base*0.65);
-  if(onboardData.intensity==='allin') return Math.round(base*1.15);
-  return base;
-}
+function onboardPts(base){return base;}
 
 function onboardGenerateTasks(){
   const timed=[];
@@ -2291,15 +2306,13 @@ function onboardGenerateTasks(){
   // Deep Work
   if(cats.deepwork){
     const n=onboardData.deepworkBlocks||2;
-    if(n>=1) timed.push({id:id++,block:"Focused Work",name:"Focus block 1",points:p(17),tier:"S"});
-    if(n>=2) timed.push({id:id++,block:"Focused Work",name:"Focus block 2",points:p(15),tier:"S"});
-    if(n>=3) timed.push({id:id++,block:"Focused Work",name:"Focus block 3",points:p(13),tier:"S"});
+    if(n>=1) timed.push({id:id++,block:"Work",name:"Focus block 1",points:p(17),tier:"S"});
+    if(n>=2) timed.push({id:id++,block:"Work",name:"Focus block 2",points:p(15),tier:"S"});
+    if(n>=3) timed.push({id:id++,block:"Work",name:"Focus block 3",points:p(13),tier:"S"});
   }
 
-  // Midday (add walk if intensity allows)
-  if(onboardData.intensity!=='starter'){
-    timed.push({id:id++,block:"Midday",name:"Midday walk",points:p(5),tier:"B"});
-  }
+  // Midday
+  timed.push({id:id++,block:"Midday",name:"Midday walk",points:p(5),tier:"B"});
 
   // Physical Training
   if(cats.training){
@@ -2352,13 +2365,17 @@ function formatOnboardTime(t){
 }
 
 async function onboardSave(){
-  const gen=onboardGenerateTasks();
+  const gen=onboardData._generated||onboardGenerateTasks();
   timedTasks=gen.timed;
   essentialTasks=gen.essential;
   hasCustomTasks=true;
+  // Save custom thresholds
+  WIN=(onboardData._winPct||72)/100;
+  CRUSH=(onboardData._crushPct||88)/100;
   await saveTasks();
+  await storage.set('wtd-thresholds',JSON.stringify({win:WIN,crush:CRUSH}));
   // Build sensible rest day defaults: morning tasks, meditation if selected, learning, journal, sleep. Exclude deep work and gym.
-  const excludeBlocks=['Focused Work','Body'];
+  const excludeBlocks=['Work','Body'];
   const excludeNames=['Midday walk'];
   const restIds=gen.timed.filter(t=>!excludeBlocks.includes(t.block)&&!excludeNames.includes(t.name)).map(t=>t.id);
   // Include essential tasks except nutrition on rest days
@@ -2453,7 +2470,7 @@ const DEFAULT_ESSENTIAL=[
 ];
 const DEFAULT_REST={win:50,crush:75,taskIds:[4,7,12,15,16,17,18,19,101,102]};
 const BLOCKS=["Morning","Deep Work","Midday","Reset","Body","Evening","Wind Down"];
-const WIN=0.72,CRUSH=0.88;
+let WIN=0.72,CRUSH=0.88;
 const TIER={S:{color:"#C8891A",label:"Critical"},A:{color:"#3A7EC4",label:"High impact"},B:{color:"#888",label:"Supporting"}};
 const DAYS=["Sun","Mon","Tue","Wed","Thu","Fri","Sat"];
 const MONTHS=["January","February","March","April","May","June","July","August","September","October","November","December"];
@@ -2466,7 +2483,7 @@ let isRestDay,autoSaveTimer,autoSaveStatus,nextId,prevWonState,showCelebration,c
 let taskNotes,goals,reminderSettings,identityReflections,addingGoal,reminderTimer;
 let hasCustomTasks=false;
 let onboardStep=1;
-let onboardData={wake:'06:00',sleep:'21:30',categories:{morning:true,deepwork:true,training:true,mindfulness:false,learning:false,nutrition:false,evening:true,identity:false},deepworkBlocks:2,trainingType:'gym',mindfulnessTime:'morning',intensity:'starter',customTasks:[]};
+let onboardData={wake:'06:00',sleep:'21:30',categories:{morning:true,deepwork:true,training:true,mindfulness:false,learning:false,nutrition:false,evening:true,identity:false},deepworkBlocks:2,trainingType:'gym',mindfulnessTime:'morning',intensity:'builder',customTasks:[],_generated:null,_winPct:72,_crushPct:88};
 
 function resetAppState(){
   timedTasks=DEFAULT_TIMED.map(t=>({...t}));
@@ -2535,8 +2552,9 @@ function getMissedPatterns(){
   return Object.values(counts).filter(x=>x.count>=3).sort((a,b)=>b.count-a.count).slice(0,4);
 }
 async function loadAll(uid){
-  const keys=['wtd-history','wtd-why','wtd-identity','wtd-tasks','wtd-rest','wtd-actions','wtd-notes','wtd-goals','wtd-reminder','wtd-ir'];
-  const [r0,r1,r2,r3,r4,r5,r6,r7,r8,r9]=await Promise.all(keys.map(k=>Promise.race([storage.get(k,uid),new Promise(r=>setTimeout(()=>r(null),8000))])));
+  const keys=['wtd-history','wtd-why','wtd-identity','wtd-tasks','wtd-rest','wtd-actions','wtd-notes','wtd-goals','wtd-reminder','wtd-ir','wtd-thresholds'];
+  const results=await Promise.all(keys.map(k=>Promise.race([storage.get(k,uid),new Promise(r=>setTimeout(()=>r(null),8000))])));
+  const [r0,r1,r2,r3,r4,r5,r6,r7,r8,r9,r10]=results;
   try{allHistory=r0?JSON.parse(r0.value):{}}catch(e){allHistory={};}
   try{whyStatement=r1?.value||''}catch(e){whyStatement='';}
   try{identityStatement=r2?.value||''}catch(e){identityStatement='';}
@@ -2547,6 +2565,7 @@ async function loadAll(uid){
   try{const _g=r7?JSON.parse(r7.value):null;goals=(_g&&typeof _g==='object'&&!Array.isArray(_g))?_g:{weekly:[],monthly:[],yearly:[]};if(!goals.weekly)goals.weekly=[];if(!goals.monthly)goals.monthly=[];if(!goals.yearly)goals.yearly=[];}catch(e){goals={weekly:[],monthly:[],yearly:[]};}
   try{reminderSettings=r8?JSON.parse(r8.value):{enabled:false,time:'07:00'}}catch(e){reminderSettings={enabled:false,time:'07:00'};}
   try{identityReflections=r9?JSON.parse(r9.value):{}}catch(e){identityReflections={};}
+  try{const th=r10?JSON.parse(r10.value):null;if(th){WIN=th.win||0.72;CRUSH=th.crush||0.88;}}catch(e){}
   const today=todayKey();const todayData=allHistory[today]||{};
   checked=todayData.checked||{};isRestDay=todayData.restDay||todayData.rest||false;mood=todayData.mood||0;winOfDay=todayData.winOfDay||todayData.win||'';
   // Repair any rest-day pct values that were calculated against full-day totals
