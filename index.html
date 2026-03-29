@@ -1978,7 +1978,7 @@ const TIER={S:{color:"#C8891A",label:"Critical"},A:{color:"#3A7EC4",label:"High 
 const DAYS=["Sun","Mon","Tue","Wed","Thu","Fri","Sat"];
 const MONTHS=["January","February","March","April","May","June","July","August","September","October","November","December"];
 
-let timedTasks,essentialTasks,restSettings,checked,activeTab,weekOffset,monthOffset;
+let timedTasks,essentialTasks,restSettings,checked,activeTab,weekOffset,monthOffset,dayOffset;
 let allHistory,whyStatement,identityStatement,editingStatements;
 let mood,winOfDay,actionItems;
 let showEditor,showImport,showRestEditor,importError;
@@ -1989,7 +1989,7 @@ function resetAppState(){
   timedTasks=DEFAULT_TIMED.map(t=>({...t}));
   essentialTasks=DEFAULT_ESSENTIAL.map(t=>({...t}));
   restSettings={...DEFAULT_REST};
-  checked={};activeTab='today';weekOffset=0;monthOffset=0;
+  checked={};activeTab='today';weekOffset=0;monthOffset=0;dayOffset=0;
   allHistory={};whyStatement='';identityStatement='';editingStatements=false;
   mood=0;winOfDay='';actionItems=[];
   showEditor=false;showImport=false;showRestEditor=false;importError='';
@@ -2101,13 +2101,29 @@ async function saveStatements(){
   await storage.set('wtd-identity',identityStatement,uid);
   editingStatements=false;render();
 }
-async function setMood(n){mood=n;await saveDay();render();}
-function onWinInput(){winOfDay=document.getElementById('win-input')?.value||'';clearTimeout(autoSaveTimer);autoSaveTimer=setTimeout(async()=>{await saveDay();},1200);}
+async function setMood(n){
+  if(dayOffset!==0){
+    const vKey=viewingDateKey();if(!allHistory[vKey])allHistory[vKey]={};
+    allHistory[vKey].mood=n;
+    await storage.set('wtd-history',JSON.stringify(allHistory));render();return;
+  }
+  mood=n;await saveDay();render();
+}
+function onWinInput(){
+  const val=document.getElementById('win-input')?.value||'';
+  if(dayOffset!==0){
+    const vKey=viewingDateKey();if(!allHistory[vKey])allHistory[vKey]={};
+    allHistory[vKey].winOfDay=val;allHistory[vKey].win=val;
+    clearTimeout(autoSaveTimer);autoSaveTimer=setTimeout(async()=>{await storage.set('wtd-history',JSON.stringify(allHistory));},1200);
+    return;
+  }
+  winOfDay=val;clearTimeout(autoSaveTimer);autoSaveTimer=setTimeout(async()=>{await saveDay();},1200);
+}
 function onReflectionInput(){
   autoSaveStatus='saving...';updateAS();clearTimeout(autoSaveTimer);
   autoSaveTimer=setTimeout(async()=>{
     const val=document.getElementById('reflection-input')?.value.trim()||'';
-    const key=todayKey();if(!allHistory[key])allHistory[key]={};
+    const key=viewingDateKey();if(!allHistory[key])allHistory[key]={};
     allHistory[key]={...allHistory[key],reflection:val,reflectionTime:new Date().toISOString()};
     await storage.set('wtd-history',JSON.stringify(allHistory),adminClientId||undefined);
     autoSaveStatus='saved';updateAS();setTimeout(()=>{autoSaveStatus='';updateAS();},2000);
@@ -2119,20 +2135,23 @@ async function toggleActionItem(i){actionItems[i].done=!actionItems[i].done;awai
 
 // ── TASK NOTES ──
 function openNoteModal(taskId,taskName){
-  const existing=taskNotes[todayKey()]?.[taskId]||'';
+  const vKey=viewingDateKey();
+  const existing=taskNotes[vKey]?.[taskId]||'';
+  const dayLabel=isViewingToday()?'today':viewingDateKey();
   showOv(`<div class="overlay-bg" onclick="if(event.target===this)closeOv()"><div class="modal">
-    <div class="modal-title">Note for today</div>
+    <div class="modal-title">Note for ${dayLabel}</div>
     <div class="modal-sub">${taskName}</div>
-    <textarea class="reflect-input" id="note-inp" placeholder="What are you working on today?" style="min-height:80px">${existing}</textarea>
+    <textarea class="reflect-input" id="note-inp" placeholder="What happened with this task?" style="min-height:80px">${existing}</textarea>
     <div class="modal-actions"><button class="btn-save" onclick="saveTaskNote(${taskId})">Save</button><button class="btn-cancel" onclick="closeOv()">Cancel</button></div>
   </div></div>`);
   setTimeout(()=>document.getElementById('note-inp')?.focus(),50);
 }
 async function saveTaskNote(taskId){
+  const vKey=viewingDateKey();
   const val=document.getElementById('note-inp')?.value.trim()||'';
-  if(!taskNotes[todayKey()])taskNotes[todayKey()]={};
-  if(val)taskNotes[todayKey()][taskId]=val;
-  else delete taskNotes[todayKey()][taskId];
+  if(!taskNotes[vKey])taskNotes[vKey]={};
+  if(val)taskNotes[vKey][taskId]=val;
+  else delete taskNotes[vKey][taskId];
   await saveNotes();closeOv();render();
 }
 
@@ -2263,7 +2282,7 @@ function openMailto(){const body=buildEmailBody();const subj=`Win the Day — ${
 // ── RENDER TODAY ──
 function taskRow(task,pct,rest){
   const isDone=!!checked[task.id],tc=TIER[task.tier].color,isS=task.tier==='S';
-  const todayNote=taskNotes[todayKey()]?.[task.id]||'';
+  const todayNote=taskNotes[viewingDateKey()]?.[task.id]||'';
   return `<div class="task-row${isDone?' done':''}${isS?' s-tier':''}" id="tr-${task.id}" onclick="toggle(${task.id},event)">
     <div class="checkbox${isDone?' checked':''}" style="pointer-events:none">
       ${isDone?'<svg width="10" height="8" viewBox="0 0 10 8" fill="none"><path d="M1 4L3.5 6.5L9 1" stroke="white" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round"/></svg>':''}
@@ -2319,25 +2338,50 @@ async function saveEditDay(dateKey){
   render();
 }
 function renderToday(readOnly){
+  // Day navigation: dayOffset=0 is today, -1 is yesterday, etc.
+  const vKey=viewingDateKey();
+  const viewingPast=!isViewingToday();
+  const viewDate=new Date();viewDate.setDate(viewDate.getDate()+dayOffset);
+  const viewDateStr=viewDate.toLocaleDateString("en-US",{weekday:"long",month:"long",day:"numeric"});
+
+  // When viewing a past day, temporarily swap globals so taskRow() and helpers work
+  let _savedChecked,_savedIsRest,_savedMood,_savedWin;
+  if(viewingPast){
+    _savedChecked=checked;_savedIsRest=isRestDay;_savedMood=mood;_savedWin=winOfDay;
+    const rec=allHistory[vKey]||{};
+    checked=rec.checked||{};
+    isRestDay=rec.restDay||false;
+    mood=rec.mood||0;
+    winOfDay=rec.winOfDay||rec.win||'';
+  }
+
   const tasks=isRestDay?restTasks():allTasks();
   const tot=isRestDay?restTotal():total();
   const earned=tasks.filter(t=>checked[t.id]).reduce((s,t)=>s+t.points,0);
   const pct=tot>0?earned/tot:0;
   const sc=statusColor(pct,isRestDay);
   const R=58,C=2*Math.PI*R,d=Math.min(pct,1)*C;
-  const todayReflection=(allHistory[todayKey()]?.reflection)||'';
+  const todayReflection=(allHistory[vKey]?.reflection)||'';
   const streak=calcStreak(),daysWon=calcDaysWon(),bestStreak=calcBestStreak(),bestWeek=calcBestWeek();
   const WIN_T=isRestDay?restSettings.win/100:WIN;
   const CRUSH_T=isRestDay?restSettings.crush/100:CRUSH;
   const missedS=tasks.filter(t=>t.tier==='S'&&!checked[t.id]);
-  const yRec=allHistory[yesterday()];
+  const yRec=viewingPast?null:allHistory[yesterday()];
   const{lv,pct:lvPct,toNext,nextName}=getLevelProgress(daysWon);
-  const patterns=getMissedPatterns();
-  const todayIR=identityReflections[todayKey()]||{rating:0,note:''};
-  const todayDate=new Date().toLocaleDateString("en-US",{weekday:"long",month:"long",day:"numeric"});
+  const patterns=viewingPast?[]:getMissedPatterns();
+  const todayIR=identityReflections[vKey]||{rating:0,note:''};
+  const todayDate=viewDateStr;
 
   let h='';
-  h+=`<div style="margin-bottom:14px;padding:2px 0"><div style="font-size:13px;color:var(--text3);font-weight:500">${todayDate}</div></div>`;
+  // Day navigation header
+  h+=`<div style="display:flex;align-items:center;justify-content:space-between;margin-bottom:14px;padding:2px 0">
+    <button class="nav-btn" onclick="shiftDay(-1)" style="padding:5px 10px;font-size:14px">&larr;</button>
+    <div style="text-align:center;flex:1">
+      <div style="font-size:13px;color:var(--text3);font-weight:500">${todayDate}</div>
+      ${viewingPast?`<div style="font-size:11px;color:var(--orange);margin-top:2px">Viewing past day</div>`:''}
+    </div>
+    <button class="nav-btn" onclick="shiftDay(1)" style="padding:5px 10px;font-size:14px;${dayOffset>=0?'opacity:.3;pointer-events:none':''}">&rarr;</button>
+  </div>`;
 
   // Level card
   h+=`<div class="level-card"><div class="level-icon" style="background:${lv.color}22;border:.5px solid ${lv.color}66">${lv.icon}</div><div style="flex:1"><div style="font-size:16px;font-weight:500;color:${lv.color}">${lv.name}</div><div style="font-size:11px;color:var(--text3);margin-top:1px">${daysWon} days won${toNext>0?` · ${toNext} to ${nextName}`:'  · Max level'}</div><div class="xp-bar"><div class="xp-fill" style="width:${Math.round(lvPct*100)}%;background:${lv.color}"></div></div></div></div>`;
@@ -2438,13 +2482,16 @@ function renderToday(readOnly){
       <button class="settings-btn danger" onclick="confirmReset()">↺ Reset day</button>
     </div>`;
   }
+
+  // Restore globals if we were viewing a past day
+  if(viewingPast){checked=_savedChecked;isRestDay=_savedIsRest;mood=_savedMood;winOfDay=_savedWin;}
   return h;
 }
 
 function editStatements(){editingStatements=true;render();setTimeout(()=>document.getElementById('why-inp')?.focus(),50);}
 
 async function saveIRNote(){
-  const key=todayKey();
+  const key=viewingDateKey();
   if(!identityReflections[key])identityReflections[key]={rating:0,note:'',time:''};
   identityReflections[key].note=document.getElementById('ir-note')?.value.trim()||'';
   clearTimeout(autoSaveTimer);
@@ -2564,6 +2611,26 @@ function openRestEditor(){showRestEditor=true;showEditor=false;showImport=false;
 
 async function toggle(id,event){
   if(adminClientId)return;
+
+  // If viewing a past day, update that day's history directly
+  if(dayOffset!==0){
+    const vKey=viewingDateKey();
+    if(!allHistory[vKey])allHistory[vKey]={};
+    if(!allHistory[vKey].checked)allHistory[vKey].checked={};
+    allHistory[vKey].checked[id]=!allHistory[vKey].checked[id];
+    // Recalculate pct for that day
+    const pastRest=allHistory[vKey].restDay||false;
+    const tasks=pastRest?restTasks():allTasks();
+    const tot=pastRest?restTotal():total();
+    const earned=tasks.filter(t=>allHistory[vKey].checked[t.id]).reduce((s,t)=>s+t.points,0);
+    allHistory[vKey].pct=tot>0?earned/tot:0;
+    allHistory[vKey].earned=earned;
+    allHistory[vKey].total=tot;
+    await storage.set('wtd-history',JSON.stringify(allHistory));
+    render();
+    return;
+  }
+
   const tasks=isRestDay?restTasks():allTasks(),tot=isRestDay?restTotal():total();
   const earned=tasks.filter(t=>checked[t.id]).reduce((s,t)=>s+t.points,0);
   prevWonState=earned/tot>=(isRestDay?restSettings.win/100:WIN);
@@ -2660,9 +2727,12 @@ function updateBlockHeaders(){
 }
 
 async function confirmReset(){if(confirm('Reset today?')){checked={};mood=0;winOfDay='';await saveDay();render();}}
-function setTab(t){activeTab=t;render();}
+function setTab(t){if(t==='today')dayOffset=0;activeTab=t;render();}
+function shiftDay(d){dayOffset+=d;if(dayOffset>0)dayOffset=0;render();}
 function shiftWeek(d){weekOffset+=d;render();}
 function shiftMonth(d){monthOffset+=d;render();}
+function viewingDateKey(){const d=new Date();d.setDate(d.getDate()+dayOffset);return dateKey(d);}
+function isViewingToday(){return dayOffset===0;}
 
 // ── BOOT ──
 // Single-fire boot gate — prevents onAuthStateChange + getSession() race condition
