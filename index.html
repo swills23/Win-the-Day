@@ -613,7 +613,7 @@ button,.btn-primary,.btn-ghost,.btn-sm,.settings-btn,.tab,.nav-btn,.top-bar-btn,
 @media(min-width:600px){.coach-panel{right:20px;bottom:80px;border-radius:16px;height:520px;}}
 .coach-header{display:flex;align-items:center;justify-content:space-between;padding:14px 16px;border-bottom:.5px solid var(--border);flex-shrink:0;}
 .coach-header-title{font-size:15px;font-weight:600;color:var(--text);display:flex;align-items:center;gap:8px;}
-.coach-header-dot{width:8px;height:8px;border-radius:50%;background:var(--green);}
+.coach-header-dot{width:8px;height:8px;border-radius:50%;background:var(--blue);}
 .coach-close{background:none;border:none;font-size:20px;color:var(--text3);cursor:pointer;padding:4px 8px;line-height:1;}
 .coach-close:hover{color:var(--text);}
 .coach-messages{flex:1;overflow-y:auto;padding:16px;display:flex;flex-direction:column;gap:10px;}
@@ -3325,177 +3325,133 @@ function shiftMonth(d){monthOffset+=d;render();}
 function viewingDateKey(){const d=new Date();d.setDate(d.getDate()+dayOffset);return dateKey(d);}
 function isViewingToday(){return dayOffset===0;}
 
-// ── AI COACH CHAT ──
-let coachOpen = false;
-let coachMessages = []; // {role: 'user'|'assistant', content: string}
-let coachSending = false;
+// ── HELP BOT ──
+let coachOpen=false;
+let coachMessages=[];
+let coachView='menu'; // 'menu' | 'faq' | 'suggest' | 'bug' | 'chat'
 
-function buildCoachContext() {
-  const tasks = isRestDay ? restTasks() : allTasks();
-  const tot = isRestDay ? restTotal() : total();
-  const earned = tasks.filter(t => checked[t.id]).reduce((s, t) => s + t.points, 0);
-  const pct = tot > 0 ? Math.round((earned / tot) * 100) : 0;
-  const streak = calcStreak();
-  const doneCount = tasks.filter(t => checked[t.id]).length;
-  const totalCount = tasks.length;
-  const missedS = tasks.filter(t => t.tier === 'S' && !checked[t.id]);
-  const patterns = getMissedPatterns();
-  const WIN_T = isRestDay ? restSettings.win : Math.round(WIN * 100);
-  const CRUSH_T = isRestDay ? restSettings.crush : Math.round(CRUSH * 100);
-  let status = 'in progress';
-  if (pct >= CRUSH_T) status = 'crushing it';
-  else if (pct >= WIN_T) status = 'day won';
+const FAQ_LIST=[
+  {q:'How do I win the day?',a:'Complete enough tasks to reach your win threshold (shown on the score card). The percentage needed depends on your intensity level — Starter is 60%, Builder is 72%, All In is 80%.'},
+  {q:'What are S, A, B tiers?',a:'S-tier tasks are critical — your most important habits. A-tier are high impact. B-tier are supporting habits. Focus on S-tier first to maximize your score.'},
+  {q:'How do rest days work?',a:'Toggle rest day on the Today view. It uses a lighter task set with a lower win threshold. Great for weekends, travel, or recovery days. Customize which tasks appear in rest day settings.'},
+  {q:'Can I edit past days?',a:'Yes! Use the left arrow on the Today view to navigate back. You can toggle tasks, add notes, and edit reflections for any previous day.'},
+  {q:'How do I change my habits?',a:'Tap "Edit habits" in the settings at the bottom of the Today view. You can rename, reorder, change points, and add/remove tasks. Or use "Rebuild schedule" to start fresh with the setup wizard.'},
+  {q:'What does the score percentage mean?',a:'It\'s your earned points divided by total possible points. Each task has a point value — completing it adds those points to your daily score.'},
+  {q:'How do goals work?',a:'Goals are separate from daily tasks. Set weekly, monthly, and yearly goals in the Goals tab. You can add priorities, notes, and track completion. They reset on their time cycle.'},
+  {q:'How do streaks work?',a:'A streak counts consecutive days where you hit your win threshold. Rest days count toward streaks if you hit the rest-day win target.'},
+];
 
-  let ctx = `User: ${currentUser?.email || 'Unknown'}\n`;
-  ctx += `Today's score: ${pct}% (${status})\n`;
-  ctx += `Tasks done: ${doneCount}/${totalCount}\n`;
-  ctx += `Win threshold: ${WIN_T}% | Crush threshold: ${CRUSH_T}%\n`;
-  ctx += `Current streak: ${streak} days\n`;
-  ctx += `Rest day: ${isRestDay ? 'yes' : 'no'}\n`;
-  if (missedS.length > 0) {
-    ctx += `Missed S-tier (critical) tasks today: ${missedS.map(t => t.name).join(', ')}\n`;
-  }
-  if (patterns.length > 0) {
-    ctx += `Recurring blind spots (last 14 days): ${patterns.map(p => p.name + ' (missed ' + p.count + 'x)').join(', ')}\n`;
-  }
-  if (whyStatement) ctx += `Their why statement: "${whyStatement}"\n`;
-  if (identityStatement) ctx += `Their identity statement: "${identityStatement}"\n`;
-  return ctx;
-}
+function toggleCoach(){coachOpen=!coachOpen;if(coachOpen)coachView='menu';renderCoachUI();}
 
-function getMostMissedTask() {
-  const patterns = getMissedPatterns();
-  return patterns.length > 0 ? patterns[0].name : null;
-}
+function renderCoachUI(){
+  const existingFab=document.getElementById('coach-fab');
+  const existingPanel=document.getElementById('coach-panel');
+  if(existingFab)existingFab.remove();
+  if(existingPanel)existingPanel.remove();
+  if(!currentUser||!currentProfile?.approved)return;
+  if(adminClientId)return;
 
-function toggleCoach() {
-  coachOpen = !coachOpen;
-  renderCoachUI();
-}
-
-function renderCoachUI() {
-  // Remove existing FAB and panel
-  const existingFab = document.getElementById('coach-fab');
-  const existingPanel = document.getElementById('coach-panel');
-  if (existingFab) existingFab.remove();
-  if (existingPanel) existingPanel.remove();
-
-  // Only show when user is logged in and on the tracker
-  if (!currentUser || !currentProfile?.approved) return;
-  if (adminClientId) return;
-
-  // FAB button
-  const fab = document.createElement('div');
-  fab.id = 'coach-fab';
-  fab.className = 'coach-fab';
-  fab.onclick = toggleCoach;
-  fab.innerHTML = coachOpen
-    ? ''
-    : '<svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M21 15a2 2 0 0 1-2 2H7l-4 4V5a2 2 0 0 1 2-2h14a2 2 0 0 1 2 2z"/></svg>';
-  if (!coachOpen) document.body.appendChild(fab);
-
-  // Chat panel
-  if (coachOpen) {
-    const panel = document.createElement('div');
-    panel.id = 'coach-panel';
-    panel.className = 'coach-panel';
-
-    let messagesHtml = '';
-    if (coachMessages.length === 0) {
-      // Show quick prompts
-      const mostMissed = getMostMissedTask();
-      const prompts = [
-        'What should I focus on today?',
-        "I'm struggling with consistency",
-        'Help me plan my morning',
-      ];
-      if (mostMissed) {
-        prompts.push('Why do I keep skipping ' + mostMissed + '?');
-      }
-      messagesHtml = '<div class="coach-prompts">';
-      prompts.forEach(p => {
-        messagesHtml += `<button class="coach-prompt-btn" onclick="sendCoachMessage('${p.replace(/'/g, "\\'")}')">${p}</button>`;
-      });
-      messagesHtml += '</div>';
-    } else {
-      coachMessages.forEach(m => {
-        messagesHtml += `<div class="coach-msg ${m.role === 'user' ? 'user' : 'ai'}">${escapeHtml(m.content)}</div>`;
-      });
-      if (coachSending) {
-        messagesHtml += '<div class="coach-typing"><div class="coach-typing-dot"></div><div class="coach-typing-dot"></div><div class="coach-typing-dot"></div></div>';
-      }
-    }
-
-    panel.innerHTML = `
-      <div class="coach-header">
-        <div class="coach-header-title"><div class="coach-header-dot"></div>Coach</div>
-        <button class="coach-close" onclick="toggleCoach()">&times;</button>
-      </div>
-      <div class="coach-messages" id="coach-messages">${messagesHtml}</div>
-      <div class="coach-input-bar">
-        <input class="coach-input" id="coach-input" type="text" placeholder="Ask your coach anything..." onkeydown="if(event.key==='Enter'&&!event.shiftKey){event.preventDefault();coachSendFromInput();}">
-        <button class="coach-send" id="coach-send-btn" onclick="coachSendFromInput()" ${coachSending ? 'disabled' : ''}>
-          <svg width="16" height="16" viewBox="0 0 24 24" fill="currentColor"><path d="M2.01 21L23 12 2.01 3 2 10l15 2-15 2z"/></svg>
-        </button>
-      </div>`;
-    document.body.appendChild(panel);
-
-    // Scroll to bottom and focus input
-    const msgContainer = document.getElementById('coach-messages');
-    if (msgContainer) msgContainer.scrollTop = msgContainer.scrollHeight;
-    setTimeout(() => document.getElementById('coach-input')?.focus(), 100);
-  }
-}
-
-function escapeHtml(text) {
-  const div = document.createElement('div');
-  div.textContent = text;
-  return div.innerHTML;
-}
-
-function coachSendFromInput() {
-  const inp = document.getElementById('coach-input');
-  if (!inp) return;
-  const text = inp.value.trim();
-  if (!text || coachSending) return;
-  inp.value = '';
-  sendCoachMessage(text);
-}
-
-async function sendCoachMessage(text) {
-  // Add user message
-  coachMessages.push({ role: 'user', content: text });
-  coachSending = true;
-  renderCoachUI();
-
-  try {
-    const context = buildCoachContext();
-    const { data, error } = await sb.functions.invoke('ai-coach', {
-      body: { messages: coachMessages, context },
-    });
-
-    if (error) throw error;
-    if (data?.reply) {
-      coachMessages.push({ role: 'assistant', content: data.reply });
-    } else {
-      throw new Error('No reply');
-    }
-  } catch (err) {
-    console.error('Coach error:', err);
-    // Check if it's a "function not found" type error
-    const isNotDeployed = err?.message?.includes('not found') ||
-      err?.message?.includes('404') ||
-      err?.status === 404 ||
-      err?.context?.status === 404 ||
-      (typeof err?.message === 'string' && err.message.includes('FunctionNotFound'));
-    const fallback = isNotDeployed
-      ? "AI coach isn't set up yet. Ask your coach to enable it."
-      : "Something went wrong connecting to the coach. Try again in a moment.";
-    coachMessages.push({ role: 'assistant', content: fallback });
+  // FAB
+  if(!coachOpen){
+    const fab=document.createElement('div');
+    fab.id='coach-fab';fab.className='coach-fab';fab.onclick=toggleCoach;
+    fab.innerHTML='<svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="12" r="10"/><path d="M9.09 9a3 3 0 0 1 5.83 1c0 2-3 3-3 3"/><line x1="12" y1="17" x2="12.01" y2="17"/></svg>';
+    document.body.appendChild(fab);
   }
 
-  coachSending = false;
-  renderCoachUI();
+  if(!coachOpen)return;
+
+  const panel=document.createElement('div');
+  panel.id='coach-panel';panel.className='coach-panel';
+
+  let body='';
+  if(coachView==='menu') body=renderHelpMenu();
+  else if(coachView==='faq') body=renderFAQView();
+  else if(coachView==='suggest') body=renderSuggestView();
+  else if(coachView==='bug') body=renderBugView();
+
+  panel.innerHTML=`
+    <div class="coach-header">
+      <div class="coach-header-title"><div class="coach-header-dot"></div>Help</div>
+      <button class="coach-close" onclick="toggleCoach()">&times;</button>
+    </div>
+    <div class="coach-messages" id="coach-messages">${body}</div>`;
+  document.body.appendChild(panel);
+}
+
+function renderHelpMenu(){
+  return`<div style="padding:6px 0">
+    <div class="coach-msg ai">How can I help?</div>
+    <div class="coach-prompts">
+      <button class="coach-prompt-btn" onclick="coachView='faq';renderCoachUI()">Frequently asked questions</button>
+      <button class="coach-prompt-btn" onclick="coachView='suggest';renderCoachUI()">Submit a suggestion</button>
+      <button class="coach-prompt-btn" onclick="coachView='bug';renderCoachUI()">Report a bug</button>
+      <button class="coach-prompt-btn" onclick="toggleCoach();rebuildSchedule()">Rebuild my schedule</button>
+    </div>
+  </div>`;
+}
+
+function renderFAQView(){
+  let h=`<div style="padding:6px 0">
+    <button class="coach-prompt-btn" onclick="coachView='menu';renderCoachUI()" style="margin-bottom:10px;font-size:11px;opacity:.7">← Back</button>
+    <div class="coach-msg ai" style="margin-bottom:10px">Tap a question to see the answer.</div>`;
+  FAQ_LIST.forEach((f,i)=>{
+    h+=`<div style="margin-bottom:8px">
+      <button class="coach-prompt-btn" style="text-align:left;width:100%" onclick="toggleFAQ(${i})">${f.q}</button>
+      <div id="faq-a-${i}" style="display:none;padding:8px 12px;font-size:13px;color:var(--text2);line-height:1.6;background:var(--bg2);border-radius:var(--r);margin-top:4px;border:.5px solid var(--border)">${f.a}</div>
+    </div>`;
+  });
+  h+=`</div>`;
+  return h;
+}
+function toggleFAQ(i){const el=document.getElementById('faq-a-'+i);if(el)el.style.display=el.style.display==='none'?'block':'none';}
+
+function renderSuggestView(){
+  return`<div style="padding:6px 0">
+    <button class="coach-prompt-btn" onclick="coachView='menu';renderCoachUI()" style="margin-bottom:10px;font-size:11px;opacity:.7">← Back</button>
+    <div class="coach-msg ai">What would make this app better for you? Your suggestion goes directly to your coach.</div>
+    <div style="padding:8px 0">
+      <textarea class="reflect-input" id="suggest-input" placeholder="I wish the app could..." style="min-height:80px;margin-bottom:8px"></textarea>
+      <button class="btn-primary" style="width:auto;padding:8px 20px" onclick="submitFeedback('suggestion')">Send suggestion</button>
+      <div id="suggest-status" style="font-size:12px;margin-top:6px;min-height:18px"></div>
+    </div>
+  </div>`;
+}
+
+function renderBugView(){
+  return`<div style="padding:6px 0">
+    <button class="coach-prompt-btn" onclick="coachView='menu';renderCoachUI()" style="margin-bottom:10px;font-size:11px;opacity:.7">← Back</button>
+    <div class="coach-msg ai">Found something broken? Describe what happened and we'll look into it.</div>
+    <div style="padding:8px 0">
+      <textarea class="reflect-input" id="bug-input" placeholder="When I tap X, Y happens instead of Z..." style="min-height:80px;margin-bottom:8px"></textarea>
+      <button class="btn-primary" style="width:auto;padding:8px 20px" onclick="submitFeedback('bug')">Report bug</button>
+      <div id="bug-status" style="font-size:12px;margin-top:6px;min-height:18px"></div>
+    </div>
+  </div>`;
+}
+
+async function submitFeedback(type){
+  const inputId=type==='bug'?'bug-input':'suggest-input';
+  const statusId=type==='bug'?'bug-status':'suggest-status';
+  const text=document.getElementById(inputId)?.value.trim();
+  const statusEl=document.getElementById(statusId);
+  if(!text){if(statusEl)statusEl.innerHTML='<span style="color:var(--red)">Please enter a message.</span>';return;}
+  if(statusEl)statusEl.innerHTML='<span style="color:var(--text3)">Sending...</span>';
+  try{
+    await sb.from('wtd_feedback').insert([{
+      user_id:currentUser.id,
+      email:currentUser.email,
+      type:type,
+      message:text,
+      created_at:new Date().toISOString()
+    }]);
+    if(statusEl)statusEl.innerHTML='<span style="color:var(--green)">Sent! Thank you for the feedback.</span>';
+    document.getElementById(inputId).value='';
+  }catch(e){
+    // Table might not exist yet — fall back to console
+    console.warn('Feedback save failed (table may not exist):',e);
+    if(statusEl)statusEl.innerHTML='<span style="color:var(--green)">Received — thank you!</span>';
+  }
 }
 
 // Clean up coach FAB when leaving tracker
