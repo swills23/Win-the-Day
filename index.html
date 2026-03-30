@@ -341,6 +341,30 @@ button,.btn-primary,.btn-ghost,.btn-sm,.settings-btn,.tab,.nav-btn,.top-bar-btn,
 .no-users{text-align:center;padding:2.5rem 1rem;font-size:13px;color:var(--text3);}
 .assign-area{width:100%;font-size:13px;padding:8px 10px;border-radius:var(--r);border:.5px solid var(--border);background:var(--bg);color:var(--text);resize:none;outline:none;font-family:var(--font);min-height:80px;margin-bottom:8px;}
 
+/* ── Files ── */
+.file-card{background:var(--bg2);border-radius:var(--rl);padding:14px 16px;border:.5px solid var(--border);margin-bottom:9px;display:flex;align-items:center;gap:12px;}
+.file-icon{width:40px;height:40px;border-radius:var(--r);background:rgba(91,141,239,.1);display:flex;align-items:center;justify-content:center;font-size:18px;flex-shrink:0;}
+.file-info{flex:1;min-width:0;}
+.file-name{font-size:14px;font-weight:500;white-space:nowrap;overflow:hidden;text-overflow:ellipsis;}
+.file-meta{font-size:11px;color:var(--text3);margin-top:2px;}
+.file-actions{display:flex;gap:6px;flex-shrink:0;}
+.file-cat-pill{font-size:10px;padding:2px 8px;border-radius:20px;background:rgba(91,141,239,.1);color:var(--blue);border:.5px solid rgba(91,141,239,.25);}
+.file-cat-pill.onboarding{background:rgba(245,158,11,.1);color:var(--orange);border-color:rgba(245,158,11,.25);}
+.file-cat-pill.protocol{background:rgba(52,211,153,.1);color:var(--green);border-color:rgba(52,211,153,.25);}
+.file-upload-zone{border:2px dashed var(--border2);border-radius:var(--rl);padding:2rem;text-align:center;cursor:pointer;transition:border-color .2s;margin-bottom:1rem;}
+.file-upload-zone:hover{border-color:var(--blue);}
+.file-upload-zone.dragover{border-color:var(--blue);background:rgba(91,141,239,.04);}
+.file-toggle-row{display:flex;align-items:center;justify-content:space-between;padding:8px 0;border-bottom:.5px solid var(--border);font-size:13px;}
+.file-toggle-row:last-child{border-bottom:none;}
+.file-toggle{position:relative;width:36px;height:20px;flex-shrink:0;}
+.file-toggle input{opacity:0;width:0;height:0;}
+.file-toggle-slider{position:absolute;cursor:pointer;top:0;left:0;right:0;bottom:0;background:var(--border2);border-radius:20px;transition:.2s;}
+.file-toggle-slider:before{content:"";position:absolute;height:16px;width:16px;left:2px;bottom:2px;background:#fff;border-radius:50%;transition:.2s;}
+.file-toggle input:checked+.file-toggle-slider{background:var(--green);}
+.file-toggle input:checked+.file-toggle-slider:before{transform:translateX(16px);}
+.client-file-card{background:var(--bg2);border-radius:var(--rl);padding:16px;border:.5px solid var(--border);margin-bottom:10px;display:flex;align-items:center;gap:12px;cursor:pointer;transition:background .15s;}
+.client-file-card:hover{background:var(--bg);}
+
 /* ── Pipeline ── */
 .pl-stats{display:flex;gap:10px;margin-bottom:1.25rem;flex-wrap:wrap;}
 .pl-stat{flex:1;min-width:70px;background:var(--bg2);border-radius:var(--r);padding:11px;border:.5px solid var(--border);border-left:3px solid var(--blue);text-align:center;transition:transform .15s ease,box-shadow .15s ease;}
@@ -940,7 +964,7 @@ async function renderAdmin(){
   const list=adminView==='pending'?pending:approved;
   let html=`<div class="top-bar"><span class="top-bar-email">${currentUser.email}</span><button class="top-bar-btn" onclick="switchToMyTracker()">My Tracker</button><button class="top-bar-btn" onclick="signOut()">Sign out</button></div>
   <div class="admin"><div style="margin-bottom:1.25rem"><div style="font-size:18px;font-weight:500;">${APP_NAME} — Admin</div><div style="font-size:12px;color:var(--text3);margin-top:2px;">${profiles.length} total users</div></div>
-  <div class="admin-tabs"><div class="admin-tab${adminView==='pending'?' active':''}" onclick="setAdminView('pending')">Pending (${pending.length})</div><div class="admin-tab${adminView==='approved'?' active':''}" onclick="setAdminView('approved')">Clients (${approved.length})</div><div class="admin-tab${adminView==='pipeline'?' active':''}" onclick="setAdminView('pipeline')">Pipeline</div><div class="admin-tab${adminView==='checkins'?' active':''}" onclick="setAdminView('checkins')">Check-ins</div><div class="admin-tab${adminView==='analytics'?' active':''}" onclick="setAdminView('analytics')">Analytics</div></div>`;
+  <div class="admin-tabs"><div class="admin-tab${adminView==='pending'?' active':''}" onclick="setAdminView('pending')">Pending (${pending.length})</div><div class="admin-tab${adminView==='approved'?' active':''}" onclick="setAdminView('approved')">Clients (${approved.length})</div><div class="admin-tab${adminView==='pipeline'?' active':''}" onclick="setAdminView('pipeline')">Pipeline</div><div class="admin-tab${adminView==='checkins'?' active':''}" onclick="setAdminView('checkins')">Check-ins</div><div class="admin-tab${adminView==='analytics'?' active':''}" onclick="setAdminView('analytics')">Analytics</div><div class="admin-tab${adminView==='files'?' active':''}" onclick="setAdminView('files')">Files</div></div>`;
   if(adminView==='pipeline'){
     await loadPipelineLeads();
     html+=renderPipelineDashboard();
@@ -952,6 +976,10 @@ async function renderAdmin(){
   }
   if(adminView==='analytics'){
     html+=await renderAdminAnalytics(approved);
+    html+=`</div>`;document.getElementById('root').innerHTML=html;return;
+  }
+  if(adminView==='files'){
+    html+=await renderAdminFiles(approved);
     html+=`</div>`;document.getElementById('root').innerHTML=html;return;
   }
   if(!list.length){html+=`<div class="no-users">No ${adminView==='pending'?'pending approvals':'clients'} yet.</div>`;}
@@ -1132,6 +1160,250 @@ async function renderAdminAnalytics(clients){
   </div>`;
 
   h+=`</div>`;
+  return h;
+}
+
+// ── FILES MANAGEMENT ──
+const SUPABASE_URL='https://ceahoxydtjcprjkbjakn.supabase.co';
+const FILE_CATEGORIES=['general','onboarding','protocol','resource'];
+const FILE_ICONS={'pdf':'📄','doc':'📝','docx':'📝','xls':'📊','xlsx':'📊','ppt':'📊','pptx':'📊','jpg':'🖼','jpeg':'🖼','png':'🖼','gif':'🖼','mp4':'🎬','mov':'🎬','mp3':'🎵','zip':'📦','default':'📎'};
+function fileIcon(name){const ext=(name||'').split('.').pop().toLowerCase();return FILE_ICONS[ext]||FILE_ICONS.default;}
+function fileSize(bytes){if(!bytes)return'';if(bytes<1024)return bytes+'B';if(bytes<1048576)return(bytes/1024).toFixed(1)+'KB';return(bytes/1048576).toFixed(1)+'MB';}
+
+// Load all files (admin)
+async function loadFiles(){
+  const{data}=await sb.from('wtd_files').select('*').order('created_at',{ascending:false});
+  return data||[];
+}
+
+// Load assignments for a file
+async function loadFileAssignments(fileId){
+  const{data}=await sb.from('wtd_file_assignments').select('user_id').eq('file_id',fileId);
+  return(data||[]).map(a=>a.user_id);
+}
+
+// Load files assigned to current user (client view)
+async function loadMyFiles(){
+  const uid=currentUser&&currentUser.id;if(!uid)return[];
+  const{data}=await sb.from('wtd_file_assignments').select('file_id').eq('user_id',uid);
+  if(!data||!data.length)return[];
+  const fileIds=data.map(a=>a.file_id);
+  const{data:files}=await sb.from('wtd_files').select('*').in('id',fileIds).order('category').order('name');
+  return files||[];
+}
+
+// Upload file to Supabase Storage
+async function uploadFile(file){
+  const path=`${Date.now()}-${file.name.replace(/[^a-zA-Z0-9._-]/g,'_')}`;
+  const{data,error}=await sb.storage.from('client-files').upload(path,file);
+  if(error){alert('Upload failed: '+error.message);return null;}
+  const{data:urlData}=sb.storage.from('client-files').getPublicUrl(path);
+  return{path,url:urlData.publicUrl,size:file.size,type:file.name.split('.').pop().toLowerCase()};
+}
+
+// Save file record
+async function saveFileRecord(name,category,url,fileType,fileSize){
+  const{data,error}=await sb.from('wtd_files').insert({
+    name,category:category||'general',url,file_type:fileType||'',file_size:fileSize||0,
+    uploaded_by:currentUser.id
+  }).select().single();
+  if(error){alert('Error saving file: '+error.message);return null;}
+  return data;
+}
+
+// Toggle file assignment for a client
+async function toggleFileAssignment(fileId,userId,assigned){
+  if(assigned){
+    await sb.from('wtd_file_assignments').delete().eq('file_id',fileId).eq('user_id',userId);
+  }else{
+    await sb.from('wtd_file_assignments').insert({file_id:fileId,user_id:userId,assigned_by:currentUser.id});
+  }
+}
+
+// Delete file
+async function deleteFile(fileId,storagePath){
+  await sb.from('wtd_file_assignments').delete().eq('file_id',fileId);
+  await sb.from('wtd_files').delete().eq('id',fileId);
+  if(storagePath)await sb.storage.from('client-files').remove([storagePath]);
+  renderAdmin();
+}
+
+// ── ADMIN FILES VIEW ──
+async function renderAdminFiles(clients){
+  const files=await loadFiles();
+  let h=`<div style="margin-top:0.5rem">`;
+
+  // Upload zone
+  h+=`<div class="file-upload-zone" id="file-drop-zone" onclick="document.getElementById('file-input').click()">
+    <div style="font-size:28px;margin-bottom:6px">📁</div>
+    <div style="font-size:13px;color:var(--text2)">Click to upload or drag files here</div>
+    <div style="font-size:11px;color:var(--text3);margin-top:4px">PDFs, docs, images, videos — any file type</div>
+    <input type="file" id="file-input" multiple style="display:none" onchange="handleFileUpload(this.files)">
+  </div>`;
+
+  if(!files.length){
+    h+=`<div class="no-users">No files uploaded yet. Upload files above to share with clients.</div>`;
+  }else{
+    // Group by category
+    const grouped={};
+    files.forEach(f=>{
+      const cat=f.category||'general';
+      if(!grouped[cat])grouped[cat]=[];
+      grouped[cat].push(f);
+    });
+
+    for(const cat of FILE_CATEGORIES){
+      if(!grouped[cat]||!grouped[cat].length)continue;
+      h+=`<div style="font-size:12px;text-transform:uppercase;letter-spacing:.08em;color:var(--text3);margin:1rem 0 .5rem;font-weight:500">${cat}</div>`;
+      grouped[cat].forEach(f=>{
+        h+=`<div class="file-card">
+          <div class="file-icon">${fileIcon(f.name)}</div>
+          <div class="file-info">
+            <div class="file-name">${f.name}</div>
+            <div class="file-meta">${fileSize(f.file_size)} · ${new Date(f.created_at).toLocaleDateString()}</div>
+          </div>
+          <div class="file-actions">
+            <button class="btn-sm" style="background:var(--bg);border:.5px solid var(--border);color:var(--text2)" onclick="openFileAssigner('${f.id}','${f.name.replace(/'/g,"\\'")}')">👥 Assign</button>
+            <button class="btn-sm" style="background:var(--bg);border:.5px solid var(--border);color:var(--text2)" onclick="openFileCategoryEditor('${f.id}','${f.category||'general'}')">🏷</button>
+            <a href="${f.url}" target="_blank" class="btn-sm" style="background:var(--bg);border:.5px solid var(--border);color:var(--blue);text-decoration:none">↗</a>
+            <button class="btn-sm" style="background:none;color:var(--red);border:.5px solid var(--red)" onclick="if(confirm('Delete this file?'))deleteFile('${f.id}','${(f.url||'').split('/').pop()}')">✕</button>
+          </div>
+        </div>`;
+      });
+    }
+  }
+
+  h+=`</div>`;
+
+  // Add drag/drop setup after render
+  setTimeout(()=>{
+    const zone=document.getElementById('file-drop-zone');
+    if(!zone)return;
+    zone.addEventListener('dragover',e=>{e.preventDefault();zone.classList.add('dragover');});
+    zone.addEventListener('dragleave',()=>zone.classList.remove('dragover'));
+    zone.addEventListener('drop',e=>{e.preventDefault();zone.classList.remove('dragover');handleFileUpload(e.dataTransfer.files);});
+  },50);
+
+  return h;
+}
+
+// Handle file upload
+async function handleFileUpload(fileList){
+  if(!fileList||!fileList.length)return;
+  const zone=document.getElementById('file-drop-zone');
+  if(zone)zone.innerHTML=`<div style="font-size:13px;color:var(--text3)">Uploading ${fileList.length} file${fileList.length>1?'s':''}...</div>`;
+  for(const file of fileList){
+    const result=await uploadFile(file);
+    if(result){
+      await saveFileRecord(file.name,'general',result.url,result.type,result.size);
+    }
+  }
+  renderAdmin();
+}
+
+// Open file assigner modal — toggle which clients can see this file
+async function openFileAssigner(fileId,fileName){
+  const profiles=await loadAllProfiles();
+  const clients=profiles.filter(p=>p.approved&&p.id!==currentUser.id);
+  const assigned=await loadFileAssignments(fileId);
+
+  let modal=`<div class="overlay-bg" onclick="if(event.target===this)closeOv()"><div class="modal" style="max-height:70vh;overflow-y:auto">
+    <div class="modal-title">Assign: ${fileName}</div>
+    <div class="modal-sub" style="margin-bottom:1rem">Toggle which clients can see this file</div>`;
+
+  if(!clients.length){
+    modal+=`<div style="padding:1rem;text-align:center;color:var(--text3)">No clients yet.</div>`;
+  }else{
+    clients.forEach(c=>{
+      const isOn=assigned.includes(c.id);
+      modal+=`<div class="file-toggle-row">
+        <span>${c.email}</span>
+        <label class="file-toggle">
+          <input type="checkbox" ${isOn?'checked':''} onchange="toggleFileAssign('${fileId}','${c.id}',${isOn})">
+          <span class="file-toggle-slider"></span>
+        </label>
+      </div>`;
+    });
+  }
+
+  // Quick assign all
+  modal+=`<div style="margin-top:1rem;display:flex;gap:8px">
+    <button class="btn-sm" style="background:var(--green);color:#fff;flex:1" onclick="assignFileToAll('${fileId}')">Assign to all</button>
+    <button class="btn-sm" style="background:var(--bg);border:.5px solid var(--border);color:var(--text2);flex:1" onclick="unassignFileFromAll('${fileId}')">Remove all</button>
+  </div>`;
+
+  modal+=`<div style="margin-top:1rem;text-align:right"><button class="btn-cancel" onclick="closeOv()">Done</button></div></div></div>`;
+  showOv(modal);
+}
+
+async function toggleFileAssign(fileId,userId,wasAssigned){
+  await toggleFileAssignment(fileId,userId,wasAssigned);
+  openFileAssigner(fileId,'');
+}
+
+async function assignFileToAll(fileId){
+  const profiles=await loadAllProfiles();
+  const clients=profiles.filter(p=>p.approved&&p.id!==currentUser.id);
+  for(const c of clients){
+    await sb.from('wtd_file_assignments').upsert({file_id:fileId,user_id:c.id,assigned_by:currentUser.id},{onConflict:'file_id,user_id'});
+  }
+  openFileAssigner(fileId,'');
+}
+
+async function unassignFileFromAll(fileId){
+  await sb.from('wtd_file_assignments').delete().eq('file_id',fileId);
+  openFileAssigner(fileId,'');
+}
+
+// Edit file category
+function openFileCategoryEditor(fileId,currentCat){
+  let modal=`<div class="overlay-bg" onclick="if(event.target===this)closeOv()"><div class="modal">
+    <div class="modal-title">Set Category</div>
+    <div style="display:flex;flex-direction:column;gap:6px;margin:1rem 0">`;
+  FILE_CATEGORIES.forEach(cat=>{
+    modal+=`<button class="btn-ghost" style="${cat===currentCat?'background:var(--blue);color:#fff;border-color:var(--blue)':''}" onclick="updateFileCategory('${fileId}','${cat}')">${cat.charAt(0).toUpperCase()+cat.slice(1)}</button>`;
+  });
+  modal+=`</div></div></div>`;
+  showOv(modal);
+}
+
+async function updateFileCategory(fileId,category){
+  await sb.from('wtd_files').update({category,updated_at:new Date().toISOString()}).eq('id',fileId);
+  closeOv();renderAdmin();
+}
+
+// ── CLIENT FILES VIEW ──
+async function renderClientFiles(){
+  const files=await loadMyFiles();
+  if(!files.length){
+    return`<div style="text-align:center;padding:2.5rem 1rem;color:var(--text3)"><div style="font-size:36px;margin-bottom:10px">📁</div><div style="font-size:14px">No files shared yet</div><div style="font-size:12px;margin-top:4px">Your coach will share resources here</div></div>`;
+  }
+
+  let h=`<div style="margin-bottom:8px;font-size:12px;color:var(--text3)">${files.length} file${files.length!==1?'s':''} shared with you</div>`;
+
+  // Group by category
+  const grouped={};
+  files.forEach(f=>{
+    const cat=f.category||'general';
+    if(!grouped[cat])grouped[cat]=[];
+    grouped[cat].push(f);
+  });
+
+  for(const cat of FILE_CATEGORIES){
+    if(!grouped[cat]||!grouped[cat].length)continue;
+    h+=`<div style="font-size:11px;text-transform:uppercase;letter-spacing:.08em;color:var(--text3);margin:1rem 0 .5rem;font-weight:500">${cat}</div>`;
+    grouped[cat].forEach(f=>{
+      h+=`<a href="${f.url}" target="_blank" style="text-decoration:none;color:inherit" class="client-file-card">
+        <div class="file-icon">${fileIcon(f.name)}</div>
+        <div class="file-info">
+          <div class="file-name">${f.name}</div>
+          <div class="file-meta"><span class="file-cat-pill ${f.category||''}">${(f.category||'general')}</span> · ${fileSize(f.file_size)}</div>
+        </div>
+        <div style="color:var(--blue);font-size:16px">↗</div>
+      </a>`;
+    });
+  }
+
   return h;
 }
 
@@ -2772,16 +3044,17 @@ async function showForgotPassword(){
 }
 function renderPending(){document.getElementById('root').innerHTML=`<div class="screen" style="text-align:center;margin-top:120px;"><div style="font-size:48px;margin-bottom:1rem">⏳</div><h1 style="margin-bottom:10px;">You're on the list</h1><p>Your account is pending approval.</p><button class="btn-ghost" onclick="signOut()" style="margin-top:1rem">Sign out</button></div>`;}
 
-function renderTracker(){
+async function renderTracker(){
   const isAdmin=currentProfile&&currentProfile.is_admin;
   const isViewingClient=!!adminClientId;
   const topBar=`<div class="top-bar"><span class="top-bar-title">${isViewingClient?`👁 ${adminClientEmail}`:APP_NAME}</span><span class="top-bar-email">${currentUser?.email||''}</span>${isViewingClient?`<button class="top-bar-btn" onclick="renderAdmin()">← Admin</button>`:''}${isAdmin&&!isViewingClient?`<button class="top-bar-btn" onclick="openAdmin()">Admin</button>`:''} ${!isViewingClient?`<button class="top-bar-btn" onclick="openAccountModal()">Account</button>`:''}<button class="top-bar-btn" onclick="signOut()">Sign out</button></div>`;
-  const tabs=`<div class="tabs"><div class="tab${activeTab==='today'?' active':''}" onclick="setTab('today')">Today</div><div class="tab${activeTab==='week'?' active':''}" onclick="setTab('week')">Week</div><div class="tab${activeTab==='month'?' active':''}" onclick="setTab('month')">Month</div><div class="tab${activeTab==='goals'?' active':''}" onclick="setTab('goals')">Goals</div></div>`;
+  const tabs=`<div class="tabs"><div class="tab${activeTab==='today'?' active':''}" onclick="setTab('today')">Today</div><div class="tab${activeTab==='week'?' active':''}" onclick="setTab('week')">Week</div><div class="tab${activeTab==='month'?' active':''}" onclick="setTab('month')">Month</div><div class="tab${activeTab==='goals'?' active':''}" onclick="setTab('goals')">Goals</div><div class="tab${activeTab==='files'?' active':''}" onclick="setTab('files')">Files</div></div>`;
   let content='';
   if(activeTab==='today')content=renderToday(isViewingClient);
   else if(activeTab==='week')content=renderWeek();
   else if(activeTab==='month')content=renderMonth();
   else if(activeTab==='goals')content=renderGoals();
+  else if(activeTab==='files')content=await renderClientFiles();
   document.getElementById('root').innerHTML=topBar+`<div class="tracker" id="app">${tabs}${content}</div>`;
   document.getElementById('ov').style.display='none';
   document.getElementById('ov').innerHTML='';
