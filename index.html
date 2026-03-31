@@ -366,6 +366,36 @@ button,.btn-primary,.btn-ghost,.btn-sm,.settings-btn,.tab,.nav-btn,.top-bar-btn,
 .client-file-card{background:var(--bg2);border-radius:var(--rl);padding:16px;border:.5px solid var(--border);margin-bottom:10px;display:flex;align-items:center;gap:12px;cursor:pointer;transition:background .15s;}
 .client-file-card:hover{background:var(--bg);}
 
+/* ── Content Intelligence ── */
+.content-sub-tabs{display:flex;gap:3px;margin-bottom:1.25rem;background:var(--bg);border-radius:var(--r);padding:3px;border:.5px solid var(--border);}
+.content-sub-tab{flex:1;text-align:center;font-size:12px;padding:5px;border-radius:6px;cursor:pointer;color:var(--text3);}
+.content-sub-tab.active{background:var(--bg2);color:var(--text);font-weight:500;border:.5px solid var(--border);}
+.ig-post-card{background:var(--bg2);border-radius:var(--rl);padding:14px 16px;border:.5px solid var(--border);margin-bottom:9px;}
+.ig-post-hook{font-size:14px;font-weight:500;line-height:1.4;margin-bottom:6px;}
+.ig-post-metrics{display:flex;gap:12px;flex-wrap:wrap;font-size:12px;color:var(--text3);}
+.ig-post-metrics span{display:flex;align-items:center;gap:3px;}
+.ig-post-metrics .val{color:var(--text);font-weight:500;}
+.ig-format-badge{font-size:10px;padding:2px 8px;border-radius:20px;font-weight:500;}
+.ig-format-badge.reel,.ig-format-badge.drawing_video{background:rgba(91,141,239,.1);color:var(--blue);border:.5px solid rgba(91,141,239,.25);}
+.ig-format-badge.carousel{background:rgba(245,158,11,.1);color:var(--orange);border:.5px solid rgba(245,158,11,.25);}
+.ig-format-badge.post,.ig-format-badge.story{background:rgba(52,211,153,.1);color:var(--green);border:.5px solid rgba(52,211,153,.25);}
+.ig-analysis-card{background:var(--bg2);border-radius:var(--rl);padding:16px;border:.5px solid var(--border);margin-bottom:10px;}
+.ig-analysis-card h4{font-size:13px;font-weight:600;margin-bottom:8px;color:var(--text);}
+.ig-analysis-card ul{list-style:none;padding:0;}
+.ig-analysis-card li{font-size:13px;color:var(--text2);padding:4px 0;border-bottom:.5px solid var(--border);line-height:1.5;}
+.ig-analysis-card li:last-child{border-bottom:none;}
+.script-card{background:var(--bg2);border-radius:var(--rl);padding:16px;border:.5px solid var(--border);margin-bottom:10px;}
+.script-card .script-title{font-size:15px;font-weight:600;margin-bottom:4px;}
+.script-card .script-hook{font-size:14px;font-style:italic;color:var(--blue);margin-bottom:8px;line-height:1.4;}
+.script-card .script-body{font-size:13px;color:var(--text2);white-space:pre-line;line-height:1.6;padding:10px;background:var(--bg);border-radius:var(--r);border:.5px solid var(--border);margin-bottom:8px;max-height:200px;overflow-y:auto;}
+.script-card .script-reasoning{font-size:12px;color:var(--text3);margin-top:6px;font-style:italic;}
+.script-status-badge{font-size:10px;padding:2px 8px;border-radius:20px;font-weight:500;}
+.script-status-badge.draft{background:rgba(142,142,147,.1);color:var(--text3);border:.5px solid var(--border);}
+.script-status-badge.approved{background:rgba(91,141,239,.1);color:var(--blue);border:.5px solid rgba(91,141,239,.25);}
+.script-status-badge.filmed{background:rgba(245,158,11,.1);color:var(--orange);border:.5px solid rgba(245,158,11,.25);}
+.script-status-badge.posted{background:rgba(52,211,153,.1);color:var(--green);border:.5px solid rgba(52,211,153,.25);}
+.ig-loading{text-align:center;padding:2rem;font-size:13px;color:var(--text3);}
+
 /* ── Pipeline ── */
 .pl-stats{display:flex;gap:10px;margin-bottom:1.25rem;flex-wrap:wrap;}
 .pl-stat{flex:1;min-width:70px;background:var(--bg2);border-radius:var(--r);padding:11px;border:.5px solid var(--border);border-left:3px solid var(--blue);text-align:center;transition:transform .15s ease,box-shadow .15s ease;}
@@ -978,7 +1008,7 @@ async function renderAdmin(){
   const list=adminView==='pending'?pending:approved;
   let html=`<div class="top-bar"><span class="top-bar-email">${currentUser.email}</span><button class="top-bar-btn" onclick="switchToMyTracker()">My Tracker</button><button class="top-bar-btn" onclick="signOut()">Sign out</button></div>
   <div class="admin"><div style="margin-bottom:1.25rem"><div style="font-size:18px;font-weight:500;">${APP_NAME} — Admin</div><div style="font-size:12px;color:var(--text3);margin-top:2px;">${profiles.length} total users</div></div>
-  <div class="admin-tabs"><div class="admin-tab${adminView==='pending'?' active':''}" onclick="setAdminView('pending')">Pending (${pending.length})</div><div class="admin-tab${adminView==='approved'?' active':''}" onclick="setAdminView('approved')">Clients (${approved.length})</div><div class="admin-tab${adminView==='pipeline'?' active':''}" onclick="setAdminView('pipeline')">Pipeline</div><div class="admin-tab${adminView==='checkins'?' active':''}" onclick="setAdminView('checkins')">Check-ins</div><div class="admin-tab${adminView==='analytics'?' active':''}" onclick="setAdminView('analytics')">Analytics</div><div class="admin-tab${adminView==='files'?' active':''}" onclick="setAdminView('files')">Files</div></div>`;
+  <div class="admin-tabs"><div class="admin-tab${adminView==='pending'?' active':''}" onclick="setAdminView('pending')">Pending (${pending.length})</div><div class="admin-tab${adminView==='approved'?' active':''}" onclick="setAdminView('approved')">Clients (${approved.length})</div><div class="admin-tab${adminView==='pipeline'?' active':''}" onclick="setAdminView('pipeline')">Pipeline</div><div class="admin-tab${adminView==='checkins'?' active':''}" onclick="setAdminView('checkins')">Check-ins</div><div class="admin-tab${adminView==='analytics'?' active':''}" onclick="setAdminView('analytics')">Analytics</div><div class="admin-tab${adminView==='content'?' active':''}" onclick="setAdminView('content')">Content</div><div class="admin-tab${adminView==='files'?' active':''}" onclick="setAdminView('files')">Files</div></div>`;
   if(adminView==='pipeline'){
     await loadPipelineLeads();
     html+=renderPipelineDashboard();
@@ -990,6 +1020,10 @@ async function renderAdmin(){
   }
   if(adminView==='analytics'){
     html+=await renderAdminAnalytics(approved);
+    html+=`</div>`;document.getElementById('root').innerHTML=html;return;
+  }
+  if(adminView==='content'){
+    html+=await renderAdminContent();
     html+=`</div>`;document.getElementById('root').innerHTML=html;return;
   }
   if(adminView==='files'){
@@ -1175,6 +1209,301 @@ async function renderAdminAnalytics(clients){
 
   h+=`</div>`;
   return h;
+}
+
+// ── INSTAGRAM CONTENT INTELLIGENCE ──
+let contentSubView='performance';
+let igMedia=[];let igInsights={};let igScripts=[];
+let igAnalysis=null;let igSyncing=false;let igAnalyzing=false;let igGenerating=false;
+
+const EDGE_URL=SUPABASE_URL+'/functions/v1';
+
+async function loadIgMedia(){
+  const{data}=await sb.from('ig_media').select('*').eq('owner_id',currentUser.id).order('timestamp',{ascending:false}).limit(100);
+  igMedia=data||[];
+  // Load latest insights per media
+  if(igMedia.length){
+    const ids=igMedia.map(m=>m.ig_media_id);
+    const{data:ins}=await sb.from('ig_insights').select('*').eq('owner_id',currentUser.id).in('ig_media_id',ids).order('synced_at',{ascending:false});
+    igInsights={};
+    (ins||[]).forEach(i=>{if(!igInsights[i.ig_media_id])igInsights[i.ig_media_id]=i;});
+  }
+}
+
+async function loadIgScripts(){
+  const{data}=await sb.from('ig_scripts').select('*').eq('owner_id',currentUser.id).order('created_at',{ascending:false});
+  igScripts=data||[];
+}
+
+async function syncInstagram(mode){
+  igSyncing=true;renderAdmin();
+  try{
+    const{data:{session}}=await sb.auth.getSession();
+    const res=await fetch(EDGE_URL+'/ig-sync',{method:'POST',headers:{'Content-Type':'application/json','Authorization':'Bearer '+session.access_token},body:JSON.stringify({mode:mode||'recent',owner_id:currentUser.id})});
+    const result=await res.json();
+    if(result.error){alert('Sync error: '+result.error);return;}
+    await storage.set('ig-last-sync',new Date().toISOString());
+    alert(`Synced ${result.synced} of ${result.total} posts.${result.tokenWarning?'\n\n⚠️ '+result.tokenWarning:''}`);
+    await loadIgMedia();
+  }catch(e){alert('Sync failed: '+e.message);}
+  finally{igSyncing=false;renderAdmin();}
+}
+
+async function runContentAnalysis(){
+  igAnalyzing=true;renderAdmin();
+  try{
+    const{data:{session}}=await sb.auth.getSession();
+    const res=await fetch(EDGE_URL+'/ig-analyze',{method:'POST',headers:{'Content-Type':'application/json','Authorization':'Bearer '+session.access_token},body:JSON.stringify({action:'analyze',owner_id:currentUser.id})});
+    const result=await res.json();
+    if(result.error){alert('Analysis error: '+result.error);return;}
+    igAnalysis=result.analysis;
+  }catch(e){alert('Analysis failed: '+e.message);}
+  finally{igAnalyzing=false;renderAdmin();}
+}
+
+async function generateScripts(topic,format,count){
+  igGenerating=true;renderAdmin();
+  try{
+    const{data:{session}}=await sb.auth.getSession();
+    const res=await fetch(EDGE_URL+'/ig-analyze',{method:'POST',headers:{'Content-Type':'application/json','Authorization':'Bearer '+session.access_token},body:JSON.stringify({action:'generate',owner_id:currentUser.id,topic:topic||'',format:format||'drawing_video',count:count||3})});
+    const result=await res.json();
+    if(result.error){alert('Generation error: '+result.error);return;}
+    await loadIgScripts();
+  }catch(e){alert('Generation failed: '+e.message);}
+  finally{igGenerating=false;renderAdmin();}
+}
+
+async function updateScriptStatus(id,status){
+  await sb.from('ig_scripts').update({status,updated_at:new Date().toISOString()}).eq('id',id);
+  await loadIgScripts();renderAdmin();
+}
+
+async function deleteScript(id){
+  await sb.from('ig_scripts').delete().eq('id',id);
+  await loadIgScripts();renderAdmin();
+}
+
+function copyScript(text){
+  navigator.clipboard.writeText(text).then(()=>alert('Script copied!'));
+}
+
+// ── CONTENT TAB RENDERING ──
+async function renderAdminContent(){
+  await Promise.all([loadIgMedia(),loadIgScripts()]);
+
+  let h=`<div class="content-sub-tabs">
+    <div class="content-sub-tab${contentSubView==='performance'?' active':''}" onclick="contentSubView='performance';renderAdmin()">Performance</div>
+    <div class="content-sub-tab${contentSubView==='scripts'?' active':''}" onclick="contentSubView='scripts';renderAdmin()">Scripts</div>
+    <div class="content-sub-tab${contentSubView==='settings'?' active':''}" onclick="contentSubView='settings';renderAdmin()">Settings</div>
+  </div>`;
+
+  if(contentSubView==='performance')h+=renderContentPerformance();
+  else if(contentSubView==='scripts')h+=renderContentScripts();
+  else if(contentSubView==='settings')h+=renderContentSettings();
+
+  return h;
+}
+
+function renderContentPerformance(){
+  if(!igMedia.length)return`<div style="text-align:center;padding:2rem;color:var(--text3)"><div style="font-size:36px;margin-bottom:10px">📊</div><div style="font-size:14px">No Instagram data yet</div><div style="font-size:12px;margin-top:6px">Go to Settings → connect your Instagram → Sync Now</div></div>`;
+
+  // Compute overview stats
+  let totalPosts=igMedia.length,totalEng=0,totalSave=0,totalShare=0,withInsights=0;
+  const formatStats={};
+  const postsWithData=[];
+
+  igMedia.forEach(m=>{
+    const ins=igInsights[m.ig_media_id];
+    if(!ins)return;
+    withInsights++;
+    totalEng+=Number(ins.engagement_rate)||0;
+    totalSave+=Number(ins.save_rate)||0;
+    totalShare+=Number(ins.share_rate)||0;
+    const fmt=m.content_format||'post';
+    if(!formatStats[fmt])formatStats[fmt]={count:0,eng:0,saves:0,shares:0,views:0};
+    formatStats[fmt].count++;
+    formatStats[fmt].eng+=Number(ins.engagement_rate)||0;
+    formatStats[fmt].saves+=Number(ins.saves)||0;
+    formatStats[fmt].shares+=Number(ins.shares)||0;
+    formatStats[fmt].views+=Number(ins.views)||0;
+    postsWithData.push({...m,...ins});
+  });
+
+  const avgEng=withInsights?totalEng/withInsights:0;
+  const avgSave=withInsights?totalSave/withInsights:0;
+  const avgShare=withInsights?totalShare/withInsights:0;
+
+  postsWithData.sort((a,b)=>(Number(b.engagement_rate)||0)-(Number(a.engagement_rate)||0));
+
+  let h=`<div class="analytics-grid">
+    <div class="analytics-card"><div class="analytics-card-val">${totalPosts}</div><div class="analytics-card-lbl">Total Posts</div></div>
+    <div class="analytics-card"><div class="analytics-card-val" style="color:var(--blue)">${(avgEng*100).toFixed(1)}%</div><div class="analytics-card-lbl">Avg Engagement</div></div>
+    <div class="analytics-card"><div class="analytics-card-val" style="color:var(--orange)">${(avgSave*100).toFixed(2)}%</div><div class="analytics-card-lbl">Avg Save Rate</div></div>
+    <div class="analytics-card"><div class="analytics-card-val" style="color:var(--green)">${(avgShare*100).toFixed(2)}%</div><div class="analytics-card-lbl">Avg Share Rate</div></div>
+  </div>`;
+
+  // Format comparison
+  const formats=Object.entries(formatStats);
+  if(formats.length){
+    h+=`<div class="analytics-title" style="margin-top:1rem">Format Breakdown</div>`;
+    formats.sort((a,b)=>(b[1].eng/b[1].count)-(a[1].eng/a[1].count));
+    formats.forEach(([fmt,s])=>{
+      const avgE=s.count?(s.eng/s.count*100).toFixed(1):0;
+      h+=`<div class="analytics-row">
+        <div style="flex:1"><span class="ig-format-badge ${fmt}">${fmt.replace('_',' ')}</span> <span style="font-size:11px;color:var(--text3)">${s.count} posts</span></div>
+        <div style="text-align:right"><span style="font-weight:500">${avgE}% eng</span> <span style="font-size:11px;color:var(--text3);margin-left:6px">${s.saves} saves · ${s.shares} shares</span></div>
+      </div>`;
+    });
+  }
+
+  // Top 5 posts
+  h+=`<div class="analytics-title" style="margin-top:1.25rem">Top Posts by Engagement</div>`;
+  postsWithData.slice(0,5).forEach((p,i)=>{
+    h+=`<div class="ig-post-card">
+      <div style="display:flex;align-items:center;gap:8px;margin-bottom:6px">
+        <span style="font-size:12px;font-weight:600;color:var(--text3)">#${i+1}</span>
+        <span class="ig-format-badge ${p.content_format||'post'}">${(p.content_format||'post').replace('_',' ')}</span>
+        <span style="font-size:11px;color:var(--text3)">${p.timestamp?new Date(p.timestamp).toLocaleDateString():''}</span>
+        ${p.permalink?`<a href="${p.permalink}" target="_blank" style="font-size:11px;color:var(--blue);margin-left:auto">↗ View</a>`:''}
+      </div>
+      <div class="ig-post-hook">${p.hook_text||'(no caption)'}</div>
+      <div class="ig-post-metrics">
+        <span>👁 <span class="val">${(p.views||0).toLocaleString()}</span></span>
+        <span>❤️ <span class="val">${p.likes||0}</span></span>
+        <span>💬 <span class="val">${p.comments||0}</span></span>
+        <span>🔖 <span class="val">${p.saves||0}</span></span>
+        <span>↗️ <span class="val">${p.shares||0}</span></span>
+        <span>📈 <span class="val">${((Number(p.engagement_rate)||0)*100).toFixed(1)}%</span></span>
+      </div>
+    </div>`;
+  });
+
+  // AI Analysis section
+  h+=`<div class="analytics-title" style="margin-top:1.25rem">AI Analysis</div>`;
+  if(igAnalyzing){
+    h+=`<div class="ig-loading">🤖 Analyzing your content...</div>`;
+  }else{
+    h+=`<button class="btn-primary" style="width:auto;padding:8px 20px;margin-bottom:1rem" onclick="runContentAnalysis()">Run AI Analysis</button>`;
+    if(igAnalysis&&!igAnalysis.raw){
+      // Patterns
+      if(igAnalysis.top_patterns?.length){
+        h+=`<div class="ig-analysis-card"><h4>Top Patterns</h4><ul>`;
+        igAnalysis.top_patterns.forEach(p=>{h+=`<li><strong>${p.pattern}</strong><br>${p.evidence}<br><span style="color:var(--blue)">${p.recommendation}</span></li>`;});
+        h+=`</ul></div>`;
+      }
+      // Hook analysis
+      if(igAnalysis.hook_analysis){
+        const ha=igAnalysis.hook_analysis;
+        h+=`<div class="ig-analysis-card"><h4>Hook Formula</h4><div style="font-size:14px;font-weight:500;color:var(--blue);margin-bottom:8px">${ha.formula||''}</div>`;
+        if(ha.winning_hooks?.length){h+=`<div style="font-size:12px;color:var(--text3);margin-bottom:4px">WINNING HOOKS:</div><ul>`;ha.winning_hooks.forEach(h2=>{h+=`<li style="color:var(--green)">${h2}</li>`;});h+=`</ul>`;}
+        h+=`</div>`;
+      }
+      // Action items
+      if(igAnalysis.action_items?.length){
+        h+=`<div class="ig-analysis-card" style="border-left:3px solid var(--blue)"><h4>Action Items</h4><ul>`;
+        igAnalysis.action_items.forEach((a,i)=>{h+=`<li><strong>${i+1}.</strong> ${a}</li>`;});
+        h+=`</ul></div>`;
+      }
+      // Content to leads
+      if(igAnalysis.content_to_leads?.insight){
+        h+=`<div class="ig-analysis-card"><h4>Content → Leads</h4><div style="font-size:13px;color:var(--text2)">${igAnalysis.content_to_leads.insight}</div>${igAnalysis.content_to_leads.best_format_for_dms?`<div style="margin-top:6px;font-size:12px;color:var(--green)">Best format for DMs: ${igAnalysis.content_to_leads.best_format_for_dms}</div>`:''}</div>`;
+      }
+    }else if(igAnalysis?.raw){
+      h+=`<div class="ig-analysis-card"><div style="font-size:13px;white-space:pre-line">${igAnalysis.raw}</div></div>`;
+    }
+  }
+
+  return h;
+}
+
+function renderContentScripts(){
+  let h=`<div style="display:flex;gap:8px;margin-bottom:1rem;flex-wrap:wrap;align-items:center">`;
+  if(igGenerating){
+    h+=`<div class="ig-loading" style="flex:1">🤖 Generating scripts...</div>`;
+  }else{
+    h+=`<input type="text" id="ig-script-topic" class="inp" style="flex:1;min-width:150px;margin-bottom:0" placeholder="Topic (optional, e.g. 'the gap')">
+    <select id="ig-script-format" class="inp" style="width:auto;margin-bottom:0"><option value="drawing_video">Drawing Video</option><option value="carousel">Carousel</option><option value="reel">Reel</option></select>
+    <button class="btn-primary" style="width:auto;padding:8px 16px;margin-bottom:0" onclick="generateScripts(document.getElementById('ig-script-topic').value,document.getElementById('ig-script-format').value,3)">Generate 3 Scripts</button>`;
+  }
+  h+=`</div>`;
+
+  if(!igScripts.length){
+    return h+`<div style="text-align:center;padding:2rem;color:var(--text3)"><div style="font-size:36px;margin-bottom:10px">✍️</div><div style="font-size:14px">No scripts yet</div><div style="font-size:12px;margin-top:4px">Sync your Instagram data, then generate scripts</div></div>`;
+  }
+
+  igScripts.forEach(s=>{
+    const nextStatus={'draft':'approved','approved':'filmed','filmed':'posted','posted':'posted'}[s.status]||'draft';
+    h+=`<div class="script-card">
+      <div style="display:flex;align-items:center;gap:8px;margin-bottom:6px">
+        <div class="script-title" style="flex:1">${s.title||'Untitled'}</div>
+        <span class="script-status-badge ${s.status}">${s.status}</span>
+        <span class="ig-format-badge ${s.format||'drawing_video'}">${(s.format||'drawing_video').replace('_',' ')}</span>
+      </div>
+      <div class="script-hook">"${s.hook||''}"</div>
+      <div class="script-body">${s.body||''}</div>
+      ${s.ai_reasoning?`<div class="script-reasoning">💡 ${s.ai_reasoning}</div>`:''}
+      <div style="display:flex;gap:6px;margin-top:10px;flex-wrap:wrap">
+        ${s.status!=='posted'?`<button class="btn-sm btn-green" onclick="updateScriptStatus('${s.id}','${nextStatus}')">Mark ${nextStatus}</button>`:''}
+        <button class="btn-sm" style="background:var(--bg);border:.5px solid var(--border);color:var(--text2)" onclick="copyScript(\`${(s.hook+'\n\n'+s.body).replace(/`/g,"'").replace(/\\/g,"\\\\")}\`)">📋 Copy</button>
+        <button class="btn-sm" style="background:none;color:var(--red);border:.5px solid var(--red)" onclick="if(confirm('Delete this script?'))deleteScript('${s.id}')">✕</button>
+      </div>
+    </div>`;
+  });
+
+  return h;
+}
+
+function renderContentSettings(){
+  let h=`<div style="margin-top:.5rem">`;
+
+  // Connection status
+  h+=`<div class="ig-analysis-card">
+    <h4>Instagram Connection</h4>
+    <div style="font-size:13px;color:var(--text2);margin-bottom:10px">${igMedia.length?`✅ Connected — ${igMedia.length} posts synced`:'⚪ Not connected yet'}</div>
+    <div style="font-size:11px;color:var(--text3);margin-bottom:12px">Paste your Instagram long-lived access token below. Get one from <a href="https://developers.facebook.com/tools/explorer/" target="_blank" style="color:var(--blue)">Facebook Graph API Explorer</a>.</div>
+    <input type="password" class="inp" id="ig-token-inp" placeholder="Paste Instagram access token" style="margin-bottom:8px">
+    <div style="display:flex;gap:8px">
+      <button class="btn-primary" style="width:auto;padding:8px 16px" onclick="saveIgToken()">Save Token</button>
+      <button class="btn-ghost" onclick="removeIgToken()">Remove</button>
+    </div>
+  </div>`;
+
+  // Sync controls
+  h+=`<div class="ig-analysis-card">
+    <h4>Sync</h4>
+    <div style="display:flex;gap:8px;margin-bottom:8px">
+      <button class="btn-primary" style="width:auto;padding:8px 16px" onclick="syncInstagram('recent')" ${igSyncing?'disabled':''}>${igSyncing?'Syncing...':'Sync Recent (7 days)'}</button>
+      <button class="btn-ghost" onclick="syncInstagram('full')" ${igSyncing?'disabled':''}>${igSyncing?'Syncing...':'Full Sync (all posts)'}</button>
+    </div>
+  </div>`;
+
+  // Setup instructions
+  h+=`<div class="ig-analysis-card">
+    <h4>Setup Guide</h4>
+    <ol style="font-size:13px;color:var(--text2);padding-left:1.2rem;line-height:1.8">
+      <li>Go to <a href="https://developers.facebook.com" target="_blank" style="color:var(--blue)">developers.facebook.com</a> → Create App → Business type</li>
+      <li>Add "Instagram Graph API" product</li>
+      <li>In Graph API Explorer: select your app, add permissions: <code>instagram_basic</code>, <code>instagram_manage_insights</code>, <code>pages_show_list</code></li>
+      <li>Generate User Access Token → exchange for long-lived token (60 days)</li>
+      <li>Paste the long-lived token above → hit Save Token</li>
+      <li>Click "Sync Recent" to pull in your posts</li>
+    </ol>
+  </div>`;
+
+  h+=`</div>`;
+  return h;
+}
+
+async function saveIgToken(){
+  const token=document.getElementById('ig-token-inp')?.value.trim();
+  if(!token){alert('Paste a token first.');return;}
+  await storage.set('ig-access-token',token);
+  alert('Token saved! Now deploy the ig-sync Edge Function with this token as IG_ACCESS_TOKEN secret.');
+}
+
+async function removeIgToken(){
+  await storage.set('ig-access-token','');
+  alert('Token removed.');
 }
 
 // ── FILES MANAGEMENT ──
