@@ -169,6 +169,7 @@ body{background:var(--bg);color:var(--text);font-family:var(--font);touch-action
 .celebrate-banner.won{background:linear-gradient(135deg,rgba(91,141,239,.18),rgba(91,141,239,.05));border:1px solid rgba(91,141,239,.45);box-shadow:0 2px 12px rgba(91,141,239,.12);animation:fadeIn .4s ease,celebPulse 2.5s ease-in-out infinite;}
 .celebrate-banner.crush{background:linear-gradient(135deg,rgba(52,211,153,.2),rgba(52,211,153,.05));border:1px solid rgba(52,211,153,.45);box-shadow:0 2px 12px rgba(52,211,153,.12);animation:fadeIn .4s ease,celebPulseGreen 2.5s ease-in-out infinite;}
 @keyframes fadeIn{from{opacity:0;transform:translateY(-5px)}to{opacity:1;transform:translateY(0)}}
+@keyframes spin{to{transform:rotate(360deg)}}
 .rest-banner{border-radius:var(--rl);padding:11px 15px;margin-bottom:12px;border:.5px solid var(--border);background:var(--bg2);display:flex;align-items:center;justify-content:space-between;gap:12px;}
 .rest-banner.active{border-color:var(--blue);background:rgba(58,126,196,.06);}
 .toggle{position:relative;width:40px;height:22px;flex-shrink:0;}
@@ -711,7 +712,7 @@ button,.btn-primary,.btn-ghost,.btn-sm,.settings-btn,.tab,.nav-btn,.top-bar-btn,
 </style>
 </head>
 <body>
-<div id="root"><div class="loading"><div style="font-size:24px;font-weight:600;margin-bottom:8px">Win the Day</div><div style="font-size:13px;color:var(--text3)">Loading…</div></div></div>
+<div id="root"><div class="loading"><div style="width:32px;height:32px;border:3px solid var(--border2);border-top-color:var(--blue);border-radius:50%;animation:spin .6s linear infinite;margin-bottom:12px"></div><div style="font-size:24px;font-weight:600;margin-bottom:8px">Win the Day</div><div style="font-size:13px;color:var(--text3)">Loading…</div></div></div>
 <div id="ov" style="display:none"></div>
 
 <script>
@@ -3015,10 +3016,14 @@ async function onboardSave(){
 // ── ROOT ROUTER ──
 async function renderRoot(){
 if(!currentUser){const{data:{session}}=await sb.auth.getSession();if(!session){renderAuth();return;}currentUser=session.user;}
-  currentProfile=await loadProfile(currentUser.id);
+  // Load profile and all data in parallel for returning users
+  const [profile]=await Promise.all([
+    loadProfile(currentUser.id),
+    loadAll() // Start loading data immediately — doesn't depend on profile
+  ]);
+  currentProfile=profile;
   if(!currentProfile){const isAdmin=currentUser.email.toLowerCase()===ADMIN_EMAIL.toLowerCase();await sb.from('wtd_profiles').upsert({id:currentUser.id,email:currentUser.email,approved:isAdmin,is_admin:isAdmin},{onConflict:'id'});currentProfile=await loadProfile(currentUser.id);}
   if(!currentProfile.approved){renderPending();return;}
-  await loadAll();
   if(!hasCustomTasks && !currentProfile.is_admin && !adminClientId){renderOnboarding();return;}
   const tasks=isRestDay?restTasks():allTasks();const tot=isRestDay?restTotal():total();
   const earned=tasks.filter(t=>checked[t.id]).reduce((s,t)=>s+t.points,0);
@@ -3175,7 +3180,17 @@ function getMissedPatterns(){
 }
 async function loadAll(uid){
   const keys=['wtd-history','wtd-why','wtd-identity','wtd-tasks','wtd-rest','wtd-actions','wtd-notes','wtd-goals','wtd-reminder','wtd-ir','wtd-thresholds'];
-  const results=await Promise.all(keys.map(k=>Promise.race([storage.get(k,uid),new Promise(r=>setTimeout(()=>r(null),8000))])));
+  // Load all storage keys + report prefs in parallel
+  const reportPrefPromise=(()=>{
+    const u=uid||currentUser?.id;if(!u)return Promise.resolve(null);
+    return sb.from('wtd_report_prefs').select('weekly_email,monthly_email').eq('user_id',u).maybeSingle().then(r=>r.data).catch(()=>null);
+  })();
+  const [results,reportPrefs]=await Promise.all([
+    Promise.all(keys.map(k=>Promise.race([storage.get(k,uid),new Promise(r=>setTimeout(()=>r(null),8000))]))),
+    reportPrefPromise
+  ]);
+  // Apply report prefs
+  if(reportPrefs){weeklyReportEnabled=!!reportPrefs.weekly_email;monthlyReportEnabled=!!reportPrefs.monthly_email;}
   const [r0,r1,r2,r3,r4,r5,r6,r7,r8,r9,r10]=results;
   try{allHistory=r0?JSON.parse(r0.value):{}}catch(e){allHistory={};}
   try{whyStatement=r1?.value||''}catch(e){whyStatement='';}
@@ -3209,8 +3224,6 @@ async function loadAll(uid){
     console.log('Repaired rest-day pct values in history');
     await storage.set('wtd-history',JSON.stringify(allHistory),uid);
   }
-  // Load report preferences
-  await loadReportPrefs();
 }
 async function saveDay(){
   const uid=adminClientId||undefined;
