@@ -716,6 +716,19 @@ button,.btn-primary,.btn-ghost,.btn-sm,.settings-btn,.tab,.nav-btn,.top-bar-btn,
 <div id="ov" style="display:none"></div>
 
 <script>
+// Auto-reload if stuck on loading screen for 10s (catches cached broken builds)
+setTimeout(()=>{
+  const root=document.getElementById('root');
+  if(root&&root.querySelector('.loading')){
+    const v='_v='+Date.now();
+    const url=new URL(location.href);
+    if(url.searchParams.get('_v')){return;} // Already tried once, don't loop
+    url.searchParams.set('_v',Date.now());
+    location.replace(url.toString());
+  }
+},10000);
+</script>
+<script>
 const SUPABASE_URL = 'https://ceahoxydtjcprjkbjakn.supabase.co';
 const SUPABASE_KEY = 'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6ImNlYWhveHlkdGpjcHJqa2JqYWtuIiwicm9sZSI6ImFub24iLCJpYXQiOjE3NzQzOTAyNDMsImV4cCI6MjA4OTk2NjI0M30.B9SPHoEYWd_-GtaNuXrc8M0tlqhxns9otKl9z5jcTZ0';
 const ADMIN_EMAIL = 'scott@scottzwills.com';
