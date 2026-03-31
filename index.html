@@ -1165,7 +1165,6 @@ async function renderAdminAnalytics(clients){
 }
 
 // ── FILES MANAGEMENT ──
-const SUPABASE_URL='https://ceahoxydtjcprjkbjakn.supabase.co';
 const FILE_CATEGORIES=['general','onboarding','protocol','resource'];
 const FILE_ICONS={'pdf':'📄','doc':'📝','docx':'📝','xls':'📊','xlsx':'📊','ppt':'📊','pptx':'📊','jpg':'🖼','jpeg':'🖼','png':'🖼','gif':'🖼','mp4':'🎬','mov':'🎬','mp3':'🎵','zip':'📦','default':'📎'};
 function fileIcon(name){const ext=(name||'').split('.').pop().toLowerCase();return FILE_ICONS[ext]||FILE_ICONS.default;}
