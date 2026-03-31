@@ -43,7 +43,7 @@ https://ceahoxydtjcprjkbjakn.supabase.co/rest/v1/rpc/receive_manychat_lead
 **Body (JSON):**
 ```json
 {
-  "webhook_secret": "57aaa337c2989b44cb28fd25655b770df35f49a6b5e93e50",
+  "webhook_secret": "YOUR_WEBHOOK_SECRET_HERE",
   "subscriber_id": "{{id}}",
   "subscriber_name": "{{first_name}} {{last_name}}",
   "ig_username": "{{ig_username}}",

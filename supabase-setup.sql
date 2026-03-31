@@ -76,7 +76,9 @@ LANGUAGE plpgsql
 SECURITY DEFINER
 AS $$
 DECLARE
-  expected_secret TEXT := '57aaa337c2989b44cb28fd25655b770df35f49a6b5e93e50';
+  -- SECURITY: Read secret from Supabase config, not hardcoded
+  -- Set via: ALTER DATABASE postgres SET app.manychat_webhook_secret = 'your-secret-here';
+  expected_secret TEXT := coalesce(current_setting('app.manychat_webhook_secret', true), '');
   admin_user_id UUID;
   existing_lead UUID;
   new_lead_id UUID;
