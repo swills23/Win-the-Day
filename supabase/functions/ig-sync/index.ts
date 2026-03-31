@@ -8,10 +8,20 @@
 import { serve } from "https://deno.land/std@0.168.0/http/server.ts";
 import { createClient } from "https://esm.sh/@supabase/supabase-js@2";
 
-const corsHeaders = {
-  "Access-Control-Allow-Origin": "*",
-  "Access-Control-Allow-Headers": "authorization, x-client-info, apikey, content-type",
-};
+const ALLOWED_ORIGINS = [
+  "https://app.scottzwills.com",
+  "http://localhost:3000",
+  "http://127.0.0.1:3000",
+];
+
+function getCorsHeaders(req: Request) {
+  const origin = req.headers.get("origin") || "";
+  const allowedOrigin = ALLOWED_ORIGINS.includes(origin) ? origin : ALLOWED_ORIGINS[0];
+  return {
+    "Access-Control-Allow-Origin": allowedOrigin,
+    "Access-Control-Allow-Headers": "authorization, x-client-info, apikey, content-type",
+  };
+}
 
 const IG_API = "https://graph.instagram.com";
 const GRAPH_API = "https://graph.facebook.com/v19.0";
@@ -19,12 +29,64 @@ const GRAPH_API = "https://graph.facebook.com/v19.0";
 // Delay helper to respect rate limits
 const delay = (ms: number) => new Promise(r => setTimeout(r, ms));
 
+// Rate limit: 1 sync per 5 minutes per user
+const syncLockMap = new Map<string, number>();
+const SYNC_COOLDOWN = 5 * 60_000;
+
+async function verifyAdmin(req: Request): Promise<{ userId: string } | null> {
+  const authHeader = req.headers.get("authorization");
+  if (!authHeader) return null;
+
+  const supabaseUrl = Deno.env.get("SUPABASE_URL")!;
+  const anonKey = Deno.env.get("SUPABASE_ANON_KEY") || Deno.env.get("SUPABASE_SERVICE_ROLE_KEY")!;
+  const sb = createClient(supabaseUrl, anonKey, {
+    global: { headers: { Authorization: authHeader } },
+  });
+
+  const { data: { user }, error } = await sb.auth.getUser();
+  if (error || !user) return null;
+
+  // Verify admin status via JWT claims or profile lookup
+  const serviceKey = Deno.env.get("SUPABASE_SERVICE_ROLE_KEY")!;
+  const adminSb = createClient(supabaseUrl, serviceKey);
+  const { data: profile } = await adminSb
+    .from("wtd_profiles")
+    .select("is_admin")
+    .eq("id", user.id)
+    .single();
+
+  if (!profile?.is_admin) return null;
+  return { userId: user.id };
+}
+
 serve(async (req: Request) => {
+  const corsHeaders = getCorsHeaders(req);
+
   if (req.method === "OPTIONS") {
     return new Response("ok", { headers: corsHeaders });
   }
 
   try {
+    // Auth + admin verification
+    const auth = await verifyAdmin(req);
+    if (!auth) {
+      return new Response(
+        JSON.stringify({ error: "Unauthorized — admin access required" }),
+        { status: 401, headers: { ...corsHeaders, "Content-Type": "application/json" } }
+      );
+    }
+
+    // Rate limit: prevent rapid re-syncs
+    const lastSync = syncLockMap.get(auth.userId) || 0;
+    if (Date.now() - lastSync < SYNC_COOLDOWN) {
+      const waitSec = Math.ceil((SYNC_COOLDOWN - (Date.now() - lastSync)) / 1000);
+      return new Response(
+        JSON.stringify({ error: `Sync cooldown — try again in ${waitSec}s` }),
+        { status: 429, headers: { ...corsHeaders, "Content-Type": "application/json" } }
+      );
+    }
+    syncLockMap.set(auth.userId, Date.now());
+
     const token = Deno.env.get("IG_ACCESS_TOKEN");
     const supabaseUrl = Deno.env.get("SUPABASE_URL")!;
     const serviceKey = Deno.env.get("SUPABASE_SERVICE_ROLE_KEY")!;
@@ -39,14 +101,8 @@ serve(async (req: Request) => {
     const sb = createClient(supabaseUrl, serviceKey);
     const body = await req.json().catch(() => ({}));
     const mode = body.mode || "recent";
-    const ownerId = body.owner_id; // Admin user ID
-
-    if (!ownerId) {
-      return new Response(
-        JSON.stringify({ error: "owner_id is required" }),
-        { status: 400, headers: { ...corsHeaders, "Content-Type": "application/json" } }
-      );
-    }
+    // Use authenticated user's ID, not the request body
+    const ownerId = auth.userId;
 
     // 1. Fetch media list from Instagram
     const mediaFields = "id,media_type,media_url,thumbnail_url,permalink,caption,timestamp";
@@ -188,7 +244,6 @@ serve(async (req: Request) => {
                 const refreshData = await refreshRes.json();
                 if (refreshData.access_token) {
                   tokenWarning = `Token refreshed (was ${daysLeft} days from expiry)`;
-                  // Note: can't update Deno.env, but we store the new token info
                 }
               } else {
                 tokenWarning = `Token expires in ${daysLeft} days — refresh failed. Re-generate in Facebook Developer portal.`;

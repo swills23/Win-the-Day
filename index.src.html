@@ -2052,7 +2052,7 @@ function scoreGrade(s){if(s>=75)return'A';if(s>=55)return'B';if(s>=35)return'C';
 function getSetterScript(status,name){
   const tpl=SETTER_SCRIPTS[status];
   if(!tpl)return null;
-  return{title:tpl.title,lines:tpl.lines.map(l=>l.replace('{{name}}',name||''))};
+  return{title:tpl.title,lines:tpl.lines.map(l=>l.replace('{{name}}',esc(name||'')))};
 }
 function copyScript(status,name){
   const s=getSetterScript(status,name);
@@ -2737,7 +2737,7 @@ function openLeadDetail(id){
       <div style="font-size:10px;text-transform:uppercase;letter-spacing:.06em;color:var(--blue);margin-bottom:4px;display:flex;align-items:center;gap:6px">ManyChat <span class="mc-imported">ID: ${esc(String(l.mc_subscriber_id))}</span><span style="margin-left:auto;font-size:10px;color:var(--blue);cursor:pointer;text-decoration:underline" onclick="event.stopPropagation();mcRefreshLead('${id}')">Refresh</span></div>
       ${l.mc_tags&&l.mc_tags.length?'<div style="display:flex;gap:3px;flex-wrap:wrap;margin-top:4px">'+l.mc_tags.map(t=>'<span class="mc-tag">'+esc(t)+'</span>').join('')+'</div>':''}
     </div>`:''}
-    ${script?`<div class="pl-script"><div class="pl-script-title">Suggested script \u2014 ${script.title} <span class="pl-script-copy" id="pl-copy-btn" onclick="event.stopPropagation();copyScript('${l.status}','${esc(l.name)}')">Copy</span></div>${script.lines.map(line=>`<div>${line}</div>`).join('')}</div>`:''}
+    ${script?`<div class="pl-script"><div class="pl-script-title">Suggested script \u2014 ${script.title} <span class="pl-script-copy" id="pl-copy-btn" onclick="event.stopPropagation();copyScript('${l.status}','${esc(l.name)}')">Copy</span></div>${script.lines.map(line=>`<div>${esc(line)}</div>`).join('')}</div>`:''}
     <div class="modal-actions">
       <button class="btn-save" onclick="saveEditLead('${id}')">Save</button>
       <button class="btn-cancel" onclick="closeOv()">Cancel</button>
@@ -3843,7 +3843,7 @@ function taskRow(task,pct,rest){
       ${isDone?'<svg width="10" height="8" viewBox="0 0 10 8" fill="none"><path d="M1 4L3.5 6.5L9 1" stroke="white" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round"/></svg>':''}
     </div>
     <span class="task-name${isDone?' done':''}" style="pointer-events:none">
-      ${task.name}${task.sub?`<span class="task-sub">${task.sub}</span>`:''}
+      ${esc(task.name)}${task.sub?`<span class="task-sub">${esc(task.sub)}</span>`:''}
       ${todayNote?`<span class="task-note-text">${esc(todayNote)}</span>`:''}
     </span>
     <button class="task-note-btn" onclick="event.stopPropagation();openNoteModal(${task.id},'${esc(task.name).replace(/'/g,"\\'")}')">note</button>
@@ -3971,7 +3971,7 @@ function renderToday(readOnly){
 
   // Why + Identity
   if(editingStatements&&!readOnly){
-    h+=`<div class="statement-card"><div class="mini-label">My why</div><textarea class="statement-input" id="why-inp" placeholder="Write your why statement...">${whyStatement}</textarea><div class="identity-divider"><div class="mini-label">I am</div><textarea class="identity-input" id="id-inp" placeholder="Write your identity statement...">${identityStatement}</textarea></div><button class="save-btn" onclick="saveStatements()">Save</button></div>`;
+    h+=`<div class="statement-card"><div class="mini-label">My why</div><textarea class="statement-input" id="why-inp" placeholder="Write your why statement...">${esc(whyStatement)}</textarea><div class="identity-divider"><div class="mini-label">I am</div><textarea class="identity-input" id="id-inp" placeholder="Write your identity statement...">${esc(identityStatement)}</textarea></div><button class="save-btn" onclick="saveStatements()">Save</button></div>`;
   }else if(whyStatement||identityStatement){
     h+=`<div class="statement-card">${!readOnly?`<button class="edit-btn" onclick="editStatements()">Edit</button>`:''} ${whyStatement?`<div class="mini-label">My why</div><div class="statement-text">${whyStatement}</div>`:''} ${identityStatement?`<div class="identity-divider"><div class="mini-label">I am</div><div class="identity-text">${identityStatement}</div></div>`:''}</div>`;
   }else if(!readOnly){
@@ -4020,15 +4020,15 @@ function renderToday(readOnly){
     h+=`<div class="reflect-section" style="border-top:.5px solid rgba(58,126,196,.2)">
       <div class="identity-reflect-card" style="margin-bottom:0">
         <div class="identity-reflect-question">Identity proof — end of day</div>
-        <div class="identity-reflect-statement">"${identityStatement}"</div>
-        <textarea class="ir-note-inp" id="ir-note" placeholder="Write the specific things you did today that prove you are this person..." oninput="saveIRNote()">${todayIR.note||''}</textarea>
+        <div class="identity-reflect-statement">"${esc(identityStatement)}"</div>
+        <textarea class="ir-note-inp" id="ir-note" placeholder="Write the specific things you did today that prove you are this person..." oninput="saveIRNote()">${esc(todayIR.note||'')}</textarea>
         ${todayIR.note?`<div style="font-size:11px;color:var(--text3);margin-top:6px">✓ Saved</div>`:''}
       </div>
     </div>`;
   }
 
   // Daily reflection
-  h+=`<div class="reflect-section"><div class="reflect-label">Daily reflection</div><textarea class="reflect-input" id="reflection-input" placeholder="How did today go? What came up? What are you proud of?" ${readOnly?'readonly':''} oninput="onReflectionInput()">${todayReflection}</textarea>${!readOnly?`<div class="autosave" id="autosave-ind">${autoSaveStatus}</div>`:''}</div>`;
+  h+=`<div class="reflect-section"><div class="reflect-label">Daily reflection</div><textarea class="reflect-input" id="reflection-input" placeholder="How did today go? What came up? What are you proud of?" ${readOnly?'readonly':''} oninput="onReflectionInput()">${esc(todayReflection)}</textarea>${!readOnly?`<div class="autosave" id="autosave-ind">${autoSaveStatus}</div>`:''}</div>`;
 
   if(!readOnly){
     h+=`<div class="settings-row">

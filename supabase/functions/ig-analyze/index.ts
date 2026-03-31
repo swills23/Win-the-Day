@@ -9,12 +9,65 @@
 import { serve } from "https://deno.land/std@0.168.0/http/server.ts";
 import { createClient } from "https://esm.sh/@supabase/supabase-js@2";
 
-const corsHeaders = {
-  "Access-Control-Allow-Origin": "*",
-  "Access-Control-Allow-Headers": "authorization, x-client-info, apikey, content-type",
-};
+const ALLOWED_ORIGINS = [
+  "https://app.scottzwills.com",
+  "http://localhost:3000",
+  "http://127.0.0.1:3000",
+];
+
+function getCorsHeaders(req: Request) {
+  const origin = req.headers.get("origin") || "";
+  const allowedOrigin = ALLOWED_ORIGINS.includes(origin) ? origin : ALLOWED_ORIGINS[0];
+  return {
+    "Access-Control-Allow-Origin": allowedOrigin,
+    "Access-Control-Allow-Headers": "authorization, x-client-info, apikey, content-type",
+  };
+}
 
 const ANTHROPIC_API_KEY = Deno.env.get("ANTHROPIC_API_KEY");
+
+// Rate limit: 5 requests per 10 minutes per user
+const rateLimitMap = new Map<string, { count: number; reset: number }>();
+const RATE_LIMIT = 5;
+const RATE_WINDOW = 10 * 60_000;
+
+function checkRateLimit(userId: string): boolean {
+  const now = Date.now();
+  const entry = rateLimitMap.get(userId);
+  if (!entry || now > entry.reset) {
+    rateLimitMap.set(userId, { count: 1, reset: now + RATE_WINDOW });
+    return true;
+  }
+  if (entry.count >= RATE_LIMIT) return false;
+  entry.count++;
+  return true;
+}
+
+async function verifyAdmin(req: Request): Promise<{ userId: string } | null> {
+  const authHeader = req.headers.get("authorization");
+  if (!authHeader) return null;
+
+  const supabaseUrl = Deno.env.get("SUPABASE_URL")!;
+  const anonKey = Deno.env.get("SUPABASE_ANON_KEY") || Deno.env.get("SUPABASE_SERVICE_ROLE_KEY")!;
+  const sb = createClient(supabaseUrl, anonKey, {
+    global: { headers: { Authorization: authHeader } },
+  });
+
+  const { data: { user }, error } = await sb.auth.getUser();
+  if (error || !user) return null;
+
+  // Verify admin status
+  const serviceKey = Deno.env.get("SUPABASE_SERVICE_ROLE_KEY")!;
+  const adminSb = createClient(supabaseUrl, serviceKey);
+  const { data: profile } = await adminSb
+    .from("wtd_profiles")
+    .select("is_admin")
+    .eq("id", user.id)
+    .single();
+
+  if (!profile?.is_admin) return null;
+  return { userId: user.id };
+}
 
 async function callClaude(system: string, userMessage: string, maxTokens = 4096) {
   const res = await fetch("https://api.anthropic.com/v1/messages", {
@@ -42,11 +95,30 @@ async function callClaude(system: string, userMessage: string, maxTokens = 4096)
 }
 
 serve(async (req: Request) => {
+  const corsHeaders = getCorsHeaders(req);
+
   if (req.method === "OPTIONS") {
     return new Response("ok", { headers: corsHeaders });
   }
 
   try {
+    // Auth + admin verification
+    const auth = await verifyAdmin(req);
+    if (!auth) {
+      return new Response(
+        JSON.stringify({ error: "Unauthorized — admin access required" }),
+        { status: 401, headers: { ...corsHeaders, "Content-Type": "application/json" } }
+      );
+    }
+
+    // Rate limit
+    if (!checkRateLimit(auth.userId)) {
+      return new Response(
+        JSON.stringify({ error: "Rate limit exceeded. Try again in a few minutes." }),
+        { status: 429, headers: { ...corsHeaders, "Content-Type": "application/json" } }
+      );
+    }
+
     if (!ANTHROPIC_API_KEY) {
       return new Response(
         JSON.stringify({ error: "ANTHROPIC_API_KEY not configured" }),
@@ -59,14 +131,9 @@ serve(async (req: Request) => {
     const sb = createClient(supabaseUrl, serviceKey);
 
     const body = await req.json();
-    const { action, owner_id } = body;
-
-    if (!owner_id) {
-      return new Response(
-        JSON.stringify({ error: "owner_id is required" }),
-        { status: 400, headers: { ...corsHeaders, "Content-Type": "application/json" } }
-      );
-    }
+    const { action } = body;
+    // Use authenticated user's ID, not the request body
+    const owner_id = auth.userId;
 
     // Load media + latest insights
     const { data: media } = await sb
