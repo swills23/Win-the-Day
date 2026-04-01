@@ -14,6 +14,8 @@
 <meta name="apple-mobile-web-app-status-bar-style" content="default">
 <meta name="apple-mobile-web-app-title" content="Win the Day">
 <meta name="mobile-web-app-capable" content="yes">
+<meta name="theme-color" content="#1d1d1f">
+<link rel="manifest" href="/manifest.json">
 <title>Win the Day</title>
 <link rel="preconnect" href="https://ceahoxydtjcprjkbjakn.supabase.co">
 <link rel="dns-prefetch" href="https://ceahoxydtjcprjkbjakn.supabase.co">
@@ -51,7 +53,7 @@ body{background:var(--bg);color:var(--text);font-family:var(--font);touch-action
 .err{font-size:12px;color:var(--red);margin-bottom:10px;min-height:18px;}
 .lnk{font-size:13px;color:var(--blue);cursor:pointer;text-align:center;display:block;margin-top:10px;}
 .loading{text-align:center;padding:5rem 1rem;font-size:14px;color:var(--text3);}
-.top-bar{display:flex;justify-content:flex-end;align-items:center;padding:10px 16px;background:var(--bg);border-bottom:.5px solid var(--border);gap:8px;position:sticky;top:0;z-index:50;-webkit-backdrop-filter:blur(10px);backdrop-filter:blur(10px);background:color-mix(in srgb,var(--bg) 85%,transparent);}
+.top-bar{display:flex;justify-content:flex-end;align-items:center;padding:10px 16px;background:var(--bg);border-bottom:.5px solid var(--border);gap:8px;position:sticky;top:0;z-index:50;-webkit-backdrop-filter:blur(6px);backdrop-filter:blur(6px);background:color-mix(in srgb,var(--bg) 92%,transparent);will-change:transform;}
 .top-bar-title{font-size:14px;font-weight:600;color:var(--text);flex:1;letter-spacing:-.01em;}
 .top-bar-email{font-size:12px;color:var(--text3);white-space:nowrap;overflow:hidden;text-overflow:ellipsis;max-width:160px;}
 .top-bar-btn{font-size:12px;padding:4px 12px;border-radius:var(--r);border:.5px solid var(--border);background:none;cursor:pointer;color:var(--text2);font-family:var(--font);}
@@ -530,7 +532,7 @@ button,.btn-primary,.btn-ghost,.btn-sm,.settings-btn,.tab,.nav-btn,.top-bar-btn,
 .mc-imported{font-size:10px;padding:1px 6px;border-radius:8px;background:rgba(58,126,196,.08);color:var(--blue);border:.5px solid rgba(58,126,196,.15);white-space:nowrap;}
 
 /* ── Pipeline Kanban ── */
-.pipeline-bar{display:flex;gap:6px;align-items:center;margin-bottom:1rem;flex-wrap:wrap;position:sticky;top:52px;z-index:40;padding:8px 0;-webkit-backdrop-filter:blur(10px);backdrop-filter:blur(10px);background:color-mix(in srgb,var(--bg) 85%,transparent);border-bottom:.5px solid var(--border);}
+.pipeline-bar{display:flex;gap:6px;align-items:center;margin-bottom:1rem;flex-wrap:wrap;position:sticky;top:52px;z-index:40;padding:8px 0;-webkit-backdrop-filter:blur(6px);backdrop-filter:blur(6px);background:color-mix(in srgb,var(--bg) 92%,transparent);border-bottom:.5px solid var(--border);will-change:transform;}
 .pipeline-filter-btn{font-size:12px;padding:6px 15px;border-radius:20px;border:.5px solid var(--border);background:var(--bg);color:var(--text2);cursor:pointer;font-family:var(--font);transition:all .15s;white-space:nowrap;font-weight:500;}
 .pipeline-filter-btn.active{background:var(--text);color:var(--bg);border-color:var(--text);box-shadow:0 0 8px rgba(0,0,0,.15);}
 .pipeline-sel{font-size:12px;padding:5px 8px;border-radius:var(--r);border:.5px solid var(--border);background:var(--bg);color:var(--text);font-family:var(--font);outline:none;}
@@ -756,6 +758,15 @@ button,.btn-primary,.btn-ghost,.btn-sm,.settings-btn,.tab,.nav-btn,.top-bar-btn,
 .legal-modal-inner p,.legal-modal-inner li{font-size:12px;line-height:1.6;color:var(--text2);}
 .legal-modal-inner ul{padding-left:18px;margin:6px 0;}
 .legal-close{position:absolute;top:12px;right:16px;background:none;border:none;font-size:20px;cursor:pointer;color:var(--text3);}
+.toast{position:fixed;bottom:80px;left:50%;transform:translateX(-50%);background:var(--text);color:var(--bg);padding:10px 20px;border-radius:8px;font-size:13px;z-index:9999;opacity:0;transition:opacity .2s;pointer-events:none;max-width:90vw;text-align:center;}
+.toast.show{opacity:1;}
+.confirm-modal-bg{position:fixed;inset:0;background:rgba(0,0,0,.4);z-index:9998;display:flex;align-items:center;justify-content:center;}
+.confirm-modal{background:var(--bg);border-radius:var(--rl);padding:20px;max-width:320px;width:90vw;text-align:center;}
+.confirm-modal p{font-size:14px;color:var(--text);margin:0 0 16px;}
+.confirm-modal-btns{display:flex;gap:8px;justify-content:center;}
+.confirm-modal-btns button{flex:1;padding:10px;border-radius:var(--r);border:none;font-size:13px;cursor:pointer;font-family:var(--font);}
+.confirm-modal-btns .btn-yes{background:var(--red);color:#fff;}
+.confirm-modal-btns .btn-no{background:var(--bg2);color:var(--text2);border:.5px solid var(--border);}
 </style>
 </head>
 <body>
@@ -960,20 +971,20 @@ async function signIn(){
   }
 }
 async function signOut(){await sb.auth.signOut();currentUser=null;currentProfile=null;resetAppState();}
-async function loadProfile(uid){const{data}=await sb.from('wtd_profiles').select('*').eq('id',uid).maybeSingle();return data;}
+async function loadProfile(uid){const{data}=await sb.from('wtd_profiles').select('id,email,approved,is_admin,created_at').eq('id',uid).maybeSingle();return data;}
 function toggleAuthView(){authView=authView==='login'?'signup':'login';renderAuth();}
 
 // ── ADMIN ──
 function _isAdmin(){return !!(currentProfile&&currentProfile.is_admin);}
-async function loadAllProfiles(){if(!_isAdmin())return[];const{data}=await sb.from('wtd_profiles').select('*').order('created_at',{ascending:false});return data||[];}
+async function loadAllProfiles(){if(!_isAdmin())return[];const{data}=await sb.from('wtd_profiles').select('id,email,approved,is_admin,created_at').order('created_at',{ascending:false});return data||[];}
 async function approveUser(id){if(!_isAdmin())return;await sb.from('wtd_profiles').update({approved:true}).eq('id',id);renderAdmin();}
-async function removeUser(id){if(!_isAdmin())return;if(!confirm('Remove this user?'))return;await sb.from('wtd_profiles').delete().eq('id',id);renderAdmin();}
+async function removeUser(id){if(!_isAdmin())return;if(!await confirmDialog('Remove this user?'))return;await sb.from('wtd_profiles').delete().eq('id',id);renderAdmin();}
 function setAdminView(v){if(!_isAdmin())return;adminView=v;renderAdmin();}
 
 async function renderAdminCheckins(){
   let h='';
   try{
-    const{data,error}=await sb.from('wtd_checkins').select('*').order('created_at',{ascending:false}).limit(50);
+    const{data,error}=await sb.from('wtd_checkins').select('id,user_id,email,created_at,mood_before,mood_after,summary').order('created_at',{ascending:false}).limit(50);
     if(error)throw error;
     if(!data||!data.length){
       return`<div class="no-users">No check-ins yet. Clients will appear here after their first AI check-in.</div>`;
@@ -1028,7 +1039,7 @@ async function renderAdmin(){if(!_isAdmin()){render();return;}
   const pending=profiles.filter(p=>!p.approved);
   const approved=profiles.filter(p=>p.approved&&p.id!==currentUser.id);
   const statsMap={};
-  for(const p of approved){
+  await Promise.all(approved.map(async p=>{
     try{
       const r=await storage.get('wtd-history',p.id);
       if(r){const hist=JSON.parse(r.value),keys=Object.keys(hist).sort();
@@ -1037,7 +1048,7 @@ async function renderAdmin(){if(!_isAdmin()){render();return;}
         const daysSince=lastDate?Math.floor((new Date()-lastDate)/86400000):null;
         statsMap[p.id]={won,daysSince,todayPct:hist[todayKey()]?hist[todayKey()].pct:null};}
     }catch(e){}
-  }
+  }));
   const list=adminView==='pending'?pending:approved;
   let html=`<div class="top-bar"><span class="top-bar-email">${currentUser.email}</span><button class="top-bar-btn" onclick="switchToMyTracker()">My Tracker</button><button class="top-bar-btn" onclick="signOut()">Sign out</button></div>
   <div class="admin"><div style="margin-bottom:1.25rem"><div style="font-size:18px;font-weight:500;">${APP_NAME} — Admin</div><div style="font-size:12px;color:var(--text3);margin-top:2px;">${profiles.length} total users</div></div>
@@ -1072,25 +1083,25 @@ async function renderAdmin(){if(!_isAdmin()){render();return;}
 async function viewClient(uid,email){if(!_isAdmin())return;adminClientId=uid;adminClientEmail=email;await loadAll(uid);const tasks=isRestDay?restTasks():allTasks();const tot=isRestDay?restTotal():total();const earned=tasks.filter(t=>checked[t.id]).reduce((s,t)=>s+t.points,0);prevWonState=earned/tot>=(isRestDay?restSettings.win/100:WIN);renderTracker();}
 function switchToMyTracker(){adminClientId=null;adminClientEmail='';loadAll().then(()=>{render();});}
 function openAssignActions(uid,email){showOv(`<div class="overlay-bg" onclick="if(event.target===this)closeOv()"><div class="modal"><div class="modal-title">Assign action items</div><div class="modal-sub">For ${esc(email)} — one item per line.</div><textarea class="assign-area" id="assign-inp" placeholder="Read chapter 3&#10;Write your 90-day vision"></textarea><div class="modal-actions"><button class="btn-save" onclick="doAssignActions('${escAttr(uid)}')">Save</button><button class="btn-cancel" onclick="closeOv()">Cancel</button></div></div></div>`);}
-async function doAssignActions(uid){if(!_isAdmin())return;const text=document.getElementById('assign-inp').value.trim();const items=text.split('\n').map(s=>s.trim()).filter(Boolean).map(s=>({text:s,done:false}));await storage.set('wtd-actions',JSON.stringify(items),uid);closeOv();alert('Action items saved!');}
+async function doAssignActions(uid){if(!_isAdmin())return;const text=document.getElementById('assign-inp').value.trim();const items=text.split('\n').map(s=>s.trim()).filter(Boolean).map(s=>({text:s,done:false}));await storage.set('wtd-actions',JSON.stringify(items),uid);closeOv();toast('Action items saved!');}
 
 // ── ADMIN ANALYTICS DASHBOARD ──
 async function renderAdminAnalytics(clients){
   if(!clients||!clients.length)return`<div style="padding:2rem;text-align:center;color:var(--text3)">No client data yet.</div>`;
 
-  // Load all client histories
-  const clientData=[];
-  for(const p of clients){
+  // Load all client histories in parallel
+  const clientResults=await Promise.all(clients.map(async p=>{
     try{
-      const r=await storage.get('wtd-history',p.id);
-      const t=await storage.get('wtd-tasks',p.id);
+      const [r,t]=await Promise.all([storage.get('wtd-history',p.id),storage.get('wtd-tasks',p.id)]);
       if(r){
         const hist=JSON.parse(r.value);
         const tasks=t?JSON.parse(t.value):null;
-        clientData.push({id:p.id,email:p.email,hist,tasks});
+        return{id:p.id,email:p.email,hist,tasks};
       }
     }catch(e){}
-  }
+    return null;
+  }));
+  const clientData=clientResults.filter(Boolean);
 
   if(!clientData.length)return`<div style="padding:2rem;text-align:center;color:var(--text3)">No client data yet.</div>`;
 
@@ -1274,11 +1285,11 @@ async function syncInstagram(mode){if(!_isAdmin())return;
     const{data:{session}}=await sb.auth.getSession();
     const res=await fetch(EDGE_URL+'/ig-sync',{method:'POST',headers:{'Content-Type':'application/json','Authorization':'Bearer '+session.access_token},body:JSON.stringify({mode:mode||'recent',owner_id:currentUser.id})});
     const result=await res.json();
-    if(result.error){alert('Sync error: '+result.error);return;}
+    if(result.error){toast('Sync error: '+result.error);return;}
     await storage.set('ig-last-sync',new Date().toISOString());
-    alert(`Synced ${result.synced} of ${result.total} posts.${result.tokenWarning?'\n\n⚠️ '+result.tokenWarning:''}`);
+    toast(`Synced ${result.synced} of ${result.total} posts.${result.tokenWarning?' ⚠️ '+result.tokenWarning:''}`);
     await loadIgMedia();
-  }catch(e){alert('Sync failed: '+e.message);}
+  }catch(e){toast('Sync failed: '+e.message);}
   finally{igSyncing=false;renderAdmin();}
 }
 
@@ -1288,9 +1299,9 @@ async function runContentAnalysis(){if(!_isAdmin())return;
     const{data:{session}}=await sb.auth.getSession();
     const res=await fetch(EDGE_URL+'/ig-analyze',{method:'POST',headers:{'Content-Type':'application/json','Authorization':'Bearer '+session.access_token},body:JSON.stringify({action:'analyze',owner_id:currentUser.id})});
     const result=await res.json();
-    if(result.error){alert('Analysis error: '+result.error);return;}
+    if(result.error){toast('Analysis error: '+result.error);return;}
     igAnalysis=result.analysis;
-  }catch(e){alert('Analysis failed: '+e.message);}
+  }catch(e){toast('Analysis failed: '+e.message);}
   finally{igAnalyzing=false;renderAdmin();}
 }
 
@@ -1300,9 +1311,9 @@ async function generateScripts(topic,format,count){if(!_isAdmin())return;
     const{data:{session}}=await sb.auth.getSession();
     const res=await fetch(EDGE_URL+'/ig-analyze',{method:'POST',headers:{'Content-Type':'application/json','Authorization':'Bearer '+session.access_token},body:JSON.stringify({action:'generate',owner_id:currentUser.id,topic:topic||'',format:format||'drawing_video',count:count||3})});
     const result=await res.json();
-    if(result.error){alert('Generation error: '+result.error);return;}
+    if(result.error){toast('Generation error: '+result.error);return;}
     await loadIgScripts();
-  }catch(e){alert('Generation failed: '+e.message);}
+  }catch(e){toast('Generation failed: '+e.message);}
   finally{igGenerating=false;renderAdmin();}
 }
 
@@ -1317,7 +1328,7 @@ async function deleteScript(id){
 }
 
 function copyScript(text){
-  navigator.clipboard.writeText(text).then(()=>alert('Script copied!'));
+  navigator.clipboard.writeText(text).then(()=>toast('Copied!'));
 }
 
 // ── CONTENT TAB RENDERING ──
@@ -1478,7 +1489,7 @@ function renderContentScripts(){
       <div style="display:flex;gap:6px;margin-top:10px;flex-wrap:wrap">
         ${s.status!=='posted'?`<button class="btn-sm btn-green" onclick="updateScriptStatus('${escAttr(s.id)}','${escAttr(nextStatus)}')">Mark ${esc(nextStatus)}</button>`:''}
         <button class="btn-sm" style="background:var(--bg);border:.5px solid var(--border);color:var(--text2)" onclick="copyScript(this.dataset.script)" data-script="${escAttr(s.hook+'\n\n'+s.body)}">📋 Copy</button>
-        <button class="btn-sm" style="background:none;color:var(--red);border:.5px solid var(--red)" onclick="if(confirm('Delete this script?'))deleteScript('${escAttr(s.id)}')">✕</button>
+        <button class="btn-sm" style="background:none;color:var(--red);border:.5px solid var(--red)" onclick="confirmDialog('Delete this script?').then(ok=>ok&&deleteScript('${escAttr(s.id)}'))">✕</button>
       </div>
     </div>`;
   });
@@ -1529,14 +1540,14 @@ function renderContentSettings(){
 
 async function saveIgToken(){
   const token=document.getElementById('ig-token-inp')?.value.trim();
-  if(!token){alert('Paste a token first.');return;}
+  if(!token){toast('Paste a token first.');return;}
   await storage.set('ig-access-token',token);
-  alert('Token saved! Now deploy the ig-sync Edge Function with this token as IG_ACCESS_TOKEN secret.');
+  toast('Token saved!');
 }
 
 async function removeIgToken(){
   await storage.set('ig-access-token','');
-  alert('Token removed.');
+  toast('Token removed.');
 }
 
 // ── FILES MANAGEMENT ──
@@ -1571,7 +1582,7 @@ async function loadMyFiles(){
 async function uploadFile(file){
   const path=`${Date.now()}-${file.name.replace(/[^a-zA-Z0-9._-]/g,'_')}`;
   const{data,error}=await sb.storage.from('client-files').upload(path,file);
-  if(error){alert('Upload failed: '+error.message);return null;}
+  if(error){toast('Upload failed: '+error.message);return null;}
   const{data:urlData}=sb.storage.from('client-files').getPublicUrl(path);
   return{path,url:urlData.publicUrl,size:file.size,type:file.name.split('.').pop().toLowerCase()};
 }
@@ -1582,7 +1593,7 @@ async function saveFileRecord(name,category,url,fileType,fileSize){
     name,category:category||'general',url,file_type:fileType||'',file_size:fileSize||0,
     uploaded_by:currentUser.id
   }).select().single();
-  if(error){alert('Error saving file: '+error.message);return null;}
+  if(error){toast('Error saving file: '+error.message);return null;}
   return data;
 }
 
@@ -1641,7 +1652,7 @@ async function renderAdminFiles(clients){
             <button class="btn-sm" style="background:var(--bg);border:.5px solid var(--border);color:var(--text2)" onclick="openFileAssigner('${esc(f.id)}','${esc(f.name)}')">👥 Assign</button>
             <button class="btn-sm" style="background:var(--bg);border:.5px solid var(--border);color:var(--text2)" onclick="openFileCategoryEditor('${escAttr(f.id)}','${escAttr(f.category||'general')}')">🏷</button>
             <a href="${f.url}" target="_blank" class="btn-sm" style="background:var(--bg);border:.5px solid var(--border);color:var(--blue);text-decoration:none">↗</a>
-            <button class="btn-sm" style="background:none;color:var(--red);border:.5px solid var(--red)" onclick="if(confirm('Delete this file?'))deleteFile('${escAttr(f.id)}','${escAttr((f.url||'').split('/').pop())}')">✕</button>
+            <button class="btn-sm" style="background:none;color:var(--red);border:.5px solid var(--red)" onclick="confirmDialog('Delete this file?').then(ok=>ok&&deleteFile('${escAttr(f.id)}','${escAttr((f.url||'').split('/').pop())}'))">✕</button>
           </div>
         </div>`;
       });
@@ -1650,13 +1661,14 @@ async function renderAdminFiles(clients){
 
   h+=`</div>`;
 
-  // Add drag/drop setup after render
+  // Add drag/drop setup after render (guard against re-adding)
   setTimeout(()=>{
     const zone=document.getElementById('file-drop-zone');
-    if(!zone)return;
-    zone.addEventListener('dragover',e=>{e.preventDefault();zone.classList.add('dragover');});
+    if(!zone||zone._dragReady)return;
+    zone._dragReady=true;
+    zone.addEventListener('dragover',e=>{e.preventDefault();zone.classList.add('dragover');},{passive:false});
     zone.addEventListener('dragleave',()=>zone.classList.remove('dragover'));
-    zone.addEventListener('drop',e=>{e.preventDefault();zone.classList.remove('dragover');handleFileUpload(e.dataTransfer.files);});
+    zone.addEventListener('drop',e=>{e.preventDefault();zone.classList.remove('dragover');handleFileUpload(e.dataTransfer.files);},{passive:false});
   },50);
 
   return h;
@@ -1879,7 +1891,7 @@ async function updatePipelineLead(id,d){
 }
 
 async function deletePipelineLead(id){
-  if(!confirm('Delete this lead?'))return;
+  if(!await confirmDialog('Delete this lead?'))return;
   await sb.from('pipeline_leads').delete().eq('id',id);
   pipelineLeads=pipelineLeads.filter(l=>l.id!==id);
   closeOv();renderAdmin();
@@ -1917,8 +1929,8 @@ function subscribeToPipelineChanges(){
 
 // ── MANYCHAT BULK SYNC (alphabet crawl) ──
 async function mcBulkSync(){
-  if(!mcApiKey){alert('Add your ManyChat API key first.');return;}
-  if(mcSyncRunning){alert('Sync already running.');return;}
+  if(!mcApiKey){toast('Add your ManyChat API key first.');return;}
+  if(mcSyncRunning){toast('Sync already running.');return;}
   mcSyncRunning=true;
   const statusEl=document.getElementById('mc-sync-status');
   if(statusEl)statusEl.innerHTML='<span style="color:var(--blue)">Syncing… discovering subscribers…</span>';
@@ -2317,12 +2329,12 @@ async function saveMcKey(){
   const input=document.getElementById('mc-key-input');
   if(!input)return;
   const key=input.value.trim();
-  if(!key||key.startsWith('••')){alert('Please enter a valid API key.');return;}
+  if(!key||key.startsWith('••')){toast('Please enter a valid API key.');return;}
   await saveMcApiKey(key);
   renderAdmin();
 }
 async function clearMcKey(){
-  if(!confirm('Remove ManyChat API key?'))return;
+  if(!await confirmDialog('Remove ManyChat API key?'))return;
   await saveMcApiKey('');
   renderAdmin();
 }
@@ -2340,7 +2352,7 @@ function renderMcSearchBar(){
 
 async function mcRefreshLead(leadId){
   const lead=pipelineLeads.find(l=>l.id===leadId);
-  if(!lead||!lead.mc_subscriber_id){alert('No ManyChat subscriber linked.');return;}
+  if(!lead||!lead.mc_subscriber_id){toast('No ManyChat subscriber linked.');return;}
   try{
     const sub=await mcGetSubscriber(lead.mc_subscriber_id);
     if(!sub){alert('Could not fetch subscriber data.');return;}
@@ -2546,6 +2558,8 @@ function renderPipelineDashboard(){
 }
 function esc(s){return String(s).replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;').replace(/"/g,'&quot;').replace(/'/g,'&#39;');}
 function escAttr(s){return esc(String(s)).replace(/`/g,'&#96;').replace(/\\/g,'&#92;');}
+function toast(msg,ms){ms=ms||2500;let el=document.getElementById('toast');if(!el){el=document.createElement('div');el.id='toast';el.className='toast';document.body.appendChild(el);}el.textContent=msg;el.classList.add('show');clearTimeout(el._t);el._t=setTimeout(()=>el.classList.remove('show'),ms);}
+function confirmDialog(msg){return new Promise(resolve=>{const bg=document.createElement('div');bg.className='confirm-modal-bg';bg.innerHTML=`<div class="confirm-modal"><p>${esc(msg)}</p><div class="confirm-modal-btns"><button class="btn-no">Cancel</button><button class="btn-yes">Confirm</button></div></div>`;bg.querySelector('.btn-no').onclick=()=>{bg.remove();resolve(false);};bg.querySelector('.btn-yes').onclick=()=>{bg.remove();resolve(true);};bg.onclick=e=>{if(e.target===bg){bg.remove();resolve(false);}};document.body.appendChild(bg);});}
 
 function buildCountryOptions(selected){
   let opts='<option value="">Select country...</option>';
@@ -3381,7 +3395,7 @@ async function onboardSave(){
   const gen=onboardData._generated||onboardGenerateTasks();
   timedTasks=gen.timed;
   essentialTasks=gen.essential;
-  hasCustomTasks=true;
+  hasCustomTasks=true;invalidateTaskCache();
   // Save custom thresholds
   WIN=(onboardData._winPct||72)/100;
   CRUSH=(onboardData._crushPct||88)/100;
@@ -3438,6 +3452,7 @@ if(!currentUser){renderAuth();return;}
   scheduleReminder();
 }
 function _applyBatchData(batchData){
+  invalidateTaskCache();
   const keys=['wtd-history','wtd-why','wtd-identity','wtd-tasks','wtd-rest','wtd-actions','wtd-notes','wtd-goals','wtd-reminder','wtd-ir','wtd-thresholds'];
   const results=keys.map(k=>batchData[k]||null);
   const [r0,r1,r2,r3,r4,r5,r6,r7,r8,r9,r10]=results;
@@ -3474,6 +3489,7 @@ async function showForgotPassword(){
 function renderPending(){document.getElementById('root').innerHTML=`<div class="screen" style="text-align:center;margin-top:120px;"><div style="font-size:48px;margin-bottom:1rem">⏳</div><h1 style="margin-bottom:10px;">You're on the list</h1><p>Your account is pending approval.</p><button class="btn-ghost" onclick="signOut()" style="margin-top:1rem">Sign out</button></div>`;}
 
 async function renderTracker(){
+  const _scrollY=window.scrollY;
   const isAdmin=currentProfile&&currentProfile.is_admin;
   const isViewingClient=!!adminClientId;
   const topBar=`<div class="top-bar"><span class="top-bar-title">${isViewingClient?`👁 ${adminClientEmail}`:APP_NAME}</span><span class="top-bar-email">${currentUser?.email||''}</span>${isViewingClient?`<button class="top-bar-btn" onclick="renderAdmin()">← Admin</button>`:''}${isAdmin&&!isViewingClient?`<button class="top-bar-btn" onclick="openAdmin()">Admin</button>`:''} ${!isViewingClient?`<button class="top-bar-btn" onclick="openAccountModal()">Account</button>`:''}<button class="top-bar-btn" onclick="signOut()">Sign out</button></div>`;
@@ -3487,6 +3503,7 @@ async function renderTracker(){
   document.getElementById('root').innerHTML=topBar+`<div class="tracker" id="app">${tabs}${content}</div>`;
   document.getElementById('ov').style.display='none';
   document.getElementById('ov').innerHTML='';
+  window.scrollTo(0,_scrollY);
   // Show AI coach FAB (if not viewing client)
   if(!isViewingClient) setTimeout(renderCoachUI, 10);
 }
@@ -3552,9 +3569,11 @@ function resetAppState(){
 }
 resetAppState();
 
-function allTasks(){return[...timedTasks,...essentialTasks];}
+let _allTasksCache=null,_restTasksCache=null;
+function invalidateTaskCache(){_allTasksCache=null;_restTasksCache=null;}
+function allTasks(){if(_allTasksCache)return _allTasksCache;_allTasksCache=[...timedTasks,...essentialTasks];return _allTasksCache;}
 function total(){return allTasks().reduce((s,t)=>s+t.points,0);}
-function restTasks(){return allTasks().filter(t=>restSettings.taskIds.includes(t.id));}
+function restTasks(){if(_restTasksCache)return _restTasksCache;const ids=new Set(restSettings.taskIds);_restTasksCache=allTasks().filter(t=>ids.has(t.id));return _restTasksCache;}
 function restTotal(){return restTasks().reduce((s,t)=>s+t.points,0);}
 function todayKey(){const d=new Date();return`${d.getFullYear()}-${String(d.getMonth()+1).padStart(2,'0')}-${String(d.getDate()).padStart(2,'0')}`;}
 function dateKey(d){return`${d.getFullYear()}-${String(d.getMonth()+1).padStart(2,'0')}-${String(d.getDate()).padStart(2,'0')}`;}
@@ -3584,7 +3603,10 @@ function getInsight(pct,earned,rest){
 }
 
 // ── MISSED TASK PATTERNS ──
+let _missedCache=null,_missedCacheKey='';
 function getMissedPatterns(){
+  const tk=todayKey()+JSON.stringify(checked);
+  if(_missedCacheKey===tk&&_missedCache)return _missedCache;
   const counts={};
   const d=new Date();
   for(let i=1;i<=14;i++){
@@ -3600,9 +3622,12 @@ function getMissedPatterns(){
       }
     });
   }
-  return Object.values(counts).filter(x=>x.count>=3).sort((a,b)=>b.count-a.count).slice(0,4);
+  _missedCache=Object.values(counts).filter(x=>x.count>=3).sort((a,b)=>b.count-a.count).slice(0,4);
+  _missedCacheKey=tk;
+  return _missedCache;
 }
 async function loadAll(uid){
+  invalidateTaskCache();
   const keys=['wtd-history','wtd-why','wtd-identity','wtd-tasks','wtd-rest','wtd-actions','wtd-notes','wtd-goals','wtd-reminder','wtd-ir','wtd-thresholds'];
   // Single batch query for all storage keys + report prefs in parallel (2 DB calls instead of 12)
   const reportPrefPromise=(()=>{

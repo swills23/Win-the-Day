@@ -1,0 +1,9 @@
+{
+  "name": "Win the Day",
+  "short_name": "WTD",
+  "start_url": "/",
+  "display": "standalone",
+  "background_color": "#ffffff",
+  "theme_color": "#1d1d1f",
+  "description": "Daily habit tracker for identity-level change"
+}
