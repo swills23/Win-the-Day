@@ -2651,34 +2651,49 @@ async function onboardSave(){
 let _lastRenderFresh=false;
 async function renderRoot(){
 if(!currentUser){renderAuth();return;}
-  // Try instant render from cache first
-  const cachedProfile=_cache.getProfile();
-  const cachedBatch=_cache.getBatchObj();
-  if(cachedProfile&&cachedProfile.approved&&cachedBatch&&!_lastRenderFresh){
-    currentProfile=cachedProfile;
-    _applyBatchData(cachedBatch);
+  try{
+    // Try instant render from cache first
+    const cachedProfile=_cache.getProfile();
+    const cachedBatch=_cache.getBatchObj();
+    if(cachedProfile&&cachedProfile.approved&&cachedBatch&&!_lastRenderFresh){
+      currentProfile=cachedProfile;
+      _applyBatchData(cachedBatch);
+      const tasks=isRestDay?restTasks():allTasks();const tot=isRestDay?restTotal():total();
+      const earned=tasks.filter(t=>checked[t.id]).reduce((s,t)=>s+t.points,0);
+      prevWonState=earned/tot>=(isRestDay?restSettings.win/100:WIN);
+      renderTracker();
+      scheduleReminder();
+    }
+    // Fetch fresh data with 10s timeout — never hang forever
+    const [profile]=await Promise.race([
+      Promise.all([loadProfile(currentUser.id),loadAll()]),
+      new Promise((_,rej)=>setTimeout(()=>rej(new Error('timeout')),10000))
+    ]);
+    currentProfile=profile;
+    if(profile)_cache.setProfile(profile);
+    if(!currentProfile){
+      await Promise.race([
+        sb.from('wtd_profiles').upsert({id:currentUser.id,email:currentUser.email,approved:false,is_admin:false},{onConflict:'id'}),
+        new Promise(r=>setTimeout(r,5000))
+      ]);
+      currentProfile=await Promise.race([loadProfile(currentUser.id),new Promise(r=>setTimeout(()=>r(null),5000))]);
+      if(currentProfile)_cache.setProfile(currentProfile);
+    }
+    if(!currentProfile||!currentProfile.approved){renderPending();return;}
+    if(!hasCustomTasks && !currentProfile.is_admin && !adminClientId){renderOnboarding();return;}
+    _lastRenderFresh=true;
     const tasks=isRestDay?restTasks():allTasks();const tot=isRestDay?restTotal():total();
     const earned=tasks.filter(t=>checked[t.id]).reduce((s,t)=>s+t.points,0);
     prevWonState=earned/tot>=(isRestDay?restSettings.win/100:WIN);
     renderTracker();
     scheduleReminder();
+  }catch(e){
+    console.error('renderRoot error:',e);
+    // If we got a cached render, keep it. Otherwise show error.
+    if(!_lastRenderFresh&&!document.querySelector('.tracker')){
+      document.getElementById('root').innerHTML='<div style="text-align:center;padding:4rem 1rem"><div style="font-size:20px;font-weight:600;margin-bottom:8px">Win the Day</div><div style="font-size:13px;color:#8e8e93;margin-bottom:16px">Connection issue. Please try again.</div><button onclick="location.reload()" style="padding:10px 24px;border-radius:8px;border:none;background:#1d1d1f;color:#fff;font-size:14px;cursor:pointer">Retry</button></div>';
+    }
   }
-  // Always fetch fresh data (in background if cache rendered, blocking if not)
-  const [profile]=await Promise.all([
-    loadProfile(currentUser.id),
-    loadAll()
-  ]);
-  currentProfile=profile;
-  if(profile)_cache.setProfile(profile);
-  if(!currentProfile){await sb.from('wtd_profiles').upsert({id:currentUser.id,email:currentUser.email,approved:false,is_admin:false},{onConflict:'id'});currentProfile=await loadProfile(currentUser.id);if(currentProfile)_cache.setProfile(currentProfile);}
-  if(!currentProfile||!currentProfile.approved){renderPending();return;}
-  if(!hasCustomTasks && !currentProfile.is_admin && !adminClientId){renderOnboarding();return;}
-  _lastRenderFresh=true;
-  const tasks=isRestDay?restTasks():allTasks();const tot=isRestDay?restTotal():total();
-  const earned=tasks.filter(t=>checked[t.id]).reduce((s,t)=>s+t.points,0);
-  prevWonState=earned/tot>=(isRestDay?restSettings.win/100:WIN);
-  renderTracker();
-  scheduleReminder();
 }
 function _applyBatchData(batchData){
   invalidateTaskCache();
