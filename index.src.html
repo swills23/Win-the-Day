@@ -774,16 +774,20 @@ button,.btn-primary,.btn-ghost,.btn-sm,.settings-btn,.tab,.nav-btn,.top-bar-btn,
 <div id="ov" style="display:none"></div>
 
 <script>
-// Auto-reload if stuck on loading screen for 6s (catches cached broken builds)
+// Auto-reload if stuck on loading screen for 5s (catches cached broken builds)
 setTimeout(()=>{
   const root=document.getElementById('root');
   if(root&&root.querySelector('.loading')){
     const url=new URL(location.href);
-    if(url.searchParams.get('_v')){return;} // Already tried once, don't loop
+    if(url.searchParams.get('_v')){
+      // Already reloaded once and still stuck — force show login
+      if(typeof renderAuth==='function'){renderAuth();}
+      return;
+    }
     url.searchParams.set('_v',Date.now());
     location.replace(url.toString());
   }
-},6000);
+},5000);
 </script>
 <script>
 const SUPABASE_URL = 'https://ceahoxydtjcprjkbjakn.supabase.co';
@@ -5235,6 +5239,14 @@ async function _bootOnce(session){
   else{currentUser=null;currentProfile=null;resetAppState();renderAuth();}
 }
 
+// Race getSession against a timeout — Safari ITP can cause it to hang forever
+function getSessionWithTimeout(ms){
+  return Promise.race([
+    sb.auth.getSession().then(r=>r.data.session),
+    new Promise(r=>setTimeout(()=>r(null),ms))
+  ]);
+}
+
 sb.auth.onAuthStateChange(async(event,session)=>{
   if(event==='INITIAL_SESSION'){
     await _bootOnce(session);
@@ -5256,14 +5268,20 @@ sb.auth.onAuthStateChange(async(event,session)=>{
   await _bootOnce(session);
 });
 
-// Fallback: if INITIAL_SESSION hasn't fired after 1.5s (Safari ITP / slow networks)
+// Fallback 1: 1.5s — try getSession with 2s timeout (covers Safari ITP delay)
 setTimeout(async()=>{
   if(_appBooted)return;
   try{
-    const{data:{session}}=await sb.auth.getSession();
+    const session=await getSessionWithTimeout(2000);
     await _bootOnce(session);
   }catch(e){await _bootOnce(null);}
 },1500);
+
+// Fallback 2: 4s hard deadline — if NOTHING worked, show login screen
+// This guarantees the app never stays stuck on Loading
+setTimeout(()=>{
+  if(!_appBooted){_appBooted=true;currentUser=null;currentProfile=null;renderAuth();}
+},4000);
 // ── LEGAL / COMPLIANCE ──
 function showPrivacyPolicy(){
   const el=document.createElement('div');el.className='legal-modal';el.id='legal-modal';
