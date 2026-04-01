@@ -15,6 +15,9 @@
 <meta name="apple-mobile-web-app-title" content="Win the Day">
 <meta name="mobile-web-app-capable" content="yes">
 <title>Win the Day</title>
+<link rel="preconnect" href="https://ceahoxydtjcprjkbjakn.supabase.co">
+<link rel="dns-prefetch" href="https://ceahoxydtjcprjkbjakn.supabase.co">
+<link rel="preconnect" href="https://cdn.jsdelivr.net" crossorigin>
 <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2.49.4/dist/umd/supabase.min.js" integrity="sha384-2zrRDgDHSYB/GN3nFW3fsZXoxEhKIr3N2h63Tc6DEOB9JJdFIu8xMJT2Cph/gBil" crossorigin="anonymous"></script>
 <style>
 :root{
@@ -838,10 +841,20 @@ const SETTER_SCRIPTS={
 
 function fixMojibake(s){if(typeof s!=='string')return s;const c=[...s].map(x=>x.charCodeAt(0));if(!c.some(x=>x>127&&x<256))return s;try{return new TextDecoder('utf-8').decode(new Uint8Array(c));}catch(e){return s;}}
 function fixTaskNames(tasks){return(tasks||[]).map(t=>({...t,name:fixMojibake(t.name)}));}
+// Local cache layer — instant loads, background refresh
+const _cache={
+  _pfx(){return'wtd_c:'+(currentUser?.id||'');},
+  get(key){try{return localStorage.getItem(this._pfx()+key);}catch(e){return null;}},
+  set(key,val){try{localStorage.setItem(this._pfx()+key,val);}catch(e){}},
+  getProfile(){try{const s=localStorage.getItem(this._pfx()+'profile');return s?JSON.parse(s):null;}catch(e){return null;}},
+  setProfile(p){try{localStorage.setItem(this._pfx()+'profile',JSON.stringify(p));}catch(e){}},
+  getBatchObj(){try{const s=localStorage.getItem(this._pfx()+'batch');return s?JSON.parse(s):null;}catch(e){return null;}},
+  setBatchObj(o){try{localStorage.setItem(this._pfx()+'batch',JSON.stringify(o));}catch(e){}}
+};
 const storage={
   async get(key,uid){const id=uid||(currentUser&&currentUser.id);if(!id)return null;const{data}=await sb.from('wtd_store').select('value').eq('key',`${id}:${key}`).maybeSingle();return data?{key,value:data.value}:null;},
-  async set(key,value,uid){const id=uid||(currentUser&&currentUser.id);if(!id)return null;await sb.from('wtd_store').upsert({key:`${id}:${key}`,value,updated_at:new Date().toISOString()},{onConflict:'key'});return{key,value};},
-  async getBatch(keys,uid){const id=uid||(currentUser&&currentUser.id);if(!id)return{};const prefixed=keys.map(k=>`${id}:${k}`);const{data}=await sb.from('wtd_store').select('key,value').in('key',prefixed);const result={};if(data)data.forEach(r=>{const shortKey=r.key.replace(`${id}:`,'');result[shortKey]={key:shortKey,value:r.value};});return result;}
+  async set(key,value,uid){const id=uid||(currentUser&&currentUser.id);if(!id)return null;await sb.from('wtd_store').upsert({key:`${id}:${key}`,value,updated_at:new Date().toISOString()},{onConflict:'key'});_cache.set(key,value);return{key,value};},
+  async getBatch(keys,uid){const id=uid||(currentUser&&currentUser.id);if(!id)return{};const prefixed=keys.map(k=>`${id}:${k}`);const{data}=await sb.from('wtd_store').select('key,value').in('key',prefixed);const result={};if(data)data.forEach(r=>{const shortKey=r.key.replace(`${id}:`,'');result[shortKey]={key:shortKey,value:r.value};});_cache.setBatchObj(result);return result;}
 };
 
 // ── DATA VAULT ──
@@ -3392,22 +3405,55 @@ async function onboardSave(){
 }
 
 // ── ROOT ROUTER ──
+let _lastRenderFresh=false;
 async function renderRoot(){
 if(!currentUser){renderAuth();return;}
-  // Load profile and all data in parallel (2 DB calls total)
+  // Try instant render from cache first
+  const cachedProfile=_cache.getProfile();
+  const cachedBatch=_cache.getBatchObj();
+  if(cachedProfile&&cachedProfile.approved&&cachedBatch&&!_lastRenderFresh){
+    currentProfile=cachedProfile;
+    _applyBatchData(cachedBatch);
+    const tasks=isRestDay?restTasks():allTasks();const tot=isRestDay?restTotal():total();
+    const earned=tasks.filter(t=>checked[t.id]).reduce((s,t)=>s+t.points,0);
+    prevWonState=earned/tot>=(isRestDay?restSettings.win/100:WIN);
+    renderTracker();
+    scheduleReminder();
+  }
+  // Always fetch fresh data (in background if cache rendered, blocking if not)
   const [profile]=await Promise.all([
     loadProfile(currentUser.id),
-    loadAll() // Start loading data immediately — doesn't depend on profile
+    loadAll()
   ]);
   currentProfile=profile;
-  if(!currentProfile){await sb.from('wtd_profiles').upsert({id:currentUser.id,email:currentUser.email,approved:false,is_admin:false},{onConflict:'id'});currentProfile=await loadProfile(currentUser.id);}
+  if(profile)_cache.setProfile(profile);
+  if(!currentProfile){await sb.from('wtd_profiles').upsert({id:currentUser.id,email:currentUser.email,approved:false,is_admin:false},{onConflict:'id'});currentProfile=await loadProfile(currentUser.id);if(currentProfile)_cache.setProfile(currentProfile);}
   if(!currentProfile||!currentProfile.approved){renderPending();return;}
   if(!hasCustomTasks && !currentProfile.is_admin && !adminClientId){renderOnboarding();return;}
+  _lastRenderFresh=true;
   const tasks=isRestDay?restTasks():allTasks();const tot=isRestDay?restTotal():total();
   const earned=tasks.filter(t=>checked[t.id]).reduce((s,t)=>s+t.points,0);
   prevWonState=earned/tot>=(isRestDay?restSettings.win/100:WIN);
   renderTracker();
   scheduleReminder();
+}
+function _applyBatchData(batchData){
+  const keys=['wtd-history','wtd-why','wtd-identity','wtd-tasks','wtd-rest','wtd-actions','wtd-notes','wtd-goals','wtd-reminder','wtd-ir','wtd-thresholds'];
+  const results=keys.map(k=>batchData[k]||null);
+  const [r0,r1,r2,r3,r4,r5,r6,r7,r8,r9,r10]=results;
+  try{allHistory=r0?JSON.parse(r0.value):{}}catch(e){allHistory={};}
+  try{whyStatement=r1?.value||''}catch(e){whyStatement='';}
+  try{identityStatement=r2?.value||''}catch(e){identityStatement='';}
+  try{const s=r3?JSON.parse(r3.value):null;if(s){hasCustomTasks=true;timedTasks=fixTaskNames(s.timed)||DEFAULT_TIMED.map(t=>({...t}));essentialTasks=fixTaskNames(s.essential)||DEFAULT_ESSENTIAL.map(t=>({...t}));}else{hasCustomTasks=false;timedTasks=DEFAULT_TIMED.map(t=>({...t}));essentialTasks=DEFAULT_ESSENTIAL.map(t=>({...t}));}}catch(e){hasCustomTasks=false;timedTasks=DEFAULT_TIMED.map(t=>({...t}));essentialTasks=DEFAULT_ESSENTIAL.map(t=>({...t}));}
+  try{const rest=r4?JSON.parse(r4.value):null;if(rest)restSettings={...DEFAULT_REST,...rest};}catch(e){restSettings={...DEFAULT_REST};}
+  try{actionItems=r5?JSON.parse(r5.value):[];}catch(e){actionItems=[];}
+  try{taskNotes=r6?JSON.parse(r6.value):{}}catch(e){taskNotes={};}
+  try{const _g=r7?JSON.parse(r7.value):null;goals=(_g&&typeof _g==='object'&&!Array.isArray(_g))?_g:{weekly:[],monthly:[],yearly:[]};if(!goals.weekly)goals.weekly=[];if(!goals.monthly)goals.monthly=[];if(!goals.yearly)goals.yearly=[];}catch(e){goals={weekly:[],monthly:[],yearly:[]};}
+  try{reminderSettings=r8?JSON.parse(r8.value):{enabled:false,time:'07:00'}}catch(e){reminderSettings={enabled:false,time:'07:00'};}
+  try{identityReflections=r9?JSON.parse(r9.value):{}}catch(e){identityReflections={};}
+  try{const th=r10?JSON.parse(r10.value):null;if(th){WIN=th.win||0.72;CRUSH=th.crush||0.88;}}catch(e){}
+  const today=todayKey();const todayData=allHistory[today]||{};
+  checked=todayData.checked||{};isRestDay=todayData.restDay||todayData.rest||false;mood=todayData.mood||0;winOfDay=todayData.winOfDay||todayData.win||'';
 }
 
 function renderAuth(){
