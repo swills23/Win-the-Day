@@ -114,7 +114,7 @@ CREATE POLICY "Users read own daily logs" ON wtd_daily_logs
   FOR SELECT USING (auth.uid() = user_id);
 CREATE POLICY "Admin reads all daily logs" ON wtd_daily_logs
   FOR SELECT USING (
-    auth.uid() IN (SELECT id FROM auth.users WHERE email = 'scott@scottzwills.com')
+    auth.jwt() ->> 'email' = 'scott@scottzwills.com'
   );
 
 -- Task logs
@@ -127,7 +127,7 @@ CREATE POLICY "Users read own task logs" ON wtd_task_logs
   FOR SELECT USING (auth.uid() = user_id);
 CREATE POLICY "Admin reads all task logs" ON wtd_task_logs
   FOR SELECT USING (
-    auth.uid() IN (SELECT id FROM auth.users WHERE email = 'scott@scottzwills.com')
+    auth.jwt() ->> 'email' = 'scott@scottzwills.com'
   );
 
 -- Goal logs
@@ -140,7 +140,7 @@ CREATE POLICY "Users read own goal logs" ON wtd_goal_logs
   FOR SELECT USING (auth.uid() = user_id);
 CREATE POLICY "Admin reads all goal logs" ON wtd_goal_logs
   FOR SELECT USING (
-    auth.uid() IN (SELECT id FROM auth.users WHERE email = 'scott@scottzwills.com')
+    auth.jwt() ->> 'email' = 'scott@scottzwills.com'
   );
 
 -- Identity logs
@@ -153,7 +153,7 @@ CREATE POLICY "Users read own identity logs" ON wtd_identity_logs
   FOR SELECT USING (auth.uid() = user_id);
 CREATE POLICY "Admin reads all identity logs" ON wtd_identity_logs
   FOR SELECT USING (
-    auth.uid() IN (SELECT id FROM auth.users WHERE email = 'scott@scottzwills.com')
+    auth.jwt() ->> 'email' = 'scott@scottzwills.com'
   );
 
 -- Report prefs
@@ -162,7 +162,7 @@ CREATE POLICY "Users manage own report prefs" ON wtd_report_prefs
   FOR ALL USING (auth.uid() = user_id);
 CREATE POLICY "Admin reads all report prefs" ON wtd_report_prefs
   FOR SELECT USING (
-    auth.uid() IN (SELECT id FROM auth.users WHERE email = 'scott@scottzwills.com')
+    auth.jwt() ->> 'email' = 'scott@scottzwills.com'
   );
 
 -- ============================================================

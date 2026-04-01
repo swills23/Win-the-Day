@@ -79,19 +79,19 @@ CREATE INDEX IF NOT EXISTS idx_ig_scripts_status ON ig_scripts(status);
 ALTER TABLE ig_media ENABLE ROW LEVEL SECURITY;
 CREATE POLICY "Admin manages ig_media" ON ig_media
   FOR ALL USING (
-    auth.uid() IN (SELECT id FROM auth.users WHERE email = 'scott@scottzwills.com')
+    auth.jwt() ->> 'email' = 'scott@scottzwills.com'
   );
 
 ALTER TABLE ig_insights ENABLE ROW LEVEL SECURITY;
 CREATE POLICY "Admin manages ig_insights" ON ig_insights
   FOR ALL USING (
-    auth.uid() IN (SELECT id FROM auth.users WHERE email = 'scott@scottzwills.com')
+    auth.jwt() ->> 'email' = 'scott@scottzwills.com'
   );
 
 ALTER TABLE ig_scripts ENABLE ROW LEVEL SECURITY;
 CREATE POLICY "Admin manages ig_scripts" ON ig_scripts
   FOR ALL USING (
-    auth.uid() IN (SELECT id FROM auth.users WHERE email = 'scott@scottzwills.com')
+    auth.jwt() ->> 'email' = 'scott@scottzwills.com'
   );
 
 -- ============================================================

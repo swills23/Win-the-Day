@@ -40,16 +40,16 @@ CREATE POLICY "Users insert own profile" ON wtd_profiles
 CREATE POLICY "Users update own profile" ON wtd_profiles
   FOR UPDATE USING (auth.uid() = id);
 
--- Admin can read all profiles
+-- Admin can read all profiles (use JWT email to avoid auth.users permission issue)
 CREATE POLICY "Admin reads all profiles" ON wtd_profiles
   FOR SELECT USING (
-    auth.uid() IN (SELECT id FROM auth.users WHERE email = 'scott@scottzwills.com')
+    auth.jwt() ->> 'email' = 'scott@scottzwills.com'
   );
 
 -- Admin can update all profiles (approve users, etc.)
 CREATE POLICY "Admin manages all profiles" ON wtd_profiles
   FOR UPDATE USING (
-    auth.uid() IN (SELECT id FROM auth.users WHERE email = 'scott@scottzwills.com')
+    auth.jwt() ->> 'email' = 'scott@scottzwills.com'
   );
 
 -- ── TRIGGER: Prevent privilege escalation ──
@@ -63,10 +63,8 @@ AS $$
 DECLARE
   caller_is_admin BOOLEAN;
 BEGIN
-  -- Check if the calling user is admin
-  SELECT EXISTS(
-    SELECT 1 FROM auth.users WHERE id = auth.uid() AND email = 'scott@scottzwills.com'
-  ) INTO caller_is_admin;
+  -- Check if the calling user is admin (use JWT to avoid auth.users permission issue)
+  caller_is_admin := (auth.jwt() ->> 'email') = 'scott@scottzwills.com';
 
   IF NOT caller_is_admin THEN
     -- Non-admin users: force is_admin to false, preserve approved from existing row

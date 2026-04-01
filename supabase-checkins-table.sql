@@ -34,7 +34,7 @@ CREATE POLICY "Users update own checkins" ON wtd_checkins
 -- Admin (Scott) can read all checkins
 CREATE POLICY "Admin reads all checkins" ON wtd_checkins
   FOR SELECT USING (
-    auth.uid() IN (SELECT id FROM auth.users WHERE email = 'scott@scottzwills.com')
+    auth.jwt() ->> 'email' = 'scott@scottzwills.com'
   );
 
 -- Also create the feedback table if not exists
@@ -54,7 +54,7 @@ CREATE POLICY "Users insert own feedback" ON wtd_feedback
 
 CREATE POLICY "Admin reads all feedback" ON wtd_feedback
   FOR SELECT USING (
-    auth.uid() IN (SELECT id FROM auth.users WHERE email = 'scott@scottzwills.com')
+    auth.jwt() ->> 'email' = 'scott@scottzwills.com'
   );
 
 -- ============================================================
