@@ -8,22 +8,32 @@
 // Trigger: POST /functions/v1/send-report
 // Body: { type: 'weekly' | 'monthly', data: ReportData }
 
-import { serve } from "https://deno.land/std@0.177.0/http/server.ts";
+import { serve } from "https://deno.land/std@0.208.0/http/server.ts";
 import { createClient } from "https://esm.sh/@supabase/supabase-js@2";
 
 const ALLOWED_ORIGINS = [
   "https://app.scottzwills.com",
-  "http://localhost:3000",
-  "http://127.0.0.1:3000",
+  // Uncomment for local development only:
+  // "http://localhost:3000",
+  // "http://127.0.0.1:3000",
 ];
 
 function getCorsHeaders(req: Request) {
   const origin = req.headers.get("origin") || "";
-  const allowedOrigin = ALLOWED_ORIGINS.includes(origin) ? origin : ALLOWED_ORIGINS[0];
+  if (!ALLOWED_ORIGINS.includes(origin)) return null;
   return {
-    "Access-Control-Allow-Origin": allowedOrigin,
+    "Access-Control-Allow-Origin": origin,
     "Access-Control-Allow-Headers": "authorization, x-client-info, apikey, content-type",
+    "Access-Control-Allow-Methods": "POST, OPTIONS",
+    "Access-Control-Max-Age": "86400",
   };
+}
+
+function forbiddenResponse() {
+  return new Response(JSON.stringify({ error: "Forbidden" }), {
+    status: 403,
+    headers: { "Content-Type": "application/json" },
+  });
 }
 
 // Rate limit: 5 emails per hour per user
@@ -48,7 +58,8 @@ async function verifyAuth(req: Request): Promise<{ userId: string; email: string
   if (!authHeader) return null;
 
   const supabaseUrl = Deno.env.get("SUPABASE_URL")!;
-  const anonKey = Deno.env.get("SUPABASE_ANON_KEY") || Deno.env.get("SUPABASE_SERVICE_ROLE_KEY")!;
+  const anonKey = Deno.env.get("SUPABASE_ANON_KEY");
+  if (!anonKey) return null;
   const sb = createClient(supabaseUrl, anonKey, {
     global: { headers: { Authorization: authHeader } },
   });
@@ -191,6 +202,7 @@ function generateMonthlyEmailHTML(data: MonthlyReportData): string {
 
 serve(async (req: Request) => {
   const corsHeaders = getCorsHeaders(req);
+  if (!corsHeaders) return forbiddenResponse();
 
   // Handle CORS preflight
   if (req.method === "OPTIONS") {
@@ -198,6 +210,15 @@ serve(async (req: Request) => {
   }
 
   try {
+    // Request size limit (20KB max)
+    const contentLength = parseInt(req.headers.get("content-length") || "0");
+    if (contentLength > 20_000) {
+      return new Response(
+        JSON.stringify({ error: "Request too large" }),
+        { status: 413, headers: { ...corsHeaders, "Content-Type": "application/json" } }
+      );
+    }
+
     // Auth verification
     const auth = await verifyAuth(req);
     if (!auth) {
@@ -220,8 +241,16 @@ serve(async (req: Request) => {
       data: ReportData;
     };
 
-    if (!type || !data) {
-      return new Response(JSON.stringify({ error: "Missing type or data" }), {
+    if (!type || !data || (type !== "weekly" && type !== "monthly")) {
+      return new Response(JSON.stringify({ error: "Missing or invalid type/data" }), {
+        status: 400,
+        headers: { ...corsHeaders, "Content-Type": "application/json" },
+      });
+    }
+
+    // Sanitize label to prevent email header injection
+    if (data.label && (String(data.label).includes('\n') || String(data.label).includes('\r'))) {
+      return new Response(JSON.stringify({ error: "Invalid label" }), {
         status: 400,
         headers: { ...corsHeaders, "Content-Type": "application/json" },
       });
@@ -268,9 +297,9 @@ serve(async (req: Request) => {
 
       if (!resendRes.ok) {
         const errBody = await resendRes.text();
-        console.error("Resend API error:", errBody);
+        console.error("Resend API error:", resendRes.status, errBody.substring(0, 200));
         return new Response(
-          JSON.stringify({ error: "Failed to send email", details: errBody }),
+          JSON.stringify({ error: "Failed to send email. Please try again later." }),
           {
             status: 500,
             headers: { ...corsHeaders, "Content-Type": "application/json" },
@@ -307,7 +336,7 @@ serve(async (req: Request) => {
   } catch (err) {
     console.error("send-report error:", err);
     return new Response(
-      JSON.stringify({ error: err.message || "Internal server error" }),
+      JSON.stringify({ error: "Internal server error" }),
       {
         status: 500,
         headers: { ...corsHeaders, "Content-Type": "application/json" },

@@ -8,14 +8,14 @@
 <meta http-equiv="Expires" content="0">
 <meta http-equiv="X-Content-Type-Options" content="nosniff">
 <meta http-equiv="X-Frame-Options" content="DENY">
-<meta http-equiv="Content-Security-Policy" content="default-src 'self'; script-src 'self' 'unsafe-inline' 'unsafe-eval' https://cdn.jsdelivr.net; style-src 'self' 'unsafe-inline'; connect-src 'self' https://*.supabase.co https://api.anthropic.com; img-src 'self' https://*.supabase.co data: blob:; frame-ancestors 'none';">
+<meta http-equiv="Content-Security-Policy" content="default-src 'self'; script-src 'self' 'unsafe-inline' https://cdn.jsdelivr.net; style-src 'self' 'unsafe-inline'; connect-src 'self' https://ceahoxydtjcprjkbjakn.supabase.co wss://ceahoxydtjcprjkbjakn.supabase.co; img-src 'self' https://ceahoxydtjcprjkbjakn.supabase.co data: blob:; frame-ancestors 'none'; base-uri 'self'; form-action 'self';">
 <meta name="referrer" content="strict-origin-when-cross-origin">
 <meta name="apple-mobile-web-app-capable" content="yes">
 <meta name="apple-mobile-web-app-status-bar-style" content="default">
 <meta name="apple-mobile-web-app-title" content="Win the Day">
 <meta name="mobile-web-app-capable" content="yes">
 <title>Win the Day</title>
-<script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2/dist/umd/supabase.min.js" integrity="sha384-HS/sUFZexXk91zcjy7zGIBg3tNDxgxF8YbcifixByxxtxQoF2o8GBBT9p6DdGlAR" crossorigin="anonymous"></script>
+<script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2.49.4/dist/umd/supabase.min.js" integrity="sha384-HS/sUFZexXk91zcjy7zGIBg3tNDxgxF8YbcifixByxxtxQoF2o8GBBT9p6DdGlAR" crossorigin="anonymous"></script>
 <style>
 :root{
   --bg:#ffffff;--bg2:#f5f5f7;--text:#1d1d1f;--text2:#3a3a3c;--text3:#8e8e93;
@@ -743,6 +743,16 @@ button,.btn-primary,.btn-ghost,.btn-sm,.settings-btn,.tab,.nav-btn,.top-bar-btn,
 .report-email-btn:hover{color:var(--blue);border-color:var(--blue);}
 .report-toggle-row{display:flex;align-items:center;justify-content:space-between;padding:10px 0;margin-top:8px;border-top:.5px solid var(--border);}
 .report-toggle-label{font-size:12px;color:var(--text2);}
+.legal-links{display:flex;gap:12px;justify-content:center;margin-top:16px;font-size:11px;}
+.legal-links a{color:var(--text3);text-decoration:underline;cursor:pointer;}
+.legal-links a:hover{color:var(--text2);}
+.legal-modal{position:fixed;top:0;left:0;right:0;bottom:0;z-index:9999;background:rgba(0,0,0,.55);display:flex;align-items:center;justify-content:center;padding:16px;}
+.legal-modal-inner{background:var(--bg);border-radius:14px;max-width:600px;width:100%;max-height:85vh;overflow-y:auto;padding:28px 24px;position:relative;}
+.legal-modal-inner h2{font-size:18px;margin:0 0 6px;}
+.legal-modal-inner h3{font-size:14px;margin:18px 0 6px;color:var(--text);}
+.legal-modal-inner p,.legal-modal-inner li{font-size:12px;line-height:1.6;color:var(--text2);}
+.legal-modal-inner ul{padding-left:18px;margin:6px 0;}
+.legal-close{position:absolute;top:12px;right:16px;background:none;border:none;font-size:20px;cursor:pointer;color:var(--text3);}
 </style>
 </head>
 <body>
@@ -910,11 +920,16 @@ const vault={
 async function signUp(){
   const email=document.getElementById('a-email').value.trim(),pw=document.getElementById('a-pw').value;
   const errEl=document.getElementById('a-err'),btn=document.getElementById('a-btn');
-  errEl.textContent='';btn.disabled=true;btn.textContent='Creating…';
+  errEl.textContent='';
+  if(!pw||pw.length<8){errEl.textContent='Password must be at least 8 characters.';return;}
+  if(!/[A-Z]/.test(pw)||!/[0-9]/.test(pw)){errEl.textContent='Password must include at least one uppercase letter and one number.';return;}
+  btn.disabled=true;btn.textContent='Creating…';
   const{data,error}=await sb.auth.signUp({email,password:pw});
   if(error){errEl.textContent=error.message;btn.disabled=false;btn.textContent='Create account';return;}
-  const isAdmin=email.toLowerCase()===ADMIN_EMAIL.toLowerCase();
-  await sb.from('wtd_profiles').upsert({id:data.user.id,email,approved:isAdmin,is_admin:isAdmin},{onConflict:'id'});
+  // Profile created with is_admin:false, approved:false
+  // The server-side trigger prevents privilege escalation
+  // Admin status is managed via Supabase dashboard or by existing admin
+  await sb.from('wtd_profiles').upsert({id:data.user.id,email,approved:false,is_admin:false},{onConflict:'id'});
   btn.disabled=false;btn.textContent='Create account';
 }
 async function signIn(){
@@ -963,7 +978,7 @@ async function renderAdminCheckins(){
           </div>
           <div style="font-size:11px;color:var(--text3)">${msgs.length} messages</div>
         </div>
-        ${msgPreview?`<div style="font-size:12px;color:var(--text3);margin-top:4px;line-height:1.5;overflow:hidden;text-overflow:ellipsis;white-space:nowrap">${msgPreview}...</div>`:''}
+        ${msgPreview?`<div style="font-size:12px;color:var(--text3);margin-top:4px;line-height:1.5;overflow:hidden;text-overflow:ellipsis;white-space:nowrap">${esc(msgPreview)}...</div>`:''}
       </div>`;
     });
   }catch(e){
@@ -981,12 +996,12 @@ function showCheckinDetail(id){
       <div class="modal-title">Check-in — ${data.email||'Unknown'}</div>
       <div class="modal-sub">${date}${data.mood_before?' · Mood before: '+data.mood_before+'/5':''}${data.mood_after?' · Mood after: '+data.mood_after+'/5':''}</div>`;
     if(data.context){
-      h+=`<div style="font-size:11px;color:var(--text3);background:var(--bg2);border-radius:var(--r);padding:8px 10px;margin-bottom:12px;border:.5px solid var(--border);white-space:pre-wrap;line-height:1.5">${data.context}</div>`;
+      h+=`<div style="font-size:11px;color:var(--text3);background:var(--bg2);border-radius:var(--r);padding:8px 10px;margin-bottom:12px;border:.5px solid var(--border);white-space:pre-wrap;line-height:1.5">${esc(data.context)}</div>`;
     }
     msgs.forEach(m=>{
       const isUser=m.role==='user';
       h+=`<div style="margin-bottom:8px;display:flex;${isUser?'justify-content:flex-end':''}">
-        <div style="max-width:85%;padding:8px 12px;border-radius:12px;font-size:13px;line-height:1.5;${isUser?'background:var(--blue);color:#fff;border-bottom-right-radius:4px':'background:var(--bg2);border:.5px solid var(--border);border-bottom-left-radius:4px'}">${m.content}</div>
+        <div style="max-width:85%;padding:8px 12px;border-radius:12px;font-size:13px;line-height:1.5;${isUser?'background:var(--blue);color:#fff;border-bottom-right-radius:4px':'background:var(--bg2);border:.5px solid var(--border);border-bottom-left-radius:4px'}">${esc(m.content)}</div>
       </div>`;
     });
     h+=`<div class="modal-actions"><button class="btn-cancel" onclick="closeOv()">Close</button></div></div></div>`;
@@ -1036,14 +1051,14 @@ async function renderAdmin(){if(!_isAdmin()){render();return;}
     html+=`</div>`;document.getElementById('root').innerHTML=html;return;
   }
   if(!list.length){html+=`<div class="no-users">No ${adminView==='pending'?'pending approvals':'clients'} yet.</div>`;}
-  else if(adminView==='pending'){list.forEach(p=>{html+=`<div class="user-card"><div class="user-top"><div class="user-avatar">${p.email[0].toUpperCase()}</div><div style="flex:1"><div style="font-size:14px">${p.email}</div><div style="font-size:11px;color:var(--text3)">Requested ${new Date(p.created_at).toLocaleDateString()}</div></div></div><div class="user-actions"><button class="btn-sm btn-green" onclick="approveUser('${p.id}')">Approve</button><button class="btn-outline-red" onclick="removeUser('${p.id}')">Remove</button></div></div>`;});}
-  else{list.forEach(p=>{const s=statsMap[p.id]||{};const lv=getLevel(s.won||0);const inactive=s.daysSince!==null&&s.daysSince>=2;const todayColor=s.todayPct!==null?statusColor(s.todayPct,false):'var(--text3)';html+=`<div class="user-card"><div class="user-top"><div class="user-avatar">${p.email[0].toUpperCase()}</div><div style="flex:1"><div style="font-size:14px">${p.email}</div><div style="font-size:11px;display:flex;align-items:center;gap:6px;margin-top:2px;"><span style="color:${lv.color};font-weight:500">${lv.icon} ${lv.name}</span>${inactive?`<span class="inactive-flag">Inactive ${s.daysSince}d</span>`:''}</div></div>${s.todayPct!==null?`<div style="font-size:15px;font-weight:500;color:${todayColor}">${Math.round(s.todayPct*100)}%</div>`:''}</div><div class="user-stats"><div class="user-stat"><div class="user-stat-val">${s.won||0}</div><div class="user-stat-lbl">Days won</div></div><div class="user-stat"><div class="user-stat-val" style="color:${todayColor}">${s.todayPct!==null?Math.round(s.todayPct*100)+'%':'—'}</div><div class="user-stat-lbl">Today</div></div><div class="user-stat"><div class="user-stat-val">${s.daysSince!==null?s.daysSince+'d':'—'}</div><div class="user-stat-lbl">Last active</div></div></div><div class="user-actions"><button class="btn-sm btn-green" onclick="viewClient('${p.id}','${p.email}')">View tracker</button><button class="top-bar-btn" onclick="openHabitBuilder('${p.id}','${p.email}')">Build habits</button><button class="top-bar-btn" onclick="openAssignActions('${p.id}','${p.email}')">Assign actions</button><button class="btn-outline-red" onclick="removeUser('${p.id}')">Remove</button></div></div>`;});}
+  else if(adminView==='pending'){list.forEach(p=>{html+=`<div class="user-card"><div class="user-top"><div class="user-avatar">${esc(p.email[0].toUpperCase())}</div><div style="flex:1"><div style="font-size:14px">${esc(p.email)}</div><div style="font-size:11px;color:var(--text3)">Requested ${new Date(p.created_at).toLocaleDateString()}</div></div></div><div class="user-actions"><button class="btn-sm btn-green" onclick="approveUser('${escAttr(p.id)}')">Approve</button><button class="btn-outline-red" onclick="removeUser('${escAttr(p.id)}')">Remove</button></div></div>`;});}
+  else{list.forEach(p=>{const s=statsMap[p.id]||{};const lv=getLevel(s.won||0);const inactive=s.daysSince!==null&&s.daysSince>=2;const todayColor=s.todayPct!==null?statusColor(s.todayPct,false):'var(--text3)';html+=`<div class="user-card"><div class="user-top"><div class="user-avatar">${esc(p.email[0].toUpperCase())}</div><div style="flex:1"><div style="font-size:14px">${esc(p.email)}</div><div style="font-size:11px;display:flex;align-items:center;gap:6px;margin-top:2px;"><span style="color:${lv.color};font-weight:500">${lv.icon} ${lv.name}</span>${inactive?`<span class="inactive-flag">Inactive ${s.daysSince}d</span>`:''}</div></div>${s.todayPct!==null?`<div style="font-size:15px;font-weight:500;color:${todayColor}">${Math.round(s.todayPct*100)}%</div>`:''}</div><div class="user-stats"><div class="user-stat"><div class="user-stat-val">${s.won||0}</div><div class="user-stat-lbl">Days won</div></div><div class="user-stat"><div class="user-stat-val" style="color:${todayColor}">${s.todayPct!==null?Math.round(s.todayPct*100)+'%':'—'}</div><div class="user-stat-lbl">Today</div></div><div class="user-stat"><div class="user-stat-val">${s.daysSince!==null?s.daysSince+'d':'—'}</div><div class="user-stat-lbl">Last active</div></div></div><div class="user-actions"><button class="btn-sm btn-green" onclick="viewClient('${escAttr(p.id)}','${escAttr(p.email)}')">View tracker</button><button class="top-bar-btn" onclick="openHabitBuilder('${escAttr(p.id)}','${escAttr(p.email)}')">Build habits</button><button class="top-bar-btn" onclick="openAssignActions('${escAttr(p.id)}','${escAttr(p.email)}')">Assign actions</button><button class="btn-outline-red" onclick="removeUser('${escAttr(p.id)}')">Remove</button></div></div>`;});}
   html+=`</div>`;document.getElementById('root').innerHTML=html;
 }
 
 async function viewClient(uid,email){if(!_isAdmin())return;adminClientId=uid;adminClientEmail=email;await loadAll(uid);const tasks=isRestDay?restTasks():allTasks();const tot=isRestDay?restTotal():total();const earned=tasks.filter(t=>checked[t.id]).reduce((s,t)=>s+t.points,0);prevWonState=earned/tot>=(isRestDay?restSettings.win/100:WIN);renderTracker();}
 function switchToMyTracker(){adminClientId=null;adminClientEmail='';loadAll().then(()=>{render();});}
-function openAssignActions(uid,email){showOv(`<div class="overlay-bg" onclick="if(event.target===this)closeOv()"><div class="modal"><div class="modal-title">Assign action items</div><div class="modal-sub">For ${email} — one item per line.</div><textarea class="assign-area" id="assign-inp" placeholder="Read chapter 3&#10;Write your 90-day vision"></textarea><div class="modal-actions"><button class="btn-save" onclick="doAssignActions('${uid}')">Save</button><button class="btn-cancel" onclick="closeOv()">Cancel</button></div></div></div>`);}
+function openAssignActions(uid,email){showOv(`<div class="overlay-bg" onclick="if(event.target===this)closeOv()"><div class="modal"><div class="modal-title">Assign action items</div><div class="modal-sub">For ${esc(email)} — one item per line.</div><textarea class="assign-area" id="assign-inp" placeholder="Read chapter 3&#10;Write your 90-day vision"></textarea><div class="modal-actions"><button class="btn-save" onclick="doAssignActions('${escAttr(uid)}')">Save</button><button class="btn-cancel" onclick="closeOv()">Cancel</button></div></div></div>`);}
 async function doAssignActions(uid){if(!_isAdmin())return;const text=document.getElementById('assign-inp').value.trim();const items=text.split('\n').map(s=>s.trim()).filter(Boolean).map(s=>({text:s,done:false}));await storage.set('wtd-actions',JSON.stringify(items),uid);closeOv();alert('Action items saved!');}
 
 // ── ADMIN ANALYTICS DASHBOARD ──
@@ -1448,9 +1463,9 @@ function renderContentScripts(){
       <div class="script-body">${s.body||''}</div>
       ${s.ai_reasoning?`<div class="script-reasoning">💡 ${s.ai_reasoning}</div>`:''}
       <div style="display:flex;gap:6px;margin-top:10px;flex-wrap:wrap">
-        ${s.status!=='posted'?`<button class="btn-sm btn-green" onclick="updateScriptStatus('${s.id}','${nextStatus}')">Mark ${nextStatus}</button>`:''}
-        <button class="btn-sm" style="background:var(--bg);border:.5px solid var(--border);color:var(--text2)" onclick="copyScript(\`${(s.hook+'\n\n'+s.body).replace(/`/g,"'").replace(/\\/g,"\\\\")}\`)">📋 Copy</button>
-        <button class="btn-sm" style="background:none;color:var(--red);border:.5px solid var(--red)" onclick="if(confirm('Delete this script?'))deleteScript('${s.id}')">✕</button>
+        ${s.status!=='posted'?`<button class="btn-sm btn-green" onclick="updateScriptStatus('${escAttr(s.id)}','${escAttr(nextStatus)}')">Mark ${esc(nextStatus)}</button>`:''}
+        <button class="btn-sm" style="background:var(--bg);border:.5px solid var(--border);color:var(--text2)" onclick="copyScript(this.dataset.script)" data-script="${escAttr(s.hook+'\n\n'+s.body)}">📋 Copy</button>
+        <button class="btn-sm" style="background:none;color:var(--red);border:.5px solid var(--red)" onclick="if(confirm('Delete this script?'))deleteScript('${escAttr(s.id)}')">✕</button>
       </div>
     </div>`;
   });
@@ -1585,7 +1600,7 @@ async function renderAdminFiles(clients){
     <div style="font-size:28px;margin-bottom:6px">📁</div>
     <div style="font-size:13px;color:var(--text2)">Click to upload or drag files here</div>
     <div style="font-size:11px;color:var(--text3);margin-top:4px">PDFs, docs, images, videos — any file type</div>
-    <input type="file" id="file-input" multiple style="display:none" onchange="handleFileUpload(this.files)">
+    <input type="file" id="file-input" multiple accept=".pdf,.doc,.docx,.xls,.xlsx,.ppt,.pptx,.txt,.csv,.jpg,.jpeg,.png,.gif,.webp,.mp4,.mp3,.wav,.zip" style="display:none" onchange="handleFileUpload(this.files)">
   </div>`;
 
   if(!files.length){
@@ -1610,10 +1625,10 @@ async function renderAdminFiles(clients){
             <div class="file-meta">${fileSize(f.file_size)} · ${new Date(f.created_at).toLocaleDateString()}</div>
           </div>
           <div class="file-actions">
-            <button class="btn-sm" style="background:var(--bg);border:.5px solid var(--border);color:var(--text2)" onclick="openFileAssigner('${f.id}','${f.name.replace(/'/g,"\\'")}')">👥 Assign</button>
-            <button class="btn-sm" style="background:var(--bg);border:.5px solid var(--border);color:var(--text2)" onclick="openFileCategoryEditor('${f.id}','${f.category||'general'}')">🏷</button>
+            <button class="btn-sm" style="background:var(--bg);border:.5px solid var(--border);color:var(--text2)" onclick="openFileAssigner('${esc(f.id)}','${esc(f.name)}')">👥 Assign</button>
+            <button class="btn-sm" style="background:var(--bg);border:.5px solid var(--border);color:var(--text2)" onclick="openFileCategoryEditor('${escAttr(f.id)}','${escAttr(f.category||'general')}')">🏷</button>
             <a href="${f.url}" target="_blank" class="btn-sm" style="background:var(--bg);border:.5px solid var(--border);color:var(--blue);text-decoration:none">↗</a>
-            <button class="btn-sm" style="background:none;color:var(--red);border:.5px solid var(--red)" onclick="if(confirm('Delete this file?'))deleteFile('${f.id}','${(f.url||'').split('/').pop()}')">✕</button>
+            <button class="btn-sm" style="background:none;color:var(--red);border:.5px solid var(--red)" onclick="if(confirm('Delete this file?'))deleteFile('${escAttr(f.id)}','${escAttr((f.url||'').split('/').pop())}')">✕</button>
           </div>
         </div>`;
       });
@@ -1635,11 +1650,20 @@ async function renderAdminFiles(clients){
 }
 
 // Handle file upload
+const ALLOWED_FILE_TYPES=['pdf','doc','docx','xls','xlsx','ppt','pptx','txt','csv','jpg','jpeg','png','gif','webp','mp4','mp3','wav','zip'];
+const MAX_FILE_SIZE=25*1024*1024; // 25MB
 async function handleFileUpload(fileList){
   if(!fileList||!fileList.length)return;
   const zone=document.getElementById('file-drop-zone');
+  for(const file of fileList){
+    const ext=file.name.split('.').pop().toLowerCase();
+    if(!ALLOWED_FILE_TYPES.includes(ext)){alert(`File type ".${ext}" not allowed. Allowed: ${ALLOWED_FILE_TYPES.join(', ')}`);continue;}
+    if(file.size>MAX_FILE_SIZE){alert(`File "${file.name}" exceeds 25MB limit.`);continue;}
+  }
   if(zone)zone.innerHTML=`<div style="font-size:13px;color:var(--text3)">Uploading ${fileList.length} file${fileList.length>1?'s':''}...</div>`;
   for(const file of fileList){
+    const ext=file.name.split('.').pop().toLowerCase();
+    if(!ALLOWED_FILE_TYPES.includes(ext)||file.size>MAX_FILE_SIZE)continue;
     const result=await uploadFile(file);
     if(result){
       await saveFileRecord(file.name,'general',result.url,result.type,result.size);
@@ -1762,7 +1786,8 @@ async function loadPipelineLeads(){
   const{data,error}=await sb.from('pipeline_leads')
     .select('*')
     .eq('owner_id',currentUser.id)
-    .order('dm_date',{ascending:false});
+    .order('dm_date',{ascending:false})
+    .limit(500);
   pipelineLeads=data||[];
   // Normalize: Supabase returns TIMESTAMPTZ as ISO strings, followups as JSONB
   pipelineLeads.forEach(l=>{
@@ -2507,6 +2532,7 @@ function renderPipelineDashboard(){
   return h;
 }
 function esc(s){return String(s).replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;').replace(/"/g,'&quot;').replace(/'/g,'&#39;');}
+function escAttr(s){return esc(String(s)).replace(/`/g,'&#96;').replace(/\\/g,'&#92;');}
 
 function buildCountryOptions(selected){
   let opts='<option value="">Select country...</option>';
@@ -2741,7 +2767,7 @@ function openLeadDetail(id){
       <div style="font-size:10px;text-transform:uppercase;letter-spacing:.06em;color:var(--blue);margin-bottom:4px;display:flex;align-items:center;gap:6px">ManyChat <span class="mc-imported">ID: ${esc(String(l.mc_subscriber_id))}</span><span style="margin-left:auto;font-size:10px;color:var(--blue);cursor:pointer;text-decoration:underline" onclick="event.stopPropagation();mcRefreshLead('${id}')">Refresh</span></div>
       ${l.mc_tags&&l.mc_tags.length?'<div style="display:flex;gap:3px;flex-wrap:wrap;margin-top:4px">'+l.mc_tags.map(t=>'<span class="mc-tag">'+esc(t)+'</span>').join('')+'</div>':''}
     </div>`:''}
-    ${script?`<div class="pl-script"><div class="pl-script-title">Suggested script \u2014 ${script.title} <span class="pl-script-copy" id="pl-copy-btn" onclick="event.stopPropagation();copyScript('${l.status}','${esc(l.name)}')">Copy</span></div>${script.lines.map(line=>`<div>${esc(line)}</div>`).join('')}</div>`:''}
+    ${script?`<div class="pl-script"><div class="pl-script-title">Suggested script \u2014 ${script.title} <span class="pl-script-copy" id="pl-copy-btn" onclick="event.stopPropagation();copyScript('${escAttr(l.status)}','${escAttr(l.name)}')">Copy</span></div>${script.lines.map(line=>`<div>${esc(line)}</div>`).join('')}</div>`:''}
     <div class="modal-actions">
       <button class="btn-save" onclick="saveEditLead('${id}')">Save</button>
       <button class="btn-cancel" onclick="closeOv()">Cancel</button>
@@ -2939,6 +2965,11 @@ function openAccountModal(){
       <button class="btn-save" onclick="changePassword()">Update password</button>
       <button class="btn-cancel" onclick="closeOv()">Cancel</button>
     </div>
+    <div class="legal-links" style="margin-top:12px;padding-top:12px;border-top:.5px solid var(--border)">
+      <a onclick="closeOv();showPrivacyPolicy()">Privacy Policy</a>
+      <a onclick="closeOv();showTermsOfService()">Terms of Service</a>
+      <a onclick="closeOv();showDataDeletion()">Delete My Data</a>
+    </div>
   </div></div>`);
   setTimeout(()=>document.getElementById('acc-pw1')?.focus(),50);
 }
@@ -2946,7 +2977,8 @@ async function changePassword(){
   const pw1=document.getElementById('acc-pw1').value;
   const pw2=document.getElementById('acc-pw2').value;
   const msg=document.getElementById('acc-msg');
-  if(!pw1||pw1.length<6){msg.textContent='Password must be at least 6 characters.';return;}
+  if(!pw1||pw1.length<8){msg.textContent='Password must be at least 8 characters.';return;}
+  if(!/[A-Z]/.test(pw1)||!/[0-9]/.test(pw1)){msg.textContent='Password must include at least one uppercase letter and one number.';return;}
   if(pw1!==pw2){msg.textContent='Passwords don\'t match.';return;}
   msg.textContent='Updating…';msg.style.color='var(--text3)';
   const{error}=await sb.auth.updateUser({password:pw1});
@@ -2977,7 +3009,7 @@ async function openHabitBuilder(uid,email){if(!_isAdmin())return;
       h+=`<div class="esec"><div class="esec-label">${label}</div>`;
       tasks.forEach(task=>{
         h+=`<div class="editor-row">
-          <input class="e-inp" value="${task.name.replace(/"/g,'&quot;').replace(/'/g,"&#39;")}" onchange="hbUpdateTask(${task.id},'name',this.value,'${type}','${uid}','${email}')">
+          <input class="e-inp" value="${esc(task.name)}" onchange="hbUpdateTask(${task.id},'name',this.value,'${type}','${uid}','${email}')">
           <input class="e-pts" type="number" value="${task.points}" min="1" max="30" onchange="hbUpdateTask(${task.id},'points',parseInt(this.value)||1,'${type}','${uid}','${email}')">
           <select class="e-tier" onchange="hbUpdateTask(${task.id},'tier',this.value,'${type}','${uid}','${email}')">
             <option${task.tier==='S'?' selected':''}>S</option>
@@ -3182,7 +3214,7 @@ function onboardStep5(){
       ${bTasks.map((t,i)=>{
         const tidx=timed.indexOf(t);
         return`<div class="onboard-review-task">
-          <input class="onboard-edit-name" value="${t.name.replace(/"/g,'&quot;')}" onchange="onboardEditTaskName('timed',${tidx},this.value)">
+          <input class="onboard-edit-name" value="${esc(t.name)}" onchange="onboardEditTaskName('timed',${tidx},this.value)">
           <div class="onboard-review-task-meta">
             <span class="onboard-review-tier ${t.tier}">${t.tier}</span>
             <span class="onboard-review-pts">${t.points}pts</span>
@@ -3196,7 +3228,7 @@ function onboardStep5(){
     blocksHTML+=`<div class="onboard-review-block">
       <div class="onboard-essential-label">Daily essentials</div>
       ${essential.map((t,i)=>`<div class="onboard-review-task">
-        <input class="onboard-edit-name" value="${t.name.replace(/"/g,'&quot;')}" onchange="onboardEditTaskName('essential',${i},this.value)">
+        <input class="onboard-edit-name" value="${esc(t.name)}" onchange="onboardEditTaskName('essential',${i},this.value)">
         <div class="onboard-review-task-meta">
           <span class="onboard-review-tier ${t.tier}">${t.tier}</span>
           <span class="onboard-review-pts">${t.points}pts</span>
@@ -3368,7 +3400,7 @@ if(!currentUser){const{data:{session}}=await sb.auth.getSession();if(!session){r
     loadAll() // Start loading data immediately — doesn't depend on profile
   ]);
   currentProfile=profile;
-  if(!currentProfile){const isAdmin=currentUser.email.toLowerCase()===ADMIN_EMAIL.toLowerCase();await sb.from('wtd_profiles').upsert({id:currentUser.id,email:currentUser.email,approved:isAdmin,is_admin:isAdmin},{onConflict:'id'});currentProfile=await loadProfile(currentUser.id);}
+  if(!currentProfile){await sb.from('wtd_profiles').upsert({id:currentUser.id,email:currentUser.email,approved:false,is_admin:false},{onConflict:'id'});currentProfile=await loadProfile(currentUser.id);}
   if(!currentProfile.approved){renderPending();return;}
   if(!hasCustomTasks && !currentProfile.is_admin && !adminClientId){renderOnboarding();return;}
   const tasks=isRestDay?restTasks():allTasks();const tot=isRestDay?restTotal():total();
@@ -3381,7 +3413,7 @@ if(!currentUser){const{data:{session}}=await sb.auth.getSession();if(!session){r
 function renderAuth(){
   if(typeof removeCoachUI==='function')removeCoachUI();
   const isLogin=authView==='login';
-  document.getElementById('root').innerHTML=`<div class="screen"><h1>${APP_NAME}</h1><p>${isLogin?'Sign in to your account.':'Create your account. Your coach will approve you shortly.'}</p><div id="a-err" class="err"></div><label class="lbl">Email</label><input class="inp" id="a-email" type="email" placeholder="you@example.com" autocomplete="email"><label class="lbl">Password</label><input class="inp" id="a-pw" type="password" placeholder="••••••••" onkeydown="if(event.key==='Enter')${isLogin?'signIn()':'signUp()'}"><button class="btn-primary" id="a-btn" onclick="${isLogin?'signIn()':'signUp()'}"> ${isLogin?'Sign in':'Create account'}</button>${isLogin?`<a class="lnk" onclick="showForgotPassword()">Forgot password?</a>`:''}<a class="lnk" onclick="toggleAuthView()" style="margin-top:6px">${isLogin?"Don't have an account? Sign up":'Already have an account? Sign in'}</a></div>`;
+  document.getElementById('root').innerHTML=`<div class="screen"><h1>${APP_NAME}</h1><p>${isLogin?'Sign in to your account.':'Create your account. Your coach will approve you shortly.'}</p><div id="a-err" class="err"></div><label class="lbl">Email</label><input class="inp" id="a-email" type="email" placeholder="you@example.com" autocomplete="email"><label class="lbl">Password</label><input class="inp" id="a-pw" type="password" placeholder="••••••••" onkeydown="if(event.key==='Enter')${isLogin?'signIn()':'signUp()'}"><button class="btn-primary" id="a-btn" onclick="${isLogin?'signIn()':'signUp()'}"> ${isLogin?'Sign in':'Create account'}</button>${isLogin?`<a class="lnk" onclick="showForgotPassword()">Forgot password?</a>`:''}<a class="lnk" onclick="toggleAuthView()" style="margin-top:6px">${isLogin?"Don't have an account? Sign up":'Already have an account? Sign in'}</a><div class="legal-links"><a onclick="showPrivacyPolicy()">Privacy Policy</a><a onclick="showTermsOfService()">Terms of Service</a></div>${!isLogin?'<p style="font-size:10px;color:var(--text3);text-align:center;margin-top:8px">By creating an account, you agree to our Terms of Service and Privacy Policy.</p>':''}</div>`;
   setTimeout(()=>document.getElementById('a-email')?.focus(),50);
 }
 
@@ -3805,7 +3837,10 @@ function exportData(){
 }
 async function doImport(){
   try{
-    const data=JSON.parse(document.getElementById('import-textarea').value.trim());
+    const raw=document.getElementById('import-textarea').value.trim();
+    if(raw.includes('__proto__')||raw.includes('constructor')||raw.includes('prototype')){importError='Invalid data — contains disallowed keys.';renderOvContent();return;}
+    const data=JSON.parse(raw);
+    if(!data||typeof data!=='object'||Array.isArray(data)){importError='Invalid data.';renderOvContent();return;}
     if(data.history)allHistory={...allHistory,...data.history};
     if(data.tasks?.timed)timedTasks=data.tasks.timed;
     if(data.tasks?.essential)essentialTasks=data.tasks.essential;
@@ -4477,7 +4512,7 @@ async function toggleReportPref(type,val){
 function reflectionCards(entries){
   const withR=entries.filter(({rec})=>rec&&(rec.reflection||rec.winOfDay));
   if(!withR.length)return`<p style="font-size:13px;color:var(--text3);padding:1rem 0">No reflections written yet.</p>`;
-  return withR.map(({d,rec})=>{const timeStr=rec.reflectionTime?new Date(rec.reflectionTime).toLocaleTimeString("en-US",{hour:"numeric",minute:"2-digit"}):'';return`<div class="reflect-card"><div class="reflect-card-date"><span>${d.toLocaleDateString("en-US",{weekday:"long",month:"short",day:"numeric"})}${timeStr?` · ${timeStr}`:''}${rec.restDay?' · Rest day':''}${rec.mood?` · Mood ${rec.mood}/5`:''}</span><span style="font-weight:500;color:${statusColor(rec.pct||0,rec.restDay)}">${Math.round((rec.pct||0)*100)}%</span></div>${rec.winOfDay?`<div style="font-size:12px;color:var(--orange);font-weight:500;margin-bottom:4px">🏆 ${rec.winOfDay}</div>`:''}${rec.reflection?`<div class="reflect-card-text">${rec.reflection}</div>`:''}</div>`;}).join('');
+  return withR.map(({d,rec})=>{const timeStr=rec.reflectionTime?new Date(rec.reflectionTime).toLocaleTimeString("en-US",{hour:"numeric",minute:"2-digit"}):'';return`<div class="reflect-card"><div class="reflect-card-date"><span>${d.toLocaleDateString("en-US",{weekday:"long",month:"short",day:"numeric"})}${timeStr?` · ${timeStr}`:''}${rec.restDay?' · Rest day':''}${rec.mood?` · Mood ${rec.mood}/5`:''}</span><span style="font-weight:500;color:${statusColor(rec.pct||0,rec.restDay)}">${Math.round((rec.pct||0)*100)}%</span></div>${rec.winOfDay?`<div style="font-size:12px;color:var(--orange);font-weight:500;margin-bottom:4px">🏆 ${esc(rec.winOfDay)}</div>`:''}${rec.reflection?`<div class="reflect-card-text">${esc(rec.reflection)}</div>`:''}</div>`;}).join('');
 }
 
 // ── OVERLAYS ──
@@ -4488,7 +4523,7 @@ function renderOvContent(){if(showEditor)showOv(renderEditorModal());else if(sho
 function renderEditorModal(){
   const blocks=[...BLOCKS.map(b=>({label:b,tasks:timedTasks.filter(t=>t.block===b),type:'timed'})),{label:"Daily Essentials",tasks:essentialTasks,type:'essential'}];
   let h=`<div class="overlay-bg" onclick="if(event.target===this)closeOv()"><div class="modal"><div class="modal-title">Edit habits</div><div style="margin-bottom:1rem"><div class="esec-label" style="margin-bottom:7px">Add task to block</div><select class="block-sel" id="new-task-block">${BLOCKS.map(b=>`<option value="timed:${b}">${b}</option>`).join('')}<option value="essential:Daily Essentials">Daily Essentials</option></select><button class="btn-ghost" style="width:auto" onclick="addTaskFromSelect()">+ Add task</button></div>`;
-  blocks.forEach(({label,tasks,type})=>{if(!tasks.length)return;h+=`<div class="esec"><div class="esec-label">${label}</div>`;tasks.forEach(task=>{h+=`<div class="editor-row"><input class="e-inp" value="${task.name.replace(/"/g,'&quot;').replace(/'/g,"&#39;")}" onchange="updateTask(${task.id},'name',this.value,'${type}')"><input class="e-pts" type="number" value="${task.points}" min="1" max="30" onchange="updateTask(${task.id},'points',parseInt(this.value)||1,'${type}')"><select class="e-tier" onchange="updateTask(${task.id},'tier',this.value,'${type}')"><option${task.tier==='S'?' selected':''}>S</option><option${task.tier==='A'?' selected':''}>A</option><option${task.tier==='B'?' selected':''}>B</option></select><button class="del-btn" onclick="deleteTask(${task.id},'${type}')">×</button></div>`;});h+=`</div>`;});
+  blocks.forEach(({label,tasks,type})=>{if(!tasks.length)return;h+=`<div class="esec"><div class="esec-label">${label}</div>`;tasks.forEach(task=>{h+=`<div class="editor-row"><input class="e-inp" value="${esc(task.name)}" onchange="updateTask(${task.id},'name',this.value,'${type}')"><input class="e-pts" type="number" value="${task.points}" min="1" max="30" onchange="updateTask(${task.id},'points',parseInt(this.value)||1,'${type}')"><select class="e-tier" onchange="updateTask(${task.id},'tier',this.value,'${type}')"><option${task.tier==='S'?' selected':''}>S</option><option${task.tier==='A'?' selected':''}>A</option><option${task.tier==='B'?' selected':''}>B</option></select><button class="del-btn" onclick="deleteTask(${task.id},'${type}')">×</button></div>`;});h+=`</div>`;});
   h+=`<div class="modal-actions"><button class="btn-save" onclick="saveEdits()">Save changes</button><button class="btn-cancel" onclick="closeOv()">Cancel</button></div></div></div>`;return h;
 }
 function renderImportModal(){return`<div class="overlay-bg" onclick="if(event.target===this)closeOv()"><div class="modal"><div class="modal-title">Import data</div><p style="font-size:13px;color:var(--text2);margin-bottom:1rem;line-height:1.6">Paste your previously exported JSON.</p><textarea class="import-area" id="import-textarea" placeholder="Paste exported JSON here..."></textarea>${importError?`<p style="font-size:12px;color:var(--red);margin-top:5px">${importError}</p>`:''}<div class="modal-actions"><button class="btn-save" onclick="doImport()">Import</button><button class="btn-cancel" onclick="closeOv()">Cancel</button></div></div></div>`;}
@@ -4763,6 +4798,7 @@ async function submitFeedback(type){
   const text=document.getElementById(inputId)?.value.trim();
   const statusEl=document.getElementById(statusId);
   if(!text){if(statusEl)statusEl.innerHTML='<span style="color:var(--red)">Please enter a message.</span>';return;}
+  if(text.length>5000){if(statusEl)statusEl.innerHTML='<span style="color:var(--red)">Message too long (max 5000 characters).</span>';return;}
   if(statusEl)statusEl.innerHTML='<span style="color:var(--text3)">Sending...</span>';
   try{
     await sb.from('wtd_feedback').insert([{
@@ -4841,9 +4877,9 @@ function renderCheckinView(){
   }
   checkinMessages.forEach(m=>{
     if(m.role==='assistant'){
-      h+=`<div class="coach-msg ai">${m.content}</div>`;
+      h+=`<div class="coach-msg ai">${esc(m.content)}</div>`;
     } else if(m.role==='user'){
-      h+=`<div class="coach-msg user">${m.content}</div>`;
+      h+=`<div class="coach-msg user">${esc(m.content)}</div>`;
     }
   });
   if(checkinSending){
@@ -4888,8 +4924,7 @@ async function sendCheckinMessage(userText,isInit){
   checkinSending=true;
   renderCoachUI();
 
-  const systemPrompt="You are a check-in assistant inside Win the Day. Your job is to ask short questions that help the user reflect on their day — what went well, what got in the way, how they're feeling. You are NOT a coach. Do not give advice. Just ask good questions, acknowledge their answers, and help them think. Keep responses to 1-2 sentences. Be warm and direct. After 3-4 exchanges, wrap up with 'Thanks for checking in. Your coach has access to this conversation.'";
-
+  // System prompt is now server-controlled — we send mode:"checkin" instead
   const messages=[];
   if(isInit){
     messages.push({role:'user',content:`[CONTEXT FOR AI — do not repeat this to the user] ${checkinContext}\n\nThe user just opened a check-in. Start by greeting them warmly and asking a reflective question about their day.`});
@@ -4907,7 +4942,7 @@ async function sendCheckinMessage(userText,isInit){
 
   try{
     const{data,error}=await sb.functions.invoke('ai-coach',{
-      body:{messages,system:systemPrompt}
+      body:{messages,mode:'checkin',context:checkinContext}
     });
     checkinSending=false;
     if(error)throw error;
@@ -5069,7 +5104,7 @@ function renderPasteReview(){
     bTasks.forEach(t=>{
       const tidx=timed.indexOf(t);
       h+=`<div style="display:flex;align-items:center;gap:6px;margin-bottom:4px">
-        <input style="flex:1;font-size:13px;color:var(--text);background:none;border:none;border-bottom:1px dashed var(--border);padding:3px 0;outline:none;font-family:var(--font)" value="${t.name.replace(/"/g,'&quot;')}" onchange="_parsedSchedule.timed[${tidx}].name=this.value">
+        <input style="flex:1;font-size:13px;color:var(--text);background:none;border:none;border-bottom:1px dashed var(--border);padding:3px 0;outline:none;font-family:var(--font)" value="${esc(t.name)}" onchange="_parsedSchedule.timed[${tidx}].name=this.value">
         <span style="font-size:10px;color:${t.tier==='S'?'var(--orange)':t.tier==='A'?'var(--blue)':'var(--text3)'};font-weight:600;min-width:14px">${t.tier}</span>
         <span style="font-size:10px;color:var(--text3);min-width:28px">${t.points}pt</span>
         <button onclick="_parsedSchedule.timed.splice(${tidx},1);renderCoachUI()" style="background:none;border:none;color:var(--text3);cursor:pointer;font-size:14px;padding:0 2px">&times;</button>
@@ -5082,7 +5117,7 @@ function renderPasteReview(){
     h+=`<div style="margin-bottom:10px"><div style="font-size:10px;text-transform:uppercase;letter-spacing:.08em;color:var(--text3);margin-bottom:4px;font-weight:600">Daily Essentials</div>`;
     essential.forEach((t,i)=>{
       h+=`<div style="display:flex;align-items:center;gap:6px;margin-bottom:4px">
-        <input style="flex:1;font-size:13px;color:var(--text);background:none;border:none;border-bottom:1px dashed var(--border);padding:3px 0;outline:none;font-family:var(--font)" value="${t.name.replace(/"/g,'&quot;')}" onchange="_parsedSchedule.essential[${i}].name=this.value">
+        <input style="flex:1;font-size:13px;color:var(--text);background:none;border:none;border-bottom:1px dashed var(--border);padding:3px 0;outline:none;font-family:var(--font)" value="${esc(t.name)}" onchange="_parsedSchedule.essential[${i}].name=this.value">
         <span style="font-size:10px;color:var(--orange);font-weight:600;min-width:14px">${t.tier}</span>
         <span style="font-size:10px;color:var(--text3);min-width:28px">${t.points}pt</span>
         <button onclick="_parsedSchedule.essential.splice(${i},1);renderCoachUI()" style="background:none;border:none;color:var(--text3);cursor:pointer;font-size:14px;padding:0 2px">&times;</button>
@@ -5170,6 +5205,139 @@ setTimeout(async()=>{
     await _bootOnce(session);
   }catch(e){await _bootOnce(null);}
 },200);
+// ── LEGAL / COMPLIANCE ──
+function showPrivacyPolicy(){
+  const el=document.createElement('div');el.className='legal-modal';el.id='legal-modal';
+  el.onclick=function(e){if(e.target===el)el.remove();};
+  el.innerHTML=`<div class="legal-modal-inner"><button class="legal-close" onclick="document.getElementById('legal-modal')?.remove()">&times;</button>
+<h2>Privacy Policy</h2>
+<p><strong>Last updated:</strong> March 31, 2026</p>
+<p>Win the Day ("we", "us", "our") is operated by Scott Wills. This policy explains how we collect, use, and protect your personal information.</p>
+
+<h3>1. Information We Collect</h3>
+<ul>
+<li><strong>Account data:</strong> Email address and password (stored securely via Supabase Auth)</li>
+<li><strong>Coaching data:</strong> Daily task completions, mood ratings, reflections, goals, identity statements, and AI coach conversations</li>
+<li><strong>Pipeline data (admin):</strong> Instagram handles, DM conversation summaries, lead demographics, booking information sourced from ManyChat and Instagram</li>
+<li><strong>Content analytics (admin):</strong> Instagram post performance metrics sourced from the Instagram Graph API</li>
+<li><strong>Usage data:</strong> App interactions for functionality purposes only — we do not use third-party analytics or tracking pixels</li>
+</ul>
+
+<h3>2. How We Use Your Information</h3>
+<ul>
+<li>To provide and personalize the coaching experience</li>
+<li>To generate AI-powered coaching insights (via Anthropic Claude API — your data is sent to Anthropic for processing and is subject to <a href="https://www.anthropic.com/privacy" target="_blank" rel="noopener">Anthropic's Privacy Policy</a>)</li>
+<li>To send reports you opt into (weekly/monthly email summaries)</li>
+<li>To improve the app and coaching methodology</li>
+</ul>
+
+<h3>3. Data Sharing</h3>
+<p>We share data only with these service providers, solely for app functionality:</p>
+<ul>
+<li><strong>Supabase</strong> — Database and authentication</li>
+<li><strong>Anthropic</strong> — AI coach responses and content analysis</li>
+<li><strong>Vercel</strong> — App hosting</li>
+<li><strong>Resend</strong> — Email delivery (if you opt in to reports)</li>
+<li><strong>ManyChat / Meta</strong> — DM pipeline management (admin only)</li>
+</ul>
+<p>We do not sell your personal information. We do not use your data for advertising.</p>
+
+<h3>4. Data Retention</h3>
+<p>Your coaching data is retained for as long as your account is active. You may request deletion at any time by contacting scott@scottzwills.com. We will delete your data within 30 days of a verified request.</p>
+
+<h3>5. Your Rights</h3>
+<p>Depending on your location, you may have rights under GDPR, CCPA/CPRA, or other privacy laws including:</p>
+<ul>
+<li><strong>Access:</strong> Request a copy of your data</li>
+<li><strong>Deletion:</strong> Request we delete your data</li>
+<li><strong>Correction:</strong> Request we correct inaccurate data</li>
+<li><strong>Portability:</strong> Request your data in a machine-readable format</li>
+<li><strong>Opt-out:</strong> Opt out of any data sharing (email scott@scottzwills.com)</li>
+</ul>
+
+<h3>6. Security</h3>
+<p>We use encryption in transit (TLS/HTTPS), row-level security policies, authentication requirements, and rate limiting to protect your data. No system is 100% secure — if we discover a breach affecting your data, we will notify you within 72 hours.</p>
+
+<h3>7. Cookies</h3>
+<p>We use only essential cookies/local storage for authentication session management. We do not use tracking cookies, analytics cookies, or advertising pixels.</p>
+
+<h3>8. Children</h3>
+<p>This app is not intended for anyone under 18. We do not knowingly collect data from minors.</p>
+
+<h3>9. Changes</h3>
+<p>We may update this policy. Material changes will be communicated via the app or email.</p>
+
+<h3>10. Contact</h3>
+<p>For privacy inquiries or data requests: <strong>scott@scottzwills.com</strong></p>
+</div>`;
+  document.body.appendChild(el);
+}
+
+function showTermsOfService(){
+  const el=document.createElement('div');el.className='legal-modal';el.id='legal-modal';
+  el.onclick=function(e){if(e.target===el)el.remove();};
+  el.innerHTML=`<div class="legal-modal-inner"><button class="legal-close" onclick="document.getElementById('legal-modal')?.remove()">&times;</button>
+<h2>Terms of Service</h2>
+<p><strong>Last updated:</strong> March 31, 2026</p>
+<p>By creating an account or using Win the Day ("the App"), you agree to these terms.</p>
+
+<h3>1. The Service</h3>
+<p>Win the Day is a daily coaching and habit-tracking app. It includes AI-powered coaching features. The App is a tool for personal development — it is not therapy, medical advice, or a substitute for professional mental health services.</p>
+
+<h3>2. Accounts</h3>
+<p>You must provide accurate information when creating an account. You are responsible for maintaining the security of your password. Accounts are approved at our discretion.</p>
+
+<h3>3. Coaching Disclaimer</h3>
+<p><strong>Results vary.</strong> The coaching methodology and AI features are designed to support personal growth, but individual outcomes depend on many factors. We make no guarantees about specific results, income changes, or life outcomes. Testimonials and examples represent individual experiences, not typical results.</p>
+
+<h3>4. AI Features</h3>
+<p>The AI coach provides supportive guidance based on your inputs. It is not a licensed therapist or medical professional. AI responses are generated by Anthropic Claude and may occasionally be inaccurate. Do not rely on AI responses for medical, legal, or financial decisions.</p>
+
+<h3>5. Acceptable Use</h3>
+<p>You agree not to misuse the App, attempt to access other users' data, reverse-engineer the App, or use it for any unlawful purpose.</p>
+
+<h3>6. Intellectual Property</h3>
+<p>The App, its design, methodology, and content are owned by Scott Wills. Your personal data remains yours.</p>
+
+<h3>7. Limitation of Liability</h3>
+<p>To the maximum extent permitted by law, Scott Wills and Win the Day shall not be liable for any indirect, incidental, or consequential damages arising from your use of the App.</p>
+
+<h3>8. Termination</h3>
+<p>We may suspend or terminate accounts that violate these terms. You may delete your account at any time by contacting scott@scottzwills.com.</p>
+
+<h3>9. Governing Law</h3>
+<p>These terms are governed by the laws of the United States. Disputes will be resolved through binding arbitration.</p>
+
+<h3>10. Contact</h3>
+<p>Questions about these terms: <strong>scott@scottzwills.com</strong></p>
+</div>`;
+  document.body.appendChild(el);
+}
+
+function showDataDeletion(){
+  const el=document.createElement('div');el.className='legal-modal';el.id='legal-modal';
+  el.onclick=function(e){if(e.target===el)el.remove();};
+  el.innerHTML=`<div class="legal-modal-inner"><button class="legal-close" onclick="document.getElementById('legal-modal')?.remove()">&times;</button>
+<h2>Request Data Deletion</h2>
+<p>You have the right to request deletion of all your personal data from Win the Day.</p>
+<h3>What gets deleted</h3>
+<ul>
+<li>Your account and authentication data</li>
+<li>All daily logs, task completions, and streaks</li>
+<li>All goals and identity reflections</li>
+<li>All AI coach conversation history</li>
+<li>All report preferences</li>
+<li>Any pipeline lead data associated with your account</li>
+</ul>
+<h3>How to request</h3>
+<p>Email <strong>scott@scottzwills.com</strong> from the email address associated with your account with the subject line "Data Deletion Request".</p>
+<p>We will process your request within 30 days and confirm deletion via email.</p>
+<h3>What we cannot delete</h3>
+<p>Data that has been anonymized or aggregated for analytics purposes, and data we are legally required to retain (e.g., for tax or legal compliance).</p>
+</div>`;
+  document.body.appendChild(el);
+}
+
 window.addEventListener('unhandledrejection',(e)=>{
   if(e.reason?.message?.includes('Lock')||e.reason?.message?.includes('lock')){
     e.preventDefault();

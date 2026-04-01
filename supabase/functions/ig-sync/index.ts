@@ -5,22 +5,32 @@
 // Fetches Instagram media + insights, stores in ig_media + ig_insights tables.
 // Modes: "full" (all media) or "recent" (last 7 days, default)
 
-import { serve } from "https://deno.land/std@0.168.0/http/server.ts";
+import { serve } from "https://deno.land/std@0.208.0/http/server.ts";
 import { createClient } from "https://esm.sh/@supabase/supabase-js@2";
 
 const ALLOWED_ORIGINS = [
   "https://app.scottzwills.com",
-  "http://localhost:3000",
-  "http://127.0.0.1:3000",
+  // Uncomment for local development only:
+  // "http://localhost:3000",
+  // "http://127.0.0.1:3000",
 ];
 
 function getCorsHeaders(req: Request) {
   const origin = req.headers.get("origin") || "";
-  const allowedOrigin = ALLOWED_ORIGINS.includes(origin) ? origin : ALLOWED_ORIGINS[0];
+  if (!ALLOWED_ORIGINS.includes(origin)) return null;
   return {
-    "Access-Control-Allow-Origin": allowedOrigin,
+    "Access-Control-Allow-Origin": origin,
     "Access-Control-Allow-Headers": "authorization, x-client-info, apikey, content-type",
+    "Access-Control-Allow-Methods": "POST, OPTIONS",
+    "Access-Control-Max-Age": "86400",
   };
+}
+
+function forbiddenResponse() {
+  return new Response(JSON.stringify({ error: "Forbidden" }), {
+    status: 403,
+    headers: { "Content-Type": "application/json" },
+  });
 }
 
 const IG_API = "https://graph.instagram.com";
@@ -38,7 +48,8 @@ async function verifyAdmin(req: Request): Promise<{ userId: string } | null> {
   if (!authHeader) return null;
 
   const supabaseUrl = Deno.env.get("SUPABASE_URL")!;
-  const anonKey = Deno.env.get("SUPABASE_ANON_KEY") || Deno.env.get("SUPABASE_SERVICE_ROLE_KEY")!;
+  const anonKey = Deno.env.get("SUPABASE_ANON_KEY");
+  if (!anonKey) return null;
   const sb = createClient(supabaseUrl, anonKey, {
     global: { headers: { Authorization: authHeader } },
   });
@@ -61,12 +72,22 @@ async function verifyAdmin(req: Request): Promise<{ userId: string } | null> {
 
 serve(async (req: Request) => {
   const corsHeaders = getCorsHeaders(req);
+  if (!corsHeaders) return forbiddenResponse();
 
   if (req.method === "OPTIONS") {
     return new Response("ok", { headers: corsHeaders });
   }
 
   try {
+    // Request size limit (10KB max)
+    const contentLength = parseInt(req.headers.get("content-length") || "0");
+    if (contentLength > 10_000) {
+      return new Response(
+        JSON.stringify({ error: "Request too large" }),
+        { status: 413, headers: { ...corsHeaders, "Content-Type": "application/json" } }
+      );
+    }
+
     // Auth + admin verification
     const auth = await verifyAdmin(req);
     if (!auth) {
@@ -117,9 +138,9 @@ serve(async (req: Request) => {
       const res = await fetch(url);
       if (!res.ok) {
         const err = await res.text();
-        console.error("Instagram media fetch error:", err);
+        console.error("Instagram media fetch error:", res.status, err.substring(0, 200));
         return new Response(
-          JSON.stringify({ error: "Instagram API error", details: err }),
+          JSON.stringify({ error: "Instagram API temporarily unavailable" }),
           { status: 502, headers: { ...corsHeaders, "Content-Type": "application/json" } }
         );
       }
@@ -263,7 +284,7 @@ serve(async (req: Request) => {
   } catch (err) {
     console.error("ig-sync error:", err);
     return new Response(
-      JSON.stringify({ error: "Internal error", details: String(err) }),
+      JSON.stringify({ error: "Internal error" }),
       { status: 500, headers: { ...corsHeaders, "Content-Type": "application/json" } }
     );
   }
