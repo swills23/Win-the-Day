@@ -758,6 +758,16 @@ button,.btn-primary,.btn-ghost,.btn-sm,.settings-btn,.tab,.nav-btn,.top-bar-btn,
 .legal-modal-inner p,.legal-modal-inner li{font-size:12px;line-height:1.6;color:var(--text2);}
 .legal-modal-inner ul{padding-left:18px;margin:6px 0;}
 .legal-close{position:absolute;top:12px;right:16px;background:none;border:none;font-size:20px;cursor:pointer;color:var(--text3);}
+/* ── Mobile fixes: prevent iOS zoom on inputs, improve touch targets ── */
+@media(max-width:768px){
+  input,textarea,select,.inp,.coach-input,.statement-input,.identity-input,.win-input,.reflect-input,.mc-search-bar input,.pl-fu-add input,.onboard-custom-input{font-size:16px !important;}
+  .pl-filters select,.pl-filters input[type=date]{font-size:14px !important;}
+  .top-bar{padding:8px 12px;-webkit-backdrop-filter:none;backdrop-filter:none;background:var(--bg);}
+  .pipeline-bar{-webkit-backdrop-filter:none;backdrop-filter:none;background:var(--bg);}
+  .tracker{padding:0 8px;}
+  .screen{padding:2rem 1.25rem;}
+  .modal{max-height:85vh;overflow-y:auto;-webkit-overflow-scrolling:touch;}
+}
 .toast{position:fixed;bottom:80px;left:50%;transform:translateX(-50%);background:var(--text);color:var(--bg);padding:10px 20px;border-radius:8px;font-size:13px;z-index:9999;opacity:0;transition:opacity .2s;pointer-events:none;max-width:90vw;text-align:center;}
 .toast.show{opacity:1;}
 .confirm-modal-bg{position:fixed;inset:0;background:rgba(0,0,0,.4);z-index:9998;display:flex;align-items:center;justify-content:center;}
