@@ -760,17 +760,16 @@ button,.btn-primary,.btn-ghost,.btn-sm,.settings-btn,.tab,.nav-btn,.top-bar-btn,
 <div id="ov" style="display:none"></div>
 
 <script>
-// Auto-reload if stuck on loading screen for 10s (catches cached broken builds)
+// Auto-reload if stuck on loading screen for 6s (catches cached broken builds)
 setTimeout(()=>{
   const root=document.getElementById('root');
   if(root&&root.querySelector('.loading')){
-    const v='_v='+Date.now();
     const url=new URL(location.href);
     if(url.searchParams.get('_v')){return;} // Already tried once, don't loop
     url.searchParams.set('_v',Date.now());
     location.replace(url.toString());
   }
-},10000);
+},6000);
 </script>
 <script>
 const SUPABASE_URL = 'https://ceahoxydtjcprjkbjakn.supabase.co';
@@ -841,7 +840,8 @@ function fixMojibake(s){if(typeof s!=='string')return s;const c=[...s].map(x=>x.
 function fixTaskNames(tasks){return(tasks||[]).map(t=>({...t,name:fixMojibake(t.name)}));}
 const storage={
   async get(key,uid){const id=uid||(currentUser&&currentUser.id);if(!id)return null;const{data}=await sb.from('wtd_store').select('value').eq('key',`${id}:${key}`).maybeSingle();return data?{key,value:data.value}:null;},
-  async set(key,value,uid){const id=uid||(currentUser&&currentUser.id);if(!id)return null;await sb.from('wtd_store').upsert({key:`${id}:${key}`,value,updated_at:new Date().toISOString()},{onConflict:'key'});return{key,value};}
+  async set(key,value,uid){const id=uid||(currentUser&&currentUser.id);if(!id)return null;await sb.from('wtd_store').upsert({key:`${id}:${key}`,value,updated_at:new Date().toISOString()},{onConflict:'key'});return{key,value};},
+  async getBatch(keys,uid){const id=uid||(currentUser&&currentUser.id);if(!id)return{};const prefixed=keys.map(k=>`${id}:${k}`);const{data}=await sb.from('wtd_store').select('key,value').in('key',prefixed);const result={};if(data)data.forEach(r=>{const shortKey=r.key.replace(`${id}:`,'');result[shortKey]={key:shortKey,value:r.value};});return result;}
 };
 
 // ── DATA VAULT ──
@@ -3393,15 +3393,15 @@ async function onboardSave(){
 
 // ── ROOT ROUTER ──
 async function renderRoot(){
-if(!currentUser){const{data:{session}}=await sb.auth.getSession();if(!session){renderAuth();return;}currentUser=session.user;}
-  // Load profile and all data in parallel for returning users
+if(!currentUser){renderAuth();return;}
+  // Load profile and all data in parallel (2 DB calls total)
   const [profile]=await Promise.all([
     loadProfile(currentUser.id),
     loadAll() // Start loading data immediately — doesn't depend on profile
   ]);
   currentProfile=profile;
   if(!currentProfile){await sb.from('wtd_profiles').upsert({id:currentUser.id,email:currentUser.email,approved:false,is_admin:false},{onConflict:'id'});currentProfile=await loadProfile(currentUser.id);}
-  if(!currentProfile.approved){renderPending();return;}
+  if(!currentProfile||!currentProfile.approved){renderPending();return;}
   if(!hasCustomTasks && !currentProfile.is_admin && !adminClientId){renderOnboarding();return;}
   const tasks=isRestDay?restTasks():allTasks();const tot=isRestDay?restTotal():total();
   const earned=tasks.filter(t=>checked[t.id]).reduce((s,t)=>s+t.points,0);
@@ -3558,17 +3558,18 @@ function getMissedPatterns(){
 }
 async function loadAll(uid){
   const keys=['wtd-history','wtd-why','wtd-identity','wtd-tasks','wtd-rest','wtd-actions','wtd-notes','wtd-goals','wtd-reminder','wtd-ir','wtd-thresholds'];
-  // Load all storage keys + report prefs in parallel
+  // Single batch query for all storage keys + report prefs in parallel (2 DB calls instead of 12)
   const reportPrefPromise=(()=>{
     const u=uid||currentUser?.id;if(!u)return Promise.resolve(null);
     return sb.from('wtd_report_prefs').select('weekly_email,monthly_email').eq('user_id',u).maybeSingle().then(r=>r.data).catch(()=>null);
   })();
-  const [results,reportPrefs]=await Promise.all([
-    Promise.all(keys.map(k=>Promise.race([storage.get(k,uid),new Promise(r=>setTimeout(()=>r(null),8000))]))),
+  const [batchData,reportPrefs]=await Promise.all([
+    Promise.race([storage.getBatch(keys,uid),new Promise(r=>setTimeout(()=>r({}),8000))]),
     reportPrefPromise
   ]);
   // Apply report prefs
   if(reportPrefs){weeklyReportEnabled=!!reportPrefs.weekly_email;monthlyReportEnabled=!!reportPrefs.monthly_email;}
+  const results=keys.map(k=>batchData[k]||null);
   const [r0,r1,r2,r3,r4,r5,r6,r7,r8,r9,r10]=results;
   try{allHistory=r0?JSON.parse(r0.value):{}}catch(e){allHistory={};}
   try{whyStatement=r1?.value||''}catch(e){whyStatement='';}
@@ -5154,38 +5155,26 @@ async function saveParsedSchedule(){
 function removeCoachUI(){const f=document.getElementById('coach-fab');const p=document.getElementById('coach-panel');if(f)f.remove();if(p)p.remove();coachOpen=false;}
 
 // ── BOOT ──
-// Single-fire boot gate — prevents onAuthStateChange + getSession() race condition
+// Single-fire boot gate — prevents double-render from race conditions
 let _appBooted=false;
 async function _bootOnce(session){
   if(_appBooted)return;
   _appBooted=true;
-  if(session){currentUser=session.user;setTimeout(()=>renderRoot(),0);}
+  if(session){currentUser=session.user;renderRoot();}
   else{currentUser=null;currentProfile=null;resetAppState();renderAuth();}
 }
 
-// Safari fallback: if INITIAL_SESSION hasn't fired after 3s (Safari ITP delay), force it
-// Does NOT call getSession() proactively to avoid lock contention with INITIAL_SESSION
-setTimeout(async()=>{
-  if(!_appBooted){
-    const {data:{session}}=await sb.auth.getSession();
-    _bootOnce(session);
-  }
-},3000);
-
 sb.auth.onAuthStateChange(async(event,session)=>{
   if(event==='INITIAL_SESSION'){
-    // Supabase v2 fires this on first load — primary boot path
     await _bootOnce(session);
     return;
   }
   if(event==='SIGNED_IN'){
     if(!_appBooted){await _bootOnce(session);return;}
-    // Post-login — defer renderRoot() to release auth lock first
-    if(session){currentUser=session.user;setTimeout(()=>renderRoot(),0);}
+    if(session){currentUser=session.user;renderRoot();}
     return;
   }
   if(event==='TOKEN_REFRESHED'){
-    // Just update the user ref; no re-render needed
     if(session)currentUser=session.user;
     return;
   }
@@ -5193,18 +5182,17 @@ sb.auth.onAuthStateChange(async(event,session)=>{
     currentUser=null;currentProfile=null;resetAppState();renderAuth();
     return;
   }
-  // Catch-all for any other events
   await _bootOnce(session);
 });
 
-// Fallback: 200ms after load in case INITIAL_SESSION doesn't fire (older Supabase versions)
+// Fallback: if INITIAL_SESSION hasn't fired after 1.5s (Safari ITP / slow networks)
 setTimeout(async()=>{
   if(_appBooted)return;
   try{
     const{data:{session}}=await sb.auth.getSession();
     await _bootOnce(session);
   }catch(e){await _bootOnce(null);}
-},200);
+},1500);
 // ── LEGAL / COMPLIANCE ──
 function showPrivacyPolicy(){
   const el=document.createElement('div');el.className='legal-modal';el.id='legal-modal';
