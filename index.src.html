@@ -405,7 +405,32 @@ button,.btn-primary,.btn-ghost,.btn-sm,.settings-btn,.tab,.nav-btn,.top-bar-btn,
 .script-status-badge.posted{background:rgba(52,211,153,.1);color:var(--green);border:.5px solid rgba(52,211,153,.25);}
 .ig-loading{text-align:center;padding:2rem;font-size:13px;color:var(--text3);}
 
-/* ── Pipeline ── */
+/* ── Dashboard Cards ── */
+.dash-card{background:var(--bg2);border-radius:var(--rl);padding:16px;margin-bottom:12px;border:.5px solid var(--border);}
+.dash-card-title{font-size:14px;font-weight:600;margin-bottom:10px;display:flex;align-items:center;gap:8px;}
+.dash-stats-row{display:flex;gap:8px;flex-wrap:wrap;}
+.dash-stat{flex:1;min-width:65px;text-align:center;padding:8px 4px;background:var(--bg);border-radius:var(--r);border:.5px solid var(--border);}
+.dash-stat-val{font-size:20px;font-weight:600;font-variant-numeric:tabular-nums;}
+.dash-stat-lbl{font-size:10px;color:var(--text3);text-transform:uppercase;letter-spacing:.04em;margin-top:2px;}
+.dash-spark{display:flex;gap:4px;align-items:flex-end;margin-top:10px;height:50px;padding:0 2px;}
+.dash-spark-day{display:flex;flex-direction:column;align-items:center;gap:1px;flex:1;}
+.dash-spark-bar{width:100%;border-radius:2px;min-height:2px;}
+.dash-spark-label{font-size:9px;color:var(--text3);margin-top:2px;}
+.fu-list{display:flex;flex-direction:column;}
+.fu-item{display:flex;align-items:center;gap:10px;padding:10px 0;border-bottom:.5px solid var(--border);cursor:pointer;}
+.fu-item:last-child{border-bottom:none;}
+.fu-item:hover{background:rgba(91,141,239,.04);margin:0 -16px;padding:10px 16px;}
+.fu-info{flex:1;min-width:0;}
+.fu-name{font-size:14px;font-weight:500;}
+.fu-meta{font-size:12px;color:var(--text3);margin-top:2px;}
+.fu-action{color:var(--blue);font-weight:600;}
+.speed-bar{display:flex;height:14px;border-radius:7px;overflow:hidden;background:var(--bg);}
+.speed-segment{min-width:2px;transition:width .3s;}
+.lead-row{display:flex;align-items:center;gap:10px;padding:12px 14px;border-bottom:.5px solid var(--border);cursor:pointer;transition:background .15s;}
+.lead-row:hover{background:rgba(91,141,239,.04);}
+.lead-row:first-child{border-top:.5px solid var(--border);}
+
+/* ── Pipeline (legacy) ── */
 .pl-stats{display:flex;gap:10px;margin-bottom:1.25rem;flex-wrap:wrap;}
 .pl-stat{flex:1;min-width:70px;background:var(--bg2);border-radius:var(--r);padding:11px;border:.5px solid var(--border);border-left:3px solid var(--blue);text-align:center;transition:transform .15s ease,box-shadow .15s ease;}
 .pl-stat:nth-child(2){border-left-color:var(--orange);}
@@ -1080,7 +1105,7 @@ async function renderAdmin(){if(!_isAdmin()){render();return;}
   <div class="admin"><div style="margin-bottom:1.25rem"><div style="font-size:18px;font-weight:500;">${APP_NAME} — Admin</div><div style="font-size:12px;color:var(--text3);margin-top:2px;">${profiles.length} total users</div></div>
   <div class="admin-tabs"><div class="admin-tab${adminView==='pending'?' active':''}" onclick="setAdminView('pending')">Pending (${pending.length})</div><div class="admin-tab${adminView==='approved'?' active':''}" onclick="setAdminView('approved')">Clients (${approved.length})</div><div class="admin-tab${adminView==='pipeline'?' active':''}" onclick="setAdminView('pipeline')">Pipeline</div><div class="admin-tab${adminView==='checkins'?' active':''}" onclick="setAdminView('checkins')">Check-ins</div><div class="admin-tab${adminView==='analytics'?' active':''}" onclick="setAdminView('analytics')">Analytics</div><div class="admin-tab${adminView==='content'?' active':''}" onclick="setAdminView('content')">Content</div><div class="admin-tab${adminView==='files'?' active':''}" onclick="setAdminView('files')">Files</div></div>`;
   if(adminView==='pipeline'){
-    await loadPipelineLeads();
+    await Promise.all([loadPipelineLeads(),loadSetterEvents(30)]);
     html+=renderPipelineDashboard();
     html+=`</div>`;document.getElementById('root').innerHTML=html;return;
   }
@@ -2409,177 +2434,212 @@ function getFunnelData(){
   return stages.map((s,i)=>({...s,pct:Math.round(s.count/total*100),color:colors[i]}));
 }
 
+// ── SETTER EVENTS DATA LAYER ──
+let setterEvents=[];
+async function loadSetterEvents(days){
+  days=days||30;
+  const since=new Date(Date.now()-days*86400000).toISOString();
+  const{data}=await sb.from('setter_events').select('id,event_type,subscriber_id,subscriber_name,ig_handle,metadata,created_at').gte('created_at',since).order('created_at',{ascending:false}).limit(2000);
+  setterEvents=data||[];
+  return setterEvents;
+}
+function getSetterActivityToday(){
+  const today=new Date().toISOString().split('T')[0];
+  const todayEvents=setterEvents.filter(e=>e.created_at.startsWith(today));
+  const replies=todayEvents.filter(e=>e.event_type==='setter_reply');
+  const newDms=todayEvents.filter(e=>e.event_type==='new_dm');
+  const uniqueConvos=new Set([...replies,...newDms].map(e=>e.subscriber_id)).size;
+  return{replies:replies.length,newDms:newDms.length,activeConvos:uniqueConvos};
+}
+function getSetterActivity7Days(){
+  const days=[];
+  for(let i=6;i>=0;i--){
+    const d=new Date(Date.now()-i*86400000).toISOString().split('T')[0];
+    const dayEvents=setterEvents.filter(e=>e.created_at.startsWith(d));
+    days.push({date:d,replies:dayEvents.filter(e=>e.event_type==='setter_reply').length,dms:dayEvents.filter(e=>e.event_type==='new_dm').length});
+  }
+  return days;
+}
+function getNeedsFollowUp(){
+  // Find subscribers who sent a DM but haven't received a reply
+  const subMap={};
+  setterEvents.forEach(e=>{
+    if(!subMap[e.subscriber_id])subMap[e.subscriber_id]={name:e.subscriber_name,ig:e.ig_handle,lastDm:null,lastReply:null,meta:e.metadata};
+    const s=subMap[e.subscriber_id];
+    if(e.subscriber_name)s.name=e.subscriber_name;
+    if(e.ig_handle)s.ig=e.ig_handle;
+    if(e.event_type==='new_dm'&&(!s.lastDm||e.created_at>s.lastDm))s.lastDm=e.created_at;
+    if(e.event_type==='setter_reply'&&(!s.lastReply||e.created_at>s.lastReply))s.lastReply=e.created_at;
+  });
+  return Object.entries(subMap)
+    .filter(([_,s])=>s.lastDm&&(!s.lastReply||s.lastDm>s.lastReply))
+    .map(([id,s])=>({id,name:s.name,ig:s.ig,waitingSince:s.lastDm,hoursWaiting:Math.round((Date.now()-new Date(s.lastDm).getTime())/3600000*10)/10,meta:s.meta}))
+    .sort((a,b)=>b.hoursWaiting-a.hoursWaiting);
+}
+function getAvgResponseSpeed(){
+  // For each new_dm, find the next setter_reply to same subscriber
+  const dmEvents=setterEvents.filter(e=>e.event_type==='new_dm').sort((a,b)=>new Date(a.created_at)-new Date(b.created_at));
+  const replyEvents=setterEvents.filter(e=>e.event_type==='setter_reply').sort((a,b)=>new Date(a.created_at)-new Date(b.created_at));
+  const speeds=[];
+  dmEvents.forEach(dm=>{
+    const reply=replyEvents.find(r=>r.subscriber_id===dm.subscriber_id&&r.created_at>dm.created_at);
+    if(reply){speeds.push((new Date(reply.created_at)-new Date(dm.created_at))/3600000);}
+  });
+  if(!speeds.length)return{avg:null,count:0,breakdown:{under1h:0,under4h:0,under12h:0,over12h:0}};
+  const avg=Math.round(speeds.reduce((s,v)=>s+v,0)/speeds.length*10)/10;
+  return{avg,count:speeds.length,breakdown:{under1h:speeds.filter(s=>s<1).length,under4h:speeds.filter(s=>s>=1&&s<4).length,under12h:speeds.filter(s=>s>=4&&s<12).length,over12h:speeds.filter(s=>s>=12).length}};
+}
+function getQualificationStats(){
+  const qualified=pipelineLeads.filter(l=>{
+    const tier=getCountryTier(l.country);
+    return tier!=='red'&&(l.pain_signal||l.income_signal);
+  });
+  const booked=pipelineLeads.filter(l=>['booked','completed_call','closed_won','closed_lost'].includes(l.status));
+  const closedWon=pipelineLeads.filter(l=>l.status==='closed_won');
+  const total=pipelineLeads.length;
+  return{total,qualified:qualified.length,booked:booked.length,closedWon:closedWon.length,bookRate:qualified.length>0?Math.round(booked.length/qualified.length*100):0,closeRate:booked.length>0?Math.round(closedWon.length/booked.length*100):0};
+}
+
 function renderPipelineDashboard(){
-  const stats=getPipelineStats();
-  const stale=getStaleLeads();
-  const avgRT=avgResponseTime();
-  const funnel=getFunnelData();
+  const activity=getSetterActivityToday();
+  const week=getSetterActivity7Days();
+  const followUps=getNeedsFollowUp();
+  const speed=getAvgResponseSpeed();
+  const qual=getQualificationStats();
   let h='';
 
-  // Stale lead alert
-  if(stale.length){
-    h+=`<div class="pl-alert"><span class="pl-alert-count">${stale.length}</span> lead${stale.length>1?'s':''} need${stale.length===1?'s':''} follow-up (${STALE_DAYS}+ days stale)<span class="pl-alert-link" onclick="plQuickFilter='attention';renderAdmin();">Show stale</span></div>`;
-  }
-
-  // Stats row
-  const showRate=getShowRate();
-  const avgTTB=avgTimeToBook();
-  const fuStats=getFollowupStats();
-  h+=`<div class="pl-stats">
-    <div class="pl-stat"><div class="pl-stat-val">${stats.total}</div><div class="pl-stat-lbl">Leads (month)</div></div>
-    <div class="pl-stat"><div class="pl-stat-val">${stats.dmToBooked}%</div><div class="pl-stat-lbl">DM \u2192 Booked</div></div>
-    <div class="pl-stat"><div class="pl-stat-val">${showRate!==null?showRate+'%':'\u2014'}</div><div class="pl-stat-lbl">Show rate</div></div>
-    <div class="pl-stat"><div class="pl-stat-val">${stats.bookedToClosed}%</div><div class="pl-stat-lbl">Showed \u2192 Closed</div></div>
-    <div class="pl-stat"><div class="pl-stat-val">${avgRT!==null?fmtResponseTime(avgRT):'\u2014'}</div><div class="pl-stat-lbl">Avg reply time</div></div>
-    <div class="pl-stat"><div class="pl-stat-val">${avgTTB!==null?avgTTB+'d':'\u2014'}</div><div class="pl-stat-lbl">Avg time-to-book</div></div>
-    <div class="pl-stat"><div class="pl-stat-val">${fuStats.total?fuStats.rate+'%':'\u2014'}</div><div class="pl-stat-lbl">Follow-up response</div></div>
+  // ── CARD 1: SETTER ACTIVITY ──
+  const yesterdayReplies=week.length>=2?week[week.length-2].replies:0;
+  const replyDelta=activity.replies-yesterdayReplies;
+  const sparkMax=Math.max(...week.map(d=>d.replies+d.dms),1);
+  h+=`<div class="dash-card">
+    <div class="dash-card-title">Setter Activity — Today</div>
+    <div class="dash-stats-row">
+      <div class="dash-stat"><div class="dash-stat-val">${activity.replies}</div><div class="dash-stat-lbl">Replies sent</div></div>
+      <div class="dash-stat"><div class="dash-stat-val">${activity.newDms}</div><div class="dash-stat-lbl">New DMs</div></div>
+      <div class="dash-stat"><div class="dash-stat-val">${activity.activeConvos}</div><div class="dash-stat-lbl">Active convos</div></div>
+      <div class="dash-stat"><div class="dash-stat-val" style="color:${replyDelta>=0?'var(--green)':'var(--red)'}">${replyDelta>=0?'+':''}${replyDelta}</div><div class="dash-stat-lbl">vs yesterday</div></div>
+    </div>
+    <div class="dash-spark" title="Last 7 days">${week.map(d=>{
+      const h1=Math.max(4,Math.round((d.replies/sparkMax)*40));
+      const h2=Math.max(2,Math.round((d.dms/sparkMax)*40));
+      return`<div class="dash-spark-day"><div class="dash-spark-bar" style="height:${h1}px;background:var(--blue)" title="${d.replies} replies"></div><div class="dash-spark-bar" style="height:${h2}px;background:var(--orange)" title="${d.dms} new DMs"></div><div class="dash-spark-label">${d.date.split('-')[2]}</div></div>`;
+    }).join('')}</div>
+    <div style="display:flex;gap:12px;font-size:11px;color:var(--text3);margin-top:4px"><span><span style="color:var(--blue)">■</span> Replies</span><span><span style="color:var(--orange)">■</span> New DMs</span></div>
   </div>`;
 
-  // Conversion funnel
-  if(funnel.length&&funnel[0].count>0){
-    const maxW=100;
-    h+=`<div class="pl-funnel">`;
-    funnel.forEach(s=>{
-      const w=Math.max(12,Math.round(s.pct/100*maxW));
-      h+=`<div class="pl-funnel-step"><span class="pl-funnel-label">${s.label}</span><div class="pl-funnel-bar" style="width:${w}%;background:${s.color}">${s.count}</div><span class="pl-funnel-pct">${s.pct}%</span></div>`;
+  // ── CARD 2: NEEDS FOLLOW-UP ──
+  h+=`<div class="dash-card">
+    <div class="dash-card-title">Needs Follow-Up <span style="font-size:13px;color:${followUps.length?'var(--red)':'var(--green)'};">${followUps.length}</span></div>`;
+  if(!followUps.length){
+    h+=`<div style="padding:1rem 0;text-align:center;color:var(--text3);font-size:13px">All caught up. No leads waiting for a reply.</div>`;
+  } else {
+    h+=`<div class="fu-list">`;
+    followUps.slice(0,10).forEach(f=>{
+      const urgency=f.hoursWaiting>=24?'urgent-red':f.hoursWaiting>=4?'urgent-orange':'';
+      const timeStr=f.hoursWaiting<1?Math.round(f.hoursWaiting*60)+'m':f.hoursWaiting<24?Math.round(f.hoursWaiting)+'h':Math.round(f.hoursWaiting/24)+'d';
+      // Find lead to get live_chat_url
+      const lead=pipelineLeads.find(l=>l.mc_subscriber_id===f.id);
+      h+=`<div class="fu-item" onclick="${lead?`openLeadDetail('${escAttr(lead.id)}')`:''}">
+        <div class="fu-info">
+          <div class="fu-name">${esc(f.name||'Unknown')}${f.ig?' <span class="lead-handle">@'+esc(f.ig)+'</span>':''}</div>
+          <div class="fu-meta">Waiting <span class="${urgency}" style="font-weight:600">${timeStr}</span> for reply</div>
+        </div>
+        <div class="fu-action" style="font-size:20px">→</div>
+      </div>`;
+    });
+    h+=`</div>`;
+    if(followUps.length>10)h+=`<div style="font-size:12px;color:var(--text3);text-align:center;padding:4px 0">+${followUps.length-10} more</div>`;
+  }
+  h+=`</div>`;
+
+  // ── CARD 3: RESPONSE SPEED ──
+  h+=`<div class="dash-card">
+    <div class="dash-card-title">Response Speed</div>
+    <div class="dash-stats-row">
+      <div class="dash-stat"><div class="dash-stat-val" style="color:${speed.avg!==null&&speed.avg<=2?'var(--green)':speed.avg!==null&&speed.avg<=8?'var(--orange)':'var(--text3)'}">${speed.avg!==null?speed.avg+'h':'\u2014'}</div><div class="dash-stat-lbl">Avg response time</div></div>
+      <div class="dash-stat"><div class="dash-stat-val">${speed.count}</div><div class="dash-stat-lbl">Measured replies</div></div>
+    </div>`;
+  if(speed.count>0){
+    const total=speed.count;
+    h+=`<div style="margin-top:10px">
+      <div class="speed-bar"><div class="speed-segment" style="width:${Math.round(speed.breakdown.under1h/total*100)}%;background:var(--green)" title="<1h: ${speed.breakdown.under1h}"></div><div class="speed-segment" style="width:${Math.round(speed.breakdown.under4h/total*100)}%;background:var(--blue)" title="1-4h: ${speed.breakdown.under4h}"></div><div class="speed-segment" style="width:${Math.round(speed.breakdown.under12h/total*100)}%;background:var(--orange)" title="4-12h: ${speed.breakdown.under12h}"></div><div class="speed-segment" style="width:${Math.round(speed.breakdown.over12h/total*100)}%;background:var(--red)" title="12h+: ${speed.breakdown.over12h}"></div></div>
+      <div style="display:flex;gap:10px;font-size:10px;color:var(--text3);margin-top:4px;flex-wrap:wrap"><span><span style="color:var(--green)">■</span> &lt;1h (${speed.breakdown.under1h})</span><span><span style="color:var(--blue)">■</span> 1-4h (${speed.breakdown.under4h})</span><span><span style="color:var(--orange)">■</span> 4-12h (${speed.breakdown.under12h})</span><span><span style="color:var(--red)">■</span> 12h+ (${speed.breakdown.over12h})</span></div>
+    </div>`;
+  } else {
+    h+=`<div style="padding:8px 0;font-size:12px;color:var(--text3)">No response data yet. Set up ManyChat webhooks to start tracking.</div>`;
+  }
+  h+=`</div>`;
+
+  // ── CARD 4: QUALIFICATION & BOOK RATE ──
+  h+=`<div class="dash-card">
+    <div class="dash-card-title">Qualification & Book Rate</div>
+    <div class="dash-stats-row">
+      <div class="dash-stat"><div class="dash-stat-val">${qual.total}</div><div class="dash-stat-lbl">Total leads</div></div>
+      <div class="dash-stat"><div class="dash-stat-val">${qual.qualified}</div><div class="dash-stat-lbl">Qualified</div></div>
+      <div class="dash-stat"><div class="dash-stat-val">${qual.booked}</div><div class="dash-stat-lbl">Booked</div></div>
+      <div class="dash-stat"><div class="dash-stat-val" style="color:var(--green)">${qual.bookRate}%</div><div class="dash-stat-lbl">Book rate</div></div>
+    </div>`;
+  // Mini funnel
+  if(qual.total>0){
+    const funnelSteps=[
+      {label:'DMs',count:qual.total,color:'var(--blue)'},
+      {label:'Qualified',count:qual.qualified,color:'var(--orange)'},
+      {label:'Booked',count:qual.booked,color:'#8B5CF6'},
+      {label:'Closed',count:qual.closedWon,color:'var(--green)'}
+    ];
+    h+=`<div style="margin-top:10px">`;
+    funnelSteps.forEach(s=>{
+      const w=qual.total>0?Math.max(8,Math.round(s.count/qual.total*100)):0;
+      h+=`<div style="display:flex;align-items:center;gap:8px;margin-bottom:4px"><span style="font-size:11px;color:var(--text3);width:60px">${s.label}</span><div style="flex:1;height:18px;background:var(--bg2);border-radius:4px;overflow:hidden"><div style="height:100%;width:${w}%;background:${s.color};border-radius:4px;min-width:${s.count?'18px':'0'}"></div></div><span style="font-size:12px;font-weight:500;min-width:28px;text-align:right">${s.count}</span></div>`;
     });
     h+=`</div>`;
   }
+  h+=`<div style="margin-top:8px;font-size:11px;color:var(--text3)">Qualified = green/yellow country + pain or income signal</div>`;
+  h+=`</div>`;
 
-  // Content format performance — shows which format drives bookings
-  const fmtStats={};
-  pipelineLeads.forEach(l=>{
-    const fmt=l.content_format||'';if(!fmt)return;
-    if(!fmtStats[fmt])fmtStats[fmt]={total:0,booked:0,closed:0};
-    fmtStats[fmt].total++;
-    const st=getLeadStage(l);
-    if(st==='Booked')fmtStats[fmt].booked++;
-    if(l.call_outcome==='showed_closed')fmtStats[fmt].closed++;
-  });
-  const fmtEntries=Object.entries(fmtStats).sort((a,b)=>b[1].total-a[1].total);
-  if(fmtEntries.length){
-    h+=`<div style="margin-bottom:1rem"><div class="mini-label" style="margin-bottom:6px">Content format performance</div><div class="pl-source-row">${fmtEntries.map(([fmt,s])=>`<span class="pl-source-pill"><strong>${s.total}</strong> ${CONTENT_FORMAT_LABELS[fmt]||fmt} <span style="font-size:9px;color:var(--text3)">${s.total?Math.round(s.booked/s.total*100):0}% book${s.closed?' \u00B7 '+s.closed+' closed':''}</span></span>`).join('')}</div></div>`;
-  }
-
-  // Call outcome breakdown for booked leads
-  const outcomeStats={};
-  pipelineLeads.forEach(l=>{
-    if(getLeadStage(l)!=='Booked'||!l.call_outcome)return;
-    outcomeStats[l.call_outcome]=(outcomeStats[l.call_outcome]||0)+1;
-  });
-  const outcomeEntries=Object.entries(outcomeStats).sort((a,b)=>b[1]-a[1]);
-  if(outcomeEntries.length){
-    h+=`<div style="margin-bottom:1rem"><div class="mini-label" style="margin-bottom:6px">Call outcomes</div><div class="pl-source-row">${outcomeEntries.map(([o,n])=>`<span class="pl-source-pill"><strong>${n}</strong> ${CALL_OUTCOME_LABELS[o]||o}</span>`).join('')}</div></div>`;
-  }
-
-  // Approach effectiveness — which booking approaches actually close
-  const approachStats={};
-  pipelineLeads.forEach(l=>{
-    if(!l.approach_used)return;
-    if(!approachStats[l.approach_used])approachStats[l.approach_used]={total:0,closed:0};
-    approachStats[l.approach_used].total++;
-    if(l.call_outcome==='showed_closed')approachStats[l.approach_used].closed++;
-  });
-  const approachEntries=Object.entries(approachStats).sort((a,b)=>b[1].total-a[1].total);
-  if(approachEntries.length){
-    h+=`<div style="margin-bottom:1rem"><div class="mini-label" style="margin-bottom:6px">Approach effectiveness</div><div class="pl-source-row">${approachEntries.map(([a,s])=>`<span class="pl-source-pill"><strong>${s.total}</strong> ${a} <span style="font-size:9px;color:var(--text3)">${s.total?Math.round(s.closed/s.total*100):0}% close</span></span>`).join('')}</div></div>`;
-  }
-
-  // Break reason frequency — why leads die
-  const breakStats={};
-  pipelineLeads.forEach(l=>{
-    if(getLeadStage(l)!=='Dead'||!l.break_reason)return;
-    breakStats[l.break_reason]=(breakStats[l.break_reason]||0)+1;
-  });
-  const breakEntries=Object.entries(breakStats).sort((a,b)=>b[1]-a[1]);
-  if(breakEntries.length){
-    h+=`<div style="margin-bottom:1rem"><div class="mini-label" style="margin-bottom:6px">Why leads die</div><div class="pl-source-row">${breakEntries.map(([r,n])=>`<span class="pl-source-pill"><strong>${n}</strong> ${r}</span>`).join('')}</div></div>`;
-  }
-
-  // Country tier conversion — validates whether the country gate correlates with actual closings
-  const tierStats={green:{total:0,booked:0,closed:0},yellow:{total:0,booked:0,closed:0},red:{total:0,booked:0,closed:0}};
-  pipelineLeads.forEach(l=>{
-    const tier=getCountryTier(l.country);
-    if(!tierStats[tier])return;
-    tierStats[tier].total++;
-    if(getLeadStage(l)==='Booked')tierStats[tier].booked++;
-    if(l.call_outcome==='showed_closed')tierStats[tier].closed++;
-  });
-  const hasTierData=Object.values(tierStats).some(s=>s.total>0);
-  if(hasTierData){
-    h+=`<div style="margin-bottom:1rem"><div class="mini-label" style="margin-bottom:6px">Country tier conversion</div><div class="pl-source-row">`;
-    ['green','yellow','red'].forEach(t=>{
-      const s=tierStats[t];if(!s.total)return;
-      const color=t==='green'?'var(--green)':t==='yellow'?'var(--orange)':'var(--red)';
-      h+=`<span class="pl-source-pill"><strong style="color:${color}">${s.total}</strong> ${t} <span style="font-size:9px;color:var(--text3)">${Math.round(s.booked/s.total*100)}% book${s.closed?' \u00B7 '+Math.round(s.closed/s.total*100)+'% close':''}</span></span>`;
-    });
-    h+=`</div></div>`;
-  }
-
-  // ManyChat settings
+  // ManyChat settings (collapsed)
   h+=renderMcSettings();
 
-  // Filter bar
+  // Lead list with quick filters
   h+=`<div class="pipeline-bar">
-    <button class="pipeline-filter-btn${plQuickFilter==='all'?' active':''}" onclick="plQuickFilter='all';renderAdmin()">All</button>
-    <button class="pipeline-filter-btn${plQuickFilter==='hot'?' active':''}" onclick="plQuickFilter='hot';renderAdmin()">Hot Leads</button>
-    <button class="pipeline-filter-btn${plQuickFilter==='attention'?' active':''}" onclick="plQuickFilter='attention';renderAdmin()">Needs Attention</button>
+    <button class="pipeline-filter-btn${plQuickFilter==='all'?' active':''}" onclick="plQuickFilter='all';renderAdmin()">All Leads</button>
+    <button class="pipeline-filter-btn${plQuickFilter==='hot'?' active':''}" onclick="plQuickFilter='hot';renderAdmin()">Hot</button>
+    <button class="pipeline-filter-btn${plQuickFilter==='attention'?' active':''}" onclick="plQuickFilter='attention';renderAdmin()">Stale</button>
     <select class="pipeline-sel" onchange="plStageFilter=this.value;renderAdmin()"><option value="all">All stages</option>${PIPELINE_STAGES.map(s=>`<option value="${s}"${plStageFilter===s?' selected':''}>${s}</option>`).join('')}</select>
-    <select class="pipeline-sel" onchange="plCountryFilter=this.value;renderAdmin()"><option value="all">All countries</option><option value="green"${plCountryFilter==='green'?' selected':''}>Green markets</option><option value="yellow"${plCountryFilter==='yellow'?' selected':''}>Caution</option><option value="red"${plCountryFilter==='red'?' selected':''}>Disqualified</option></select>
-    <select class="pipeline-sel" onchange="plSortOrder=this.value;renderAdmin()"><option value="score"${plSortOrder==='score'?' selected':''}>Top ranked</option><option value="newest"${plSortOrder==='newest'?' selected':''}>Newest</option><option value="oldest"${plSortOrder==='oldest'?' selected':''}>Oldest</option></select>
     <button class="pipeline-filter-btn" style="background:var(--text);color:var(--bg);border-color:var(--text)" onclick="openAddLeadModal()">+ Add lead</button>
   </div>`;
 
-  // Get filtered leads for kanban
-  let kanbanLeads=[...pipelineLeads];
-  if(plQuickFilter==='hot')kanbanLeads=kanbanLeads.filter(l=>getLeadStage(l)==='Hot');
-  else if(plQuickFilter==='attention')kanbanLeads=kanbanLeads.filter(l=>{const stage=getLeadStage(l);if(stage!=='Qualifying')return false;const h=hoursSince(l.stage_entered_at||l.updated_at||l.created_at);return h!==null&&h>=24;});
-  if(plStageFilter!=='all')kanbanLeads=kanbanLeads.filter(l=>getLeadStage(l)===plStageFilter);
-  if(plCountryFilter!=='all')kanbanLeads=kanbanLeads.filter(l=>getCountryTier(l.country)===plCountryFilter);
-  if(plSortOrder==='score'){kanbanLeads.sort((a,b)=>calcLeadScore(b)-calcLeadScore(a));}
-  else{kanbanLeads.sort((a,b)=>{const da=new Date(a.dm_date||a.created_at||0),db=new Date(b.dm_date||b.created_at||0);return plSortOrder==='newest'?db-da:da-db;});}
+  // Simple lead list (not kanban)
+  let leads=[...pipelineLeads];
+  if(plQuickFilter==='hot')leads=leads.filter(l=>getLeadStage(l)==='Hot');
+  else if(plQuickFilter==='attention')leads=leads.filter(l=>{const hrs=hoursSince(l.updated_at||l.created_at);return hrs!==null&&hrs>=72&&!['dead','closed_won','closed_lost','ghosted','not_qualified'].includes(l.status);});
+  if(plStageFilter!=='all')leads=leads.filter(l=>getLeadStage(l)===plStageFilter);
+  leads.sort((a,b)=>new Date(b.dm_date||b.created_at||0)-new Date(a.dm_date||a.created_at||0));
 
-  // Kanban columns
-  h+=`<div class="pipeline-stages">`;
-  PIPELINE_STAGES.forEach(stage=>{
-    const stageLeads=kanbanLeads.filter(l=>getLeadStage(l)===stage);
-    h+=`<div class="pipeline-col">
-      <div class="pipeline-col-header">
-        <span class="pipeline-col-title">${stage}</span>
-        <span class="pipeline-col-count">${stageLeads.length}</span>
+  if(!leads.length){
+    h+=`<div style="padding:1.5rem;text-align:center;color:var(--text3);font-size:13px">No leads yet. Connect ManyChat webhooks to auto-import DMs.</div>`;
+  } else {
+    leads.slice(0,50).forEach(l=>{
+      const stage=getLeadStage(l);
+      const stageColor=stage==='Hot'?'var(--red)':stage==='Booked'?'#8B5CF6':stage==='Dead'?'var(--text3)':stage==='Qualifying'?'var(--orange)':'var(--blue)';
+      const cTier=getCountryTier(l.country);
+      const tierDot=cTier==='green'?'🟢':cTier==='yellow'?'🟡':cTier==='red'?'🔴':'⚪';
+      const timeLabel=timeAgoLabel(l.dm_date||l.created_at);
+      h+=`<div class="lead-row" onclick="openLeadDetail('${escAttr(l.id)}')">
+        <div style="flex:1;min-width:0">
+          <div style="display:flex;align-items:center;gap:6px">
+            <span style="font-size:10px">${tierDot}</span>
+            <span style="font-size:14px;font-weight:500;color:var(--text)">${esc(l.name||'Unknown')}</span>
+            ${l.ig_handle?`<span class="lead-handle">@${esc(l.ig_handle.replace(/^@/,''))}</span>`:''}
+          </div>
+        </div>
+        <span style="font-size:11px;padding:2px 8px;border-radius:12px;background:color-mix(in srgb,${stageColor} 12%,var(--bg));color:${stageColor};font-weight:500;white-space:nowrap">${stage}</span>
+        <span style="font-size:11px;color:var(--text3);min-width:40px;text-align:right">${timeLabel}</span>
       </div>`;
-    if(!stageLeads.length){
-      h+=`<div class="pipeline-empty">No leads</div>`;
-    } else {
-      stageLeads.forEach(l=>{
-        const cInfo=getCountryInfo(l.country);
-        const cTier=getCountryTier(l.country);
-        const cDotClass=cTier==='green'?'green':cTier==='yellow'?'yellow':cTier==='red'?'red':'';
-        const hrs=hoursSince(l.stage_entered_at||l.updated_at||l.created_at);
-        const timeLabel=timeAgoLabel(l.stage_entered_at||l.updated_at||l.created_at);
-        let timeClass='';
-        if(getLeadStage(l)==='Qualifying'){if(hrs>=48)timeClass='urgent-red';else if(hrs>=24)timeClass='urgent-orange';}
-        const isAuto=l.mc_source==='webhook'||l.mc_source==='sync';
-        const score=calcLeadScore(l),grade=scoreGrade(score);
-        h+=`<div class="lead-card" onclick="openLeadDetail('${l.id}')">
-          <div style="display:flex;align-items:center;gap:8px">
-            <span class="pl-score pl-score-${grade.toLowerCase()}" title="Score: ${score}">${grade}</span>
-            <div style="flex:1">
-              ${l.country?`<div class="lead-country"><span class="lead-country-flag">${cInfo.flag}</span><span class="lead-country-name">${esc(cInfo.name)}</span>${cDotClass?`<span class="lead-country-dot ${cDotClass}"></span>`:''}</div>`:''}
-              <div class="lead-name">${esc(l.name||'Unnamed')}${l.ig_handle?` <span class="lead-handle">@${esc(l.ig_handle.replace(/^@/,''))}</span>`:''}</div>
-            </div>
-          </div>
-          <div class="lead-badges">
-            ${qualScoreBadge(l)}
-            ${isAuto?'<span class="lead-badge badge-auto">AUTO</span>':''}
-          </div>
-          ${timeLabel?`<div class="lead-time ${timeClass}">${timeLabel}</div>`:''}
-        </div>`;
-      });
-    }
-    h+=`</div>`;
-  });
-  h+=`</div>`;
+    });
+  }
+
   return h;
 }
 function esc(s){return String(s).replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;').replace(/"/g,'&quot;').replace(/'/g,'&#39;');}
