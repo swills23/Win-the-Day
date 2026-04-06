@@ -1224,7 +1224,8 @@ async function mcBulkSync(){
       if(statusEl&&imported%10===0)statusEl.innerHTML=`<span style="color:var(--blue)">Importing… ${imported} new, ${updated} updated</span>`;
     }
 
-    if(statusEl)statusEl.innerHTML=`<span style="color:var(--green)">Sync complete: ${imported} new leads, ${updated} updated, ${allSubs.size} total subscribers scanned</span>`;
+    if(statusEl)statusEl.innerHTML=`<span style="color:var(--blue)">Sync complete: ${imported} new, ${updated} updated. Now backfilling events…</span>`;
+    await backfillSetterEvents();
     renderAdmin();
   }catch(e){
     if(statusEl)statusEl.innerHTML=`<span style="color:var(--red)">Sync failed: ${esc(e.message)}</span>`;
