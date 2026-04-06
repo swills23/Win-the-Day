@@ -1232,6 +1232,82 @@ async function mcBulkSync(){
     mcSyncRunning=false;
   }
 }
+// Backfill setter_events from existing ManyChat subscribers
+async function backfillSetterEvents(){
+  if(!mcApiKey){toast('Add your ManyChat API key first.');return;}
+  const statusEl=document.getElementById('mc-sync-status');
+  if(statusEl)statusEl.innerHTML='<span style="color:var(--blue)">Backfilling events from existing subscribers…</span>';
+  try{
+    // Use existing pipeline leads with mc_subscriber_id
+    const leadsWithMc=pipelineLeads.filter(l=>l.mc_subscriber_id);
+    let created=0;
+    for(const l of leadsWithMc){
+      // Create new_dm event backdated to dm_date
+      const dmDate=l.dm_date||l.created_at||new Date().toISOString();
+      await sb.from('setter_events').insert({
+        owner_id:currentUser.id,
+        event_type:'new_dm',
+        subscriber_id:String(l.mc_subscriber_id),
+        subscriber_name:l.name||'',
+        ig_handle:l.ig_handle||'',
+        metadata:{email:l.mc_email||'',tags:(l.mc_tags||[]).join(','),country:l.country||'',backfill:true},
+        created_at:dmDate
+      });
+      // If lead is booked+, create booked event
+      if(['booked','completed_call','closed_won','closed_lost','no_show'].includes(l.status)){
+        await sb.from('setter_events').insert({
+          owner_id:currentUser.id,
+          event_type:'booked',
+          subscriber_id:String(l.mc_subscriber_id),
+          subscriber_name:l.name||'',
+          ig_handle:l.ig_handle||'',
+          metadata:{backfill:true},
+          created_at:l.booked_date||l.updated_at||new Date().toISOString()
+        });
+      }
+      // If lead has first_reply_at, create setter_reply event
+      if(l.first_reply_at){
+        await sb.from('setter_events').insert({
+          owner_id:currentUser.id,
+          event_type:'setter_reply',
+          subscriber_id:String(l.mc_subscriber_id),
+          subscriber_name:l.name||'',
+          ig_handle:l.ig_handle||'',
+          metadata:{backfill:true},
+          created_at:l.first_reply_at
+        });
+      }
+      created++;
+      if(created%10===0&&statusEl)statusEl.innerHTML=`<span style="color:var(--blue)">Backfilling… ${created}/${leadsWithMc.length}</span>`;
+      if(created%5===0)await new Promise(r=>setTimeout(r,50));
+    }
+    // Also try to get fresh subscriber data for last_interaction
+    if(statusEl)statusEl.innerHTML=`<span style="color:var(--blue)">Fetching latest activity from ManyChat…</span>`;
+    for(const l of leadsWithMc){
+      try{
+        const sub=await mcGetSubscriber(String(l.mc_subscriber_id));
+        if(sub&&sub.last_interaction){
+          // Create a new_dm event for their last interaction (approximation)
+          await sb.from('setter_events').upsert({
+            owner_id:currentUser.id,
+            event_type:'new_dm',
+            subscriber_id:String(l.mc_subscriber_id),
+            subscriber_name:sub.name||l.name||'',
+            ig_handle:sub.ig_username||l.ig_handle||'',
+            metadata:{last_interaction:true},
+            created_at:sub.last_interaction
+          });
+        }
+      }catch(e){}
+      await new Promise(r=>setTimeout(r,200));
+    }
+    if(statusEl)statusEl.innerHTML=`<span style="color:var(--green)">Backfill complete: ${created} leads processed</span>`;
+    await loadSetterEvents(30);
+    renderAdmin();
+  }catch(e){
+    if(statusEl)statusEl.innerHTML=`<span style="color:var(--red)">Backfill failed: ${esc(e.message)}</span>`;
+  }
+}
 function getPipelineStats(){
   const now=new Date(),y=now.getFullYear(),m=now.getMonth();
   const thisMonth=pipelineLeads.filter(l=>{const d=new Date(l.dm_date);return d.getFullYear()===y&&d.getMonth()===m;});
@@ -1530,7 +1606,7 @@ async function mcSearchAndShow(){
   btn.disabled=false;btn.textContent='Search';
 }
 function renderMcSettings(){
-  const webhookUrl='https://ceahoxydtjcprjkbjakn.supabase.co/rest/v1/rpc/receive_manychat_lead';
+  const webhookUrl='https://ceahoxydtjcprjkbjakn.supabase.co/rest/v1/rpc/receive_setter_event';
   return`<div class="mc-settings">
     <div class="mc-settings-title">ManyChat Integration ${mcConnected?'<span class="mc-status-dot" style="background:var(--green)"></span>':'<span class="mc-status-dot" style="background:var(--red)"></span>'}</div>
     ${mcConnected?'<div class="mc-status mc-status-ok"><span class="mc-status-dot"></span>Connected — auto-sync and search enabled</div>':'<div class="mc-status mc-status-err"><span class="mc-status-dot"></span>Not connected</div>'}
@@ -1548,9 +1624,11 @@ function renderMcSettings(){
         <code style="font-size:10px;word-break:break-all;color:var(--blue);flex:1">${webhookUrl}</code>
         <button class="btn-ghost" style="font-size:10px;padding:3px 8px;white-space:nowrap" onclick="navigator.clipboard.writeText('${webhookUrl}');this.textContent='Copied!';setTimeout(()=>this.textContent='Copy',1500)">Copy</button>
       </div>
-      <div style="font-size:10px;color:var(--text3)">
-        <strong>To import existing conversations:</strong> In ManyChat, create a flow that applies a tag to all contacts, then add an External Request to the webhook URL. This sends each subscriber to your pipeline. See MANYCHAT-SETUP.md for full details.
+      <div style="display:flex;gap:6px;margin-top:8px;flex-wrap:wrap">
+        <button class="btn-ghost" onclick="mcBulkSync()">Sync subscribers</button>
+        <button class="btn-ghost" onclick="backfillSetterEvents()">Backfill events</button>
       </div>
+      <div id="mc-sync-status" style="font-size:11px;margin-top:6px;min-height:16px"></div>
     </div>`:''}
   </div>`;
 }
