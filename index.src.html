@@ -858,7 +858,7 @@ const sb = window.supabase.createClient(SUPABASE_URL, SUPABASE_KEY, {
     storageKey:'wtd-auth',
     autoRefreshToken:true,
     persistSession:true,
-    detectSessionInUrl:false
+    detectSessionInUrl:true
   }
 });
 let currentUser=null,currentProfile=null,authView='login';
@@ -3666,6 +3666,22 @@ async function showForgotPassword(){
   if(error){document.getElementById('a-err').textContent=error.message;}
   else{document.getElementById('a-err').style.color='var(--green)';document.getElementById('a-err').textContent='Password reset email sent — check your inbox.';}
 }
+function renderPasswordReset(){
+  document.getElementById('root').innerHTML=`<div class="screen"><h1>Set New Password</h1><p>Enter your new password below.</p><div id="reset-err" class="err"></div><label class="lbl">New Password</label><input class="inp" id="reset-pw1" type="password" placeholder="New password (8+ chars, 1 uppercase, 1 number)"><label class="lbl">Confirm Password</label><input class="inp" id="reset-pw2" type="password" placeholder="Confirm new password" onkeydown="if(event.key==='Enter')submitPasswordReset()"><button class="btn-primary" onclick="submitPasswordReset()">Update Password</button></div>`;
+  setTimeout(()=>document.getElementById('reset-pw1')?.focus(),50);
+}
+async function submitPasswordReset(){
+  const pw1=document.getElementById('reset-pw1').value;
+  const pw2=document.getElementById('reset-pw2').value;
+  const msg=document.getElementById('reset-err');
+  if(!pw1||pw1.length<8){msg.textContent='Password must be at least 8 characters.';return;}
+  if(!/[A-Z]/.test(pw1)||!/[0-9]/.test(pw1)){msg.textContent='Must include at least one uppercase letter and one number.';return;}
+  if(pw1!==pw2){msg.textContent='Passwords don\u0027t match.';return;}
+  msg.textContent='Updating...';msg.style.color='var(--text3)';
+  const{error}=await sb.auth.updateUser({password:pw1});
+  if(error){msg.textContent=error.message;msg.style.color='var(--red)';}
+  else{msg.style.color='var(--green)';msg.textContent='Password updated! Redirecting...';setTimeout(()=>{window.location.href=window.location.origin;},1500);}
+}
 function renderPending(){document.getElementById('root').innerHTML=`<div class="screen" style="text-align:center;margin-top:120px;"><div style="font-size:48px;margin-bottom:1rem">⏳</div><h1 style="margin-bottom:10px;">You're on the list</h1><p>Your account is pending approval.</p><button class="btn-ghost" onclick="signOut()" style="margin-top:1rem">Sign out</button></div>`;}
 
 async function renderTracker(){
@@ -5435,6 +5451,13 @@ sb.auth.onAuthStateChange(async(event,session)=>{
   }
   if(event==='TOKEN_REFRESHED'){
     if(session)currentUser=session.user;
+    return;
+  }
+  if(event==='PASSWORD_RECOVERY'){
+    // User clicked reset link in email — show new password form
+    if(session)currentUser=session.user;
+    _appBooted=true;
+    renderPasswordReset();
     return;
   }
   if(event==='SIGNED_OUT'){
