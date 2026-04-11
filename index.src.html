@@ -1000,14 +1000,14 @@ async function signUp(){
   if(!pw||pw.length<8){errEl.textContent='Password must be at least 8 characters.';return;}
   if(!/[A-Z]/.test(pw)||!/[0-9]/.test(pw)){errEl.textContent='Password must include at least one uppercase letter and one number.';return;}
   btn.disabled=true;btn.textContent='Creating account...';
-  const{data,error}=await sb.auth.signUp({email,password:pw,options:{emailRedirectTo:window.location.origin}});
+  const{data,error}=await sb.auth.signUp({email,password:pw});
   if(error){errEl.textContent=error.message;btn.disabled=false;btn.textContent='Create account';return;}
   // Profile created with is_admin:false, approved:false — server trigger prevents privilege escalation
   if(data.user){
     try{await sb.from('wtd_profiles').upsert({id:data.user.id,email,approved:false,is_admin:false},{onConflict:'id'});}catch(e){}
   }
-  // Show success screen
-  document.getElementById('root').innerHTML=`<div class="screen" style="text-align:center"><div style="font-size:48px;margin-bottom:1rem">\u2709\uFE0F</div><h1 style="margin-bottom:10px">Check your email</h1><p>We sent a confirmation link to <strong>${esc(email)}</strong>. Click it to verify your account.</p><p style="font-size:12px;color:var(--text3);margin-top:1rem">After confirming, your coach will approve your account and you'll be able to sign in.</p><button class="btn-ghost" style="margin-top:1rem" onclick="authView='login';renderAuth()">Back to sign in</button></div>`;
+  // Show "pending approval" screen — user is signed up but waiting for admin approval
+  document.getElementById('root').innerHTML=`<div class="screen" style="text-align:center"><div style="font-size:48px;margin-bottom:1rem">\u2705</div><h1 style="margin-bottom:10px">Account created</h1><p>Welcome, <strong>${esc(email)}</strong>! Your coach will approve your account shortly.</p><p style="font-size:12px;color:var(--text3);margin-top:1rem">You'll get access once you've been approved. Check back soon.</p><button class="btn-ghost" style="margin-top:1rem" onclick="authView='login';renderAuth()">Back to sign in</button></div>`;
 }
 async function signIn(){
   const email=document.getElementById('a-email').value.trim(),pw=document.getElementById('a-pw').value;
