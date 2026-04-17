@@ -3639,8 +3639,8 @@ function _applyBatchData(batchData){
   const results=keys.map(k=>batchData[k]||null);
   const [r0,r1,r2,r3,r4,r5,r6,r7,r8,r9,r10]=results;
   try{allHistory=r0?JSON.parse(r0.value):{}}catch(e){allHistory={};}
-  try{whyStatement=r1?.value||''}catch(e){whyStatement='';}
-  try{identityStatement=r2?.value||''}catch(e){identityStatement='';}
+  try{if(r1&&r1.value)whyStatement=r1.value;}catch(e){}
+  try{if(r2&&r2.value)identityStatement=r2.value;}catch(e){}
   try{const s=r3?JSON.parse(r3.value):null;if(s){hasCustomTasks=true;timedTasks=fixTaskNames(s.timed)||DEFAULT_TIMED.map(t=>({...t}));essentialTasks=fixTaskNames(s.essential)||DEFAULT_ESSENTIAL.map(t=>({...t}));}else{hasCustomTasks=false;timedTasks=DEFAULT_TIMED.map(t=>({...t}));essentialTasks=DEFAULT_ESSENTIAL.map(t=>({...t}));}}catch(e){hasCustomTasks=false;timedTasks=DEFAULT_TIMED.map(t=>({...t}));essentialTasks=DEFAULT_ESSENTIAL.map(t=>({...t}));}
   try{const rest=r4?JSON.parse(r4.value):null;if(rest)restSettings={...DEFAULT_REST,...rest};}catch(e){restSettings={...DEFAULT_REST};}
   try{actionItems=r5?JSON.parse(r5.value):[];}catch(e){actionItems=[];}
@@ -3841,8 +3841,8 @@ async function loadAll(uid){
   const results=keys.map(k=>batchData[k]||null);
   const [r0,r1,r2,r3,r4,r5,r6,r7,r8,r9,r10]=results;
   try{allHistory=r0?JSON.parse(r0.value):{}}catch(e){allHistory={};}
-  try{whyStatement=r1?.value||''}catch(e){whyStatement='';}
-  try{identityStatement=r2?.value||''}catch(e){identityStatement='';}
+  try{if(r1&&r1.value)whyStatement=r1.value;}catch(e){}
+  try{if(r2&&r2.value)identityStatement=r2.value;}catch(e){}
   try{const s=r3?JSON.parse(r3.value):null;if(s){hasCustomTasks=true;timedTasks=fixTaskNames(s.timed)||DEFAULT_TIMED.map(t=>({...t}));essentialTasks=fixTaskNames(s.essential)||DEFAULT_ESSENTIAL.map(t=>({...t}));}else{hasCustomTasks=false;timedTasks=DEFAULT_TIMED.map(t=>({...t}));essentialTasks=DEFAULT_ESSENTIAL.map(t=>({...t}));}}catch(e){hasCustomTasks=false;timedTasks=DEFAULT_TIMED.map(t=>({...t}));essentialTasks=DEFAULT_ESSENTIAL.map(t=>({...t}));}
   try{const rest=r4?JSON.parse(r4.value):null;if(rest)restSettings={...DEFAULT_REST,...rest};}catch(e){restSettings={...DEFAULT_REST};}
   try{actionItems=r5?JSON.parse(r5.value):[];}catch(e){actionItems=[];}
@@ -3904,8 +3904,10 @@ async function saveIR(){await storage.set('wtd-ir',JSON.stringify(identityReflec
 
 async function saveStatements(){
   const uid=adminClientId||undefined;
-  whyStatement=document.getElementById('why-inp')?.value.trim()||whyStatement;
-  identityStatement=document.getElementById('id-inp')?.value.trim()||identityStatement;
+  const whyInp=document.getElementById('why-inp');
+  const idInp=document.getElementById('id-inp');
+  if(whyInp&&whyInp.value.trim())whyStatement=whyInp.value.trim();
+  if(idInp&&idInp.value.trim())identityStatement=idInp.value.trim();
   await storage.set('wtd-why',whyStatement,uid);
   await storage.set('wtd-identity',identityStatement,uid);
   vault.logIdentity(viewingDateKey());
