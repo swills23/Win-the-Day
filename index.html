@@ -2817,8 +2817,8 @@ function _applyBatchData(batchData){
   const results=keys.map(k=>batchData[k]||null);
   const [r0,r1,r2,r3,r4,r5,r6,r7,r8,r9,r10]=results;
   try{allHistory=r0?JSON.parse(r0.value):{}}catch(e){allHistory={};}
-  try{if(r1&&r1.value)whyStatement=r1.value;}catch(e){}
-  try{if(r2&&r2.value)identityStatement=r2.value;}catch(e){}
+  try{if(r1&&r1.value){whyStatement=r1.value;try{localStorage.setItem('wtd_why_backup',r1.value);}catch(e){}}}catch(e){}
+  try{if(r2&&r2.value){identityStatement=r2.value;try{localStorage.setItem('wtd_id_backup',r2.value);}catch(e){}}}catch(e){}
   try{const s=r3?JSON.parse(r3.value):null;if(s){hasCustomTasks=true;timedTasks=fixTaskNames(s.timed)||DEFAULT_TIMED.map(t=>({...t}));essentialTasks=fixTaskNames(s.essential)||DEFAULT_ESSENTIAL.map(t=>({...t}));}else{hasCustomTasks=false;timedTasks=DEFAULT_TIMED.map(t=>({...t}));essentialTasks=DEFAULT_ESSENTIAL.map(t=>({...t}));}}catch(e){hasCustomTasks=false;timedTasks=DEFAULT_TIMED.map(t=>({...t}));essentialTasks=DEFAULT_ESSENTIAL.map(t=>({...t}));}
   try{const rest=r4?JSON.parse(r4.value):null;if(rest)restSettings={...DEFAULT_REST,...rest};}catch(e){restSettings={...DEFAULT_REST};}
   try{actionItems=r5?JSON.parse(r5.value):[];}catch(e){actionItems=[];}
@@ -2934,7 +2934,11 @@ function resetAppState(){
   essentialTasks=DEFAULT_ESSENTIAL.map(t=>({...t}));
   restSettings={...DEFAULT_REST};
   checked={};activeTab='today';weekOffset=0;monthOffset=0;dayOffset=0;
-  allHistory={};whyStatement='';identityStatement='';editingStatements=false;
+  allHistory={};
+  // Preserve statements from localStorage if available
+  try{whyStatement=localStorage.getItem('wtd_why_backup')||'';}catch(e){whyStatement='';}
+  try{identityStatement=localStorage.getItem('wtd_id_backup')||'';}catch(e){identityStatement='';}
+  editingStatements=false;
   mood=0;winOfDay='';actionItems=[];
   showEditor=false;showImport=false;showRestEditor=false;importError='';
   isRestDay=false;autoSaveTimer=null;autoSaveStatus='';nextId=200;
@@ -3019,8 +3023,8 @@ async function loadAll(uid){
   const results=keys.map(k=>batchData[k]||null);
   const [r0,r1,r2,r3,r4,r5,r6,r7,r8,r9,r10]=results;
   try{allHistory=r0?JSON.parse(r0.value):{}}catch(e){allHistory={};}
-  try{if(r1&&r1.value)whyStatement=r1.value;}catch(e){}
-  try{if(r2&&r2.value)identityStatement=r2.value;}catch(e){}
+  try{if(r1&&r1.value){whyStatement=r1.value;try{localStorage.setItem('wtd_why_backup',r1.value);}catch(e){}}}catch(e){}
+  try{if(r2&&r2.value){identityStatement=r2.value;try{localStorage.setItem('wtd_id_backup',r2.value);}catch(e){}}}catch(e){}
   try{const s=r3?JSON.parse(r3.value):null;if(s){hasCustomTasks=true;timedTasks=fixTaskNames(s.timed)||DEFAULT_TIMED.map(t=>({...t}));essentialTasks=fixTaskNames(s.essential)||DEFAULT_ESSENTIAL.map(t=>({...t}));}else{hasCustomTasks=false;timedTasks=DEFAULT_TIMED.map(t=>({...t}));essentialTasks=DEFAULT_ESSENTIAL.map(t=>({...t}));}}catch(e){hasCustomTasks=false;timedTasks=DEFAULT_TIMED.map(t=>({...t}));essentialTasks=DEFAULT_ESSENTIAL.map(t=>({...t}));}
   try{const rest=r4?JSON.parse(r4.value):null;if(rest)restSettings={...DEFAULT_REST,...rest};}catch(e){restSettings={...DEFAULT_REST};}
   try{actionItems=r5?JSON.parse(r5.value):[];}catch(e){actionItems=[];}
@@ -3088,6 +3092,7 @@ async function saveStatements(){
   if(idInp&&idInp.value.trim())identityStatement=idInp.value.trim();
   await storage.set('wtd-why',whyStatement,uid);
   await storage.set('wtd-identity',identityStatement,uid);
+  try{localStorage.setItem('wtd_why_backup',whyStatement);localStorage.setItem('wtd_id_backup',identityStatement);}catch(e){}
   vault.logIdentity(viewingDateKey());
   editingStatements=false;render();
 }
